@@ -25,7 +25,8 @@ import {
   RotateCcw,
   ArrowLeft,
   Inbox,
-  Zap
+  Zap,
+  Bookmark
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -65,11 +66,12 @@ export default function NotebookExplorer() {
   const [editingItemTitle, setEditingItemTitle] = useState('');
   const [deletingItemId, setDeletingItemId] = useState(null);
 
-  // Detail View (Pane 3) states
+  // Detail View (Pane 3) states - Split 2-pane layout
   const [isEditMode, setIsEditMode] = useState(false);
   const [draftCategoryId, setDraftCategoryId] = useState('inbox');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
+  const [draftSubBody, setDraftSubBody] = useState(''); // Supplementary / Auxiliary Note Body
   const [showSavedToast, setShowSavedToast] = useState(false);
 
   const toastTimerRef = useRef(null);
@@ -197,10 +199,12 @@ export default function NotebookExplorer() {
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
+      setDraftSubBody(activeItem.subBody || '');
       setDraftCategoryId(activeItem.categoryId || 'inbox');
     } else {
       setDraftTitle('');
       setDraftBody('');
+      setDraftSubBody('');
       setDraftCategoryId('inbox');
     }
     setIsEditMode(false);
@@ -282,6 +286,7 @@ export default function NotebookExplorer() {
         categoryId: 'inbox',
         title: '새 빠른 메모',
         body: '',
+        subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -290,6 +295,7 @@ export default function NotebookExplorer() {
       setDraftCategoryId('inbox');
       setDraftTitle('새 빠른 메모');
       setDraftBody('');
+      setDraftSubBody('');
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding quick note:', err);
@@ -305,6 +311,7 @@ export default function NotebookExplorer() {
         categoryId: targetCatId,
         title: '새 메모',
         body: '',
+        subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -312,6 +319,7 @@ export default function NotebookExplorer() {
       setDraftCategoryId(targetCatId);
       setDraftTitle('새 메모');
       setDraftBody('');
+      setDraftSubBody('');
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding item:', err);
@@ -354,10 +362,10 @@ export default function NotebookExplorer() {
       await updateDoc(doc(db, 'items', selectedItemId), {
         title: draftTitle,
         body: draftBody,
+        subBody: draftSubBody,
         categoryId: draftCategoryId,
         updatedAt: serverTimestamp()
       });
-      // If category was changed during save, update selectedCategoryId to match
       if (draftCategoryId !== selectedCategoryId) {
         setSelectedCategoryId(draftCategoryId);
       }
@@ -376,6 +384,7 @@ export default function NotebookExplorer() {
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
+      setDraftSubBody(activeItem.subBody || '');
       setDraftCategoryId(activeItem.categoryId || 'inbox');
     }
     setIsEditMode(false);
@@ -474,7 +483,6 @@ export default function NotebookExplorer() {
                     <span style={styles.rowLabel}>{cat.name}</span>
                   )}
 
-                  {/* Fixed category has no edit/delete buttons */}
                   {!isFixed && (
                     <div style={styles.actionGroup}>
                       {isDeleting ? (
@@ -666,7 +674,7 @@ export default function NotebookExplorer() {
         </div>
       )}
 
-      {/* Pane 3: Detail Workspace (Flex 1 or 100% on Mobile) */}
+      {/* Pane 3: Detail Workspace - Split 2-pane Layout (Flex 1 or 100% on Mobile) */}
       {(!isMobile || mobileView === 'detail') && (
         <div style={styles.pane3}>
           {activeItem ? (
@@ -727,10 +735,10 @@ export default function NotebookExplorer() {
                 </div>
               </div>
 
-              {/* Content Body */}
+              {/* Content Body - Split 2-pane Workspace */}
               <div style={styles.pane3Body}>
                 {isEditMode ? (
-                  <div style={styles.editForm}>
+                  <div style={styles.splitEditContainer}>
                     {/* Category Selector in Edit Mode */}
                     <div style={styles.categorySelectorRow}>
                       <span style={styles.categorySelectorLabel}>카테고리 이동:</span>
@@ -754,18 +762,67 @@ export default function NotebookExplorer() {
                       placeholder="제목을 입력하세요"
                       style={styles.editTitleInput}
                     />
-                    <textarea
-                      value={draftBody}
-                      onChange={(e) => setDraftBody(e.target.value)}
-                      placeholder="메모 내용을 입력하세요... (URL과 전화번호는 자동 링크로 변환됩니다)"
-                      style={styles.editBodyTextarea}
-                    />
+
+                    {/* Split Edit Textarea Fields (Left: Main Body, Right: Supplementary SubBody) */}
+                    <div style={{
+                      ...styles.splitEditFields,
+                      flexDirection: isMobile ? 'column' : 'row'
+                    }}>
+                      <div style={styles.editPaneHalf}>
+                        <label style={styles.fieldLabel}>기본 본문 내용</label>
+                        <textarea
+                          value={draftBody}
+                          onChange={(e) => setDraftBody(e.target.value)}
+                          placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
+                          style={styles.editBodyTextarea}
+                        />
+                      </div>
+
+                      <div style={styles.editPaneHalf}>
+                        <label style={styles.fieldLabel}>📌 보충 메모 / 참고 사항 (보충 공간)</label>
+                        <textarea
+                          value={draftSubBody}
+                          onChange={(e) => setDraftSubBody(e.target.value)}
+                          placeholder="해당 메모에 대한 추가 참고 링크, 계약 조건, 부연 설명 등 보충할 내용을 자유롭게 입력하세요..."
+                          style={{
+                            ...styles.editBodyTextarea,
+                            backgroundColor: '#F8FAFC',
+                            borderColor: '#CBD5E1'
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div style={styles.readView}>
-                    <h1 style={styles.readTitle}>{activeItem.title}</h1>
-                    <div style={styles.readBody}>
-                      {renderWithLinks(activeItem.body)}
+                  <div style={{
+                    ...styles.splitReadContainer,
+                    flexDirection: isMobile ? 'column' : 'row'
+                  }}>
+                    {/* Left Pane: Primary Note Content */}
+                    <div style={styles.leftPane}>
+                      <h1 style={styles.readTitle}>{activeItem.title}</h1>
+                      <div style={styles.readBody}>
+                        {renderWithLinks(activeItem.body)}
+                      </div>
+                    </div>
+
+                    {/* Right Pane: Supplementary Note Space (보충 메모 공간) */}
+                    <div style={styles.rightPane}>
+                      <div style={styles.subNoteHeader}>
+                        <span style={styles.subNoteTitle}>
+                          <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                          보충 메모 / 참고 사항
+                        </span>
+                      </div>
+                      <div style={styles.subNoteBody}>
+                        {activeItem.subBody ? (
+                          renderWithLinks(activeItem.subBody)
+                        ) : (
+                          <span style={styles.subNoteEmptyText}>
+                            등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 부연 설명이나 추가 참고 자료를 입력해보세요.
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1132,10 +1189,59 @@ const styles = {
     backgroundColor: '#FAFAF8'
   },
 
-  readView: {
-    maxWidth: '800px',
-    margin: '0 auto'
+  // Split Read & Edit Layouts
+  splitReadContainer: {
+    display: 'flex',
+    gap: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    width: '100%',
+    minHeight: '100%'
   },
+  leftPane: {
+    flex: 1,
+    minWidth: 0
+  },
+  rightPane: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '10px',
+    padding: '20px',
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  subNoteHeader: {
+    paddingBottom: '12px',
+    marginBottom: '14px',
+    borderBottom: '1px solid #F1F5F9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  subNoteTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#1E293B',
+    display: 'flex',
+    alignItems: 'center'
+  },
+  subNoteBody: {
+    fontSize: '14px',
+    lineHeight: 1.7,
+    color: '#334155',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    flex: 1
+  },
+  subNoteEmptyText: {
+    color: '#94A3B8',
+    fontSize: '13px',
+    lineHeight: 1.6
+  },
+
   readTitle: {
     fontSize: '22px',
     fontWeight: 700,
@@ -1151,13 +1257,32 @@ const styles = {
     wordBreak: 'break-word'
   },
 
-  editForm: {
-    maxWidth: '800px',
+  splitEditContainer: {
+    maxWidth: '1200px',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    height: '100%'
+    height: '100%',
+    width: '100%'
+  },
+  splitEditFields: {
+    display: 'flex',
+    gap: '20px',
+    flex: 1,
+    minHeight: '400px'
+  },
+  editPaneHalf: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    minWidth: 0
+  },
+  fieldLabel: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#475569'
   },
 
   categorySelectorRow: {
@@ -1201,7 +1326,7 @@ const styles = {
     width: '100%',
     minHeight: '400px',
     flex: 1,
-    fontSize: '15px',
+    fontSize: '14px',
     lineHeight: 1.7,
     padding: '14px',
     border: '1px solid #DCE0E6',
