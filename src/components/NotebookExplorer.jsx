@@ -23,16 +23,27 @@ import {
   ChevronRight,
   Save,
   RotateCcw,
-  ArrowLeft
+  ArrowLeft,
+  Inbox,
+  Zap
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
+
+// Fixed In-box category definition
+const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true };
 
 export default function NotebookExplorer() {
   // Data states
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('inbox');
   const [selectedItemId, setSelectedItemId] = useState(null);
+
+  // Combine fixed In-box category at the very top
+  const allCategories = [
+    INBOX_CATEGORY,
+    ...categories.filter((c) => c.id !== 'inbox')
+  ];
 
   // Mobile responsiveness & navigation state
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -56,6 +67,7 @@ export default function NotebookExplorer() {
 
   // Detail View (Pane 3) states
   const [isEditMode, setIsEditMode] = useState(false);
+  const [draftCategoryId, setDraftCategoryId] = useState('inbox');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -74,7 +86,6 @@ export default function NotebookExplorer() {
 
   // Hardware/Browser Back button handling (popstate)
   useEffect(() => {
-    // Initial history state setup
     window.history.replaceState({ view: 'categories' }, '');
 
     const handlePopState = (e) => {
@@ -85,12 +96,10 @@ export default function NotebookExplorer() {
       } else if (stateView === 'items') {
         setMobileView('items');
       } else {
-        // We are at root 'categories' level
         setMobileView('categories');
 
         const now = Date.now();
         if (now - lastBackPressRef.current < 2000) {
-          // Double back press within 2 seconds -> Exit app / close
           try {
             window.close();
           } catch (err) {
@@ -98,10 +107,8 @@ export default function NotebookExplorer() {
           }
         } else {
           lastBackPressRef.current = now;
-          // Push state to prevent immediate browser exit on first back press
           window.history.pushState({ view: 'categories' }, '');
 
-          // Show "한번 더 누르면 앱이 종료됩니다." toast
           setShowExitToast(true);
           if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
           exitToastTimerRef.current = setTimeout(() => {
@@ -136,7 +143,7 @@ export default function NotebookExplorer() {
     window.history.back();
   };
 
-  // 1. Subscribe to Categories (Top-level collection)
+  // 1. Subscribe to Categories
   useEffect(() => {
     const q = query(collection(db, 'categories'), orderBy('order', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -145,18 +152,13 @@ export default function NotebookExplorer() {
         ...d.data()
       }));
       setCategories(catList);
-
-      // Auto-select first category if none selected
-      if (catList.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(catList[0].id);
-      }
     }, (err) => {
       console.error("Firestore categories snapshot error:", err);
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Subscribe to Items (Top-level collection)
+  // 2. Subscribe to Items
   useEffect(() => {
     const q = query(collection(db, 'items'), orderBy('updatedAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -186,18 +188,20 @@ export default function NotebookExplorer() {
     }
   }, [selectedCategoryId, filteredItems.length]);
 
-  // Get active selected item object
+  // Get active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
-  const activeCategory = categories.find((cat) => cat.id === selectedCategoryId);
+  const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
 
-  // Sync draft state when active item changes or edit mode toggles
+  // Sync draft state when active item changes
   useEffect(() => {
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
+      setDraftCategoryId(activeItem.categoryId || 'inbox');
     } else {
       setDraftTitle('');
       setDraftBody('');
+      setDraftCategoryId('inbox');
     }
     setIsEditMode(false);
   }, [selectedItemId]);
@@ -235,6 +239,7 @@ export default function NotebookExplorer() {
   };
 
   const handleUpdateCategoryName = async (catId) => {
+    if (catId === 'inbox') return;
     if (!editingCategoryName.trim()) {
       setEditingCategoryId(null);
       return;
@@ -250,11 +255,10 @@ export default function NotebookExplorer() {
   };
 
   const handleDeleteCategory = async (catId) => {
+    if (catId === 'inbox') return;
     try {
       const batch = writeBatch(db);
-      // Delete category doc
       batch.delete(doc(db, 'categories', catId));
-      // Delete all child items belonging to this category
       const childItems = items.filter((item) => item.categoryId === catId);
       childItems.forEach((item) => {
         batch.delete(doc(db, 'items', item.id));
@@ -263,27 +267,49 @@ export default function NotebookExplorer() {
 
       setDeletingCategoryId(null);
       if (selectedCategoryId === catId) {
-        const remaining = categories.filter((c) => c.id !== catId);
-        setSelectedCategoryId(remaining.length > 0 ? remaining[0].id : null);
+        setSelectedCategoryId('inbox');
       }
     } catch (err) {
       console.error('Error deleting category and child items:', err);
     }
   };
 
-  // ---------------- Item Handlers ----------------
-  const handleAddItem = async () => {
-    if (!selectedCategoryId) return;
+  // ---------------- Quick Add Note (Fast Entry to In-box) ----------------
+  const handleQuickAddNote = async () => {
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
-        categoryId: selectedCategoryId,
+        categoryId: 'inbox',
+        title: '새 빠른 메모',
+        body: '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      setSelectedCategoryId('inbox');
+      navigateToDetail(newRef.id);
+      setDraftCategoryId('inbox');
+      setDraftTitle('새 빠른 메모');
+      setDraftBody('');
+      setIsEditMode(true);
+    } catch (err) {
+      console.error('Error adding quick note:', err);
+    }
+  };
+
+  // ---------------- Item Handlers ----------------
+  const handleAddItem = async () => {
+    const targetCatId = selectedCategoryId || 'inbox';
+    try {
+      const newRef = doc(collection(db, 'items'));
+      await setDoc(newRef, {
+        categoryId: targetCatId,
         title: '새 메모',
         body: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
       navigateToDetail(newRef.id);
+      setDraftCategoryId(targetCatId);
       setDraftTitle('새 메모');
       setDraftBody('');
       setIsEditMode(true);
@@ -328,10 +354,14 @@ export default function NotebookExplorer() {
       await updateDoc(doc(db, 'items', selectedItemId), {
         title: draftTitle,
         body: draftBody,
+        categoryId: draftCategoryId,
         updatedAt: serverTimestamp()
       });
+      // If category was changed during save, update selectedCategoryId to match
+      if (draftCategoryId !== selectedCategoryId) {
+        setSelectedCategoryId(draftCategoryId);
+      }
       setIsEditMode(false);
-      // Show 1.8 second "저장됨" toast notification
       setShowSavedToast(true);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => {
@@ -346,6 +376,7 @@ export default function NotebookExplorer() {
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
+      setDraftCategoryId(activeItem.categoryId || 'inbox');
     }
     setIsEditMode(false);
   };
@@ -362,13 +393,23 @@ export default function NotebookExplorer() {
         }}>
           <div style={styles.pane1Header}>
             <span style={styles.pane1Title}>카테고리</span>
-            <button
-              onClick={() => setIsAddingCategory(true)}
-              style={styles.iconBtnDark}
-              title="카테고리 추가"
-            >
-              <Plus size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={handleQuickAddNote}
+                style={styles.quickAddBtn}
+                title="빠른 메모 생성 (In-box에 자동 저장)"
+              >
+                <Zap size={13} fill="#2563EB" color="#2563EB" />
+                <span>빠른입력</span>
+              </button>
+              <button
+                onClick={() => setIsAddingCategory(true)}
+                style={styles.iconBtnDark}
+                title="카테고리 추가"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
           <div style={styles.paneContent}>
@@ -390,10 +431,11 @@ export default function NotebookExplorer() {
               </div>
             )}
 
-            {categories.map((cat) => {
+            {allCategories.map((cat) => {
               const isSelected = cat.id === selectedCategoryId;
               const isEditing = cat.id === editingCategoryId;
               const isDeleting = cat.id === deletingCategoryId;
+              const isFixed = cat.isFixed;
 
               return (
                 <div
@@ -408,7 +450,11 @@ export default function NotebookExplorer() {
                     fontWeight: isSelected ? 600 : 400
                   }}
                 >
-                  <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+                  {isFixed ? (
+                    <Inbox size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+                  ) : (
+                    <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+                  )}
 
                   {isEditing ? (
                     <input
@@ -428,51 +474,53 @@ export default function NotebookExplorer() {
                     <span style={styles.rowLabel}>{cat.name}</span>
                   )}
 
-                  {/* Hover / Confirm Actions */}
-                  <div style={styles.actionGroup}>
-                    {isDeleting ? (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
-                          style={styles.actionBtnConfirm}
-                          title="확인 삭제"
-                        >
-                          <Check size={14} color="#2563EB" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeletingCategoryId(null); }}
-                          style={styles.actionBtnCancel}
-                          title="취소"
-                        >
-                          <X size={14} color="#E57373" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCategoryId(cat.id);
-                            setEditingCategoryName(cat.name);
-                          }}
-                          style={styles.actionBtnDark}
-                          title="이름 변경"
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingCategoryId(cat.id);
-                          }}
-                          style={styles.actionBtnDark}
-                          title="삭제"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {/* Fixed category has no edit/delete buttons */}
+                  {!isFixed && (
+                    <div style={styles.actionGroup}>
+                      {isDeleting ? (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                            style={styles.actionBtnConfirm}
+                            title="확인 삭제"
+                          >
+                            <Check size={14} color="#2563EB" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeletingCategoryId(null); }}
+                            style={styles.actionBtnCancel}
+                            title="취소"
+                          >
+                            <X size={14} color="#E57373" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCategoryId(cat.id);
+                              setEditingCategoryName(cat.name);
+                            }}
+                            style={styles.actionBtnDark}
+                            title="이름 변경"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingCategoryId(cat.id);
+                            }}
+                            style={styles.actionBtnDark}
+                            title="삭제"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -505,12 +553,7 @@ export default function NotebookExplorer() {
             </div>
             <button
               onClick={handleAddItem}
-              disabled={!selectedCategoryId}
-              style={{
-                ...styles.iconBtnLight,
-                opacity: selectedCategoryId ? 1 : 0.4,
-                cursor: selectedCategoryId ? 'pointer' : 'not-allowed'
-              }}
+              style={styles.iconBtnLight}
               title="메모 추가"
             >
               <Plus size={18} />
@@ -520,7 +563,7 @@ export default function NotebookExplorer() {
           <div style={styles.paneContent}>
             {filteredItems.length === 0 ? (
               <div style={styles.emptyStateText}>
-                {selectedCategoryId ? '등록된 메모가 없습니다.' : '카테고리를 선택하세요.'}
+                등록된 메모가 없습니다.
               </div>
             ) : (
               filteredItems.map((item) => {
@@ -642,7 +685,7 @@ export default function NotebookExplorer() {
                     </button>
                   )}
                   <div style={styles.breadcrumb}>
-                    <span>{activeCategory?.name || '카테고리'}</span>
+                    <span>{allCategories.find(c => c.id === activeItem.categoryId)?.name || 'In-box'}</span>
                     <ChevronRight size={14} color="#A0A6B2" style={{ margin: '0 4px' }} />
                     <span style={{ color: '#22262A', fontWeight: 600 }}>{activeItem.title}</span>
                   </div>
@@ -688,6 +731,22 @@ export default function NotebookExplorer() {
               <div style={styles.pane3Body}>
                 {isEditMode ? (
                   <div style={styles.editForm}>
+                    {/* Category Selector in Edit Mode */}
+                    <div style={styles.categorySelectorRow}>
+                      <span style={styles.categorySelectorLabel}>카테고리 이동:</span>
+                      <select
+                        value={draftCategoryId}
+                        onChange={(e) => setDraftCategoryId(e.target.value)}
+                        style={styles.categorySelectInput}
+                      >
+                        {allCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <input
                       type="text"
                       value={draftTitle}
@@ -764,7 +823,7 @@ const styles = {
   },
   pane1Header: {
     height: '52px',
-    padding: '0 16px',
+    padding: '0 12px 0 16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -776,6 +835,20 @@ const styles = {
     fontSize: '14px',
     fontWeight: 700,
     letterSpacing: '0.5px'
+  },
+  quickAddBtn: {
+    backgroundColor: '#D8E6F5',
+    color: '#1E3A5F',
+    border: '1px solid #BFD7F2',
+    borderRadius: '6px',
+    padding: '4px 8px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    transition: 'all 0.15s ease'
   },
   iconBtnDark: {
     background: 'none',
@@ -1086,6 +1159,33 @@ const styles = {
     gap: '16px',
     height: '100%'
   },
+
+  categorySelectorRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#FFFFFF',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #DCE0E6'
+  },
+  categorySelectorLabel: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#475569'
+  },
+  categorySelectInput: {
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #CBD5E1',
+    borderRadius: '4px',
+    padding: '4px 10px',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#1E293B',
+    outline: 'none',
+    cursor: 'pointer'
+  },
+
   editTitleInput: {
     width: '100%',
     fontSize: '20px',
