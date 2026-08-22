@@ -49,10 +49,13 @@ export default function NotebookExplorer() {
   // Mobile responsiveness & navigation state
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [mobileView, setMobileView] = useState('categories'); // 'categories' | 'items' | 'detail'
+  const [mobileSubTab, setMobileSubTab] = useState('main'); // 'main' (상세내용) | 'sub' (보충노트)
   const [showExitToast, setShowExitToast] = useState(false);
 
   const lastBackPressRef = useRef(0);
   const exitToastTimerRef = useRef(null);
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
 
   // Category inline editing states
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -66,12 +69,12 @@ export default function NotebookExplorer() {
   const [editingItemTitle, setEditingItemTitle] = useState('');
   const [deletingItemId, setDeletingItemId] = useState(null);
 
-  // Detail View (Pane 3) states - Split 2-pane layout
+  // Detail View (Pane 3) states - Split 2-pane Layout
   const [isEditMode, setIsEditMode] = useState(false);
   const [draftCategoryId, setDraftCategoryId] = useState('inbox');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
-  const [draftSubBody, setDraftSubBody] = useState(''); // Supplementary / Auxiliary Note Body
+  const [draftSubBody, setDraftSubBody] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
 
   const toastTimerRef = useRef(null);
@@ -85,6 +88,35 @@ export default function NotebookExplorer() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Touch Swipe Handlers for Mobile Tab Switching
+  const handleTouchStart = (e) => {
+    if (!isMobile) return;
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isMobile || touchStartXRef.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const diffX = touchEndX - touchStartXRef.current;
+    const diffY = touchEndY - touchStartYRef.current;
+
+    // Ensure horizontal swipe is dominant over vertical scroll
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+      if (diffX < 0) {
+        // Swiped Left -> Switch to 'sub' (보충노트)
+        setMobileSubTab('sub');
+      } else {
+        // Swiped Right -> Switch to 'main' (상세내용)
+        setMobileSubTab('main');
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
 
   // Hardware/Browser Back button handling (popstate)
   useEffect(() => {
@@ -135,6 +167,7 @@ export default function NotebookExplorer() {
 
   const navigateToDetail = (itemId) => {
     setSelectedItemId(itemId);
+    setMobileSubTab('main');
     if (isMobile) {
       setMobileView('detail');
       window.history.pushState({ view: 'detail' }, '');
@@ -674,7 +707,7 @@ export default function NotebookExplorer() {
         </div>
       )}
 
-      {/* Pane 3: Detail Workspace - Split 2-pane Layout (Flex 1 or 100% on Mobile) */}
+      {/* Pane 3: Detail Workspace (Flex 1 or 100% on Mobile) */}
       {(!isMobile || mobileView === 'detail') && (
         <div style={styles.pane3}>
           {activeItem ? (
@@ -751,8 +784,40 @@ export default function NotebookExplorer() {
                 </div>
               </div>
 
-              {/* Content Body - Split 2-pane Workspace */}
-              <div style={styles.pane3Body}>
+              {/* Mobile Sub-Tab Bar */}
+              {isMobile && (
+                <div style={styles.mobileTabBar}>
+                  <button
+                    onClick={() => setMobileSubTab('main')}
+                    style={{
+                      ...styles.mobileTabBtn,
+                      color: mobileSubTab === 'main' ? '#2563EB' : '#64748B',
+                      borderBottom: mobileSubTab === 'main' ? '2.5px solid #2563EB' : '2.5px solid transparent',
+                      fontWeight: mobileSubTab === 'main' ? 700 : 500
+                    }}
+                  >
+                    📄 상세내용
+                  </button>
+                  <button
+                    onClick={() => setMobileSubTab('sub')}
+                    style={{
+                      ...styles.mobileTabBtn,
+                      color: mobileSubTab === 'sub' ? '#2563EB' : '#64748B',
+                      borderBottom: mobileSubTab === 'sub' ? '2.5px solid #2563EB' : '2.5px solid transparent',
+                      fontWeight: mobileSubTab === 'sub' ? 700 : 500
+                    }}
+                  >
+                    📌 보충노트 {activeItem.subBody ? '•' : ''}
+                  </button>
+                </div>
+              )}
+
+              {/* Content Body - Split 2-pane Workspace (Touch Swipe enabled) */}
+              <div
+                style={styles.pane3Body}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
                 {isEditMode ? (
                   <div style={styles.splitEditContainer}>
                     <input
@@ -764,62 +829,64 @@ export default function NotebookExplorer() {
                     />
 
                     {/* Split Edit Textarea Fields (Left: Main Body Card, Right: Standalone SubBody Card) */}
-                    <div style={{
-                      ...styles.splitEditFields,
-                      flexDirection: isMobile ? 'column' : 'row'
-                    }}>
-                      <div style={styles.editPaneMainCard}>
-                        <label style={styles.fieldLabel}>📄 메인 메모 본문</label>
-                        <textarea
-                          value={draftBody}
-                          onChange={(e) => setDraftBody(e.target.value)}
-                          placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
-                          style={styles.editBodyTextarea}
-                        />
-                      </div>
+                    <div style={styles.splitEditFields}>
+                      {(!isMobile || mobileSubTab === 'main') && (
+                        <div style={styles.editPaneMainCard}>
+                          <label style={styles.fieldLabel}>📄 메인 메모 본문</label>
+                          <textarea
+                            value={draftBody}
+                            onChange={(e) => setDraftBody(e.target.value)}
+                            placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
+                            style={styles.editBodyTextarea}
+                          />
+                        </div>
+                      )}
 
-                      <div style={styles.editPaneSubCard}>
-                        <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>📌 독립 보충 노트 (참고 / 보충 공간)</label>
-                        <textarea
-                          value={draftSubBody}
-                          onChange={(e) => setDraftSubBody(e.target.value)}
-                          placeholder="해당 메모와 연관된 추가 참고 링크, 계약 조건, 보충 설명을 자유롭게 작성하세요..."
-                          style={styles.editSubBodyTextarea}
-                        />
-                      </div>
+                      {(!isMobile || mobileSubTab === 'sub') && (
+                        <div style={styles.editPaneSubCard}>
+                          <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>📌 독립 보충 노트 (참고 / 보충 공간)</label>
+                          <textarea
+                            value={draftSubBody}
+                            onChange={(e) => setDraftSubBody(e.target.value)}
+                            placeholder="해당 메모와 연관된 추가 참고 링크, 계약 조건, 보충 설명을 자유롭게 작성하세요..."
+                            style={styles.editSubBodyTextarea}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <div style={{
-                    ...styles.splitReadContainer,
-                    flexDirection: isMobile ? 'column' : 'row'
-                  }}>
+                  <div style={styles.splitReadContainer}>
                     {/* Left Card: Primary Note Content */}
-                    <div style={styles.leftPaneCard}>
-                      <h1 style={styles.readTitle}>{activeItem.title}</h1>
-                      <div style={styles.readBody}>
-                        {renderWithLinks(activeItem.body)}
+                    {(!isMobile || mobileSubTab === 'main') && (
+                      <div style={styles.leftPaneCard}>
+                        <h1 style={styles.readTitle}>{activeItem.title}</h1>
+                        <div style={styles.readBody}>
+                          {renderWithLinks(activeItem.body)}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Right Card: Standalone Supplementary Note Card */}
-                    <div style={styles.rightPaneCard}>
-                      <div style={styles.subNoteHeader}>
-                        <span style={styles.subNoteTitle}>
-                          <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                          독립 보충 노트 / 참고 사항
-                        </span>
-                      </div>
-                      <div style={styles.subNoteBody}>
-                        {activeItem.subBody ? (
-                          renderWithLinks(activeItem.subBody)
-                        ) : (
-                          <span style={styles.subNoteEmptyText}>
-                            등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 독립된 보충 노트나 추가 참고 정보를 작성해보세요.
+                    {(!isMobile || mobileSubTab === 'sub') && (
+                      <div style={styles.rightPaneCard}>
+                        <div style={styles.subNoteHeader}>
+                          <span style={styles.subNoteTitle}>
+                            <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                            독립 보충 노트 / 참고 사항
                           </span>
-                        )}
+                        </div>
+                        <div style={styles.subNoteBody}>
+                          {activeItem.subBody ? (
+                            renderWithLinks(activeItem.subBody)
+                          ) : (
+                            <span style={styles.subNoteEmptyText}>
+                              등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 독립된 보충 노트나 추가 참고 정보를 작성해보세요.
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1171,6 +1238,23 @@ const styles = {
     fontWeight: 600
   },
 
+  mobileTabBar: {
+    display: 'flex',
+    backgroundColor: '#FFFFFF',
+    borderBottom: '1px solid #E2E8F0',
+    padding: '0 8px'
+  },
+  mobileTabBtn: {
+    flex: 1,
+    padding: '12px 0',
+    background: 'none',
+    border: 'none',
+    fontSize: '14px',
+    cursor: 'pointer',
+    textAlign: 'center',
+    transition: 'all 0.15s ease'
+  },
+
   pane3Body: {
     flex: 1,
     overflowY: 'auto',
@@ -1343,7 +1427,7 @@ const styles = {
   },
   editBodyTextarea: {
     width: '100%',
-    minHeight: '400px',
+    minHeight: '360px',
     flex: 1,
     fontSize: '14px',
     lineHeight: 1.7,
@@ -1351,7 +1435,22 @@ const styles = {
     border: '1px solid #DCE0E6',
     borderRadius: '8px',
     outline: 'none',
-    color: '#3C3F42',
+    color: '#22262A',
+    backgroundColor: '#FFFFFF',
+    resize: 'vertical',
+    fontFamily: 'inherit'
+  },
+  editSubBodyTextarea: {
+    width: '100%',
+    minHeight: '360px',
+    flex: 1,
+    fontSize: '14px',
+    lineHeight: 1.7,
+    padding: '14px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '8px',
+    outline: 'none',
+    color: '#1E293B',
     backgroundColor: '#FFFFFF',
     resize: 'vertical',
     fontFamily: 'inherit'
