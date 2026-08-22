@@ -46,8 +46,8 @@ export default function NotebookExplorer() {
     ...categories.filter((c) => c.id !== 'inbox')
   ];
 
-  // Mobile responsiveness & navigation state
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 860);
   const [mobileView, setMobileView] = useState('categories'); // 'categories' | 'items' | 'detail'
   const [mobileSubTab, setMobileSubTab] = useState('main'); // 'main' (상세내용) | 'sub' (보충노트)
   const [showExitToast, setShowExitToast] = useState(false);
@@ -82,7 +82,7 @@ export default function NotebookExplorer() {
   // Resize listener for mobile responsive layout
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
+      const mobile = window.innerWidth <= 860;
       setIsMobile(mobile);
     };
     window.addEventListener('resize', handleResize);
@@ -105,7 +105,7 @@ export default function NotebookExplorer() {
     const diffY = touchEndY - touchStartYRef.current;
 
     // Ensure horizontal swipe is dominant over vertical scroll
-    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
       if (diffX < 0) {
         // Swiped Left -> Switch to 'sub' (보충노트)
         setMobileSubTab('sub');
@@ -784,16 +784,16 @@ export default function NotebookExplorer() {
                 </div>
               </div>
 
-              {/* Mobile Sub-Tab Bar */}
+              {/* Mobile Sub-Tab Bar (Prominent Tab Switching Bar) */}
               {isMobile && (
                 <div style={styles.mobileTabBar}>
                   <button
                     onClick={() => setMobileSubTab('main')}
                     style={{
                       ...styles.mobileTabBtn,
-                      color: mobileSubTab === 'main' ? '#2563EB' : '#64748B',
-                      borderBottom: mobileSubTab === 'main' ? '2.5px solid #2563EB' : '2.5px solid transparent',
-                      fontWeight: mobileSubTab === 'main' ? 700 : 500
+                      backgroundColor: mobileSubTab === 'main' ? '#2563EB' : '#FFFFFF',
+                      color: mobileSubTab === 'main' ? '#FFFFFF' : '#475569',
+                      borderColor: mobileSubTab === 'main' ? '#2563EB' : '#CBD5E1'
                     }}
                   >
                     📄 상세내용
@@ -802,9 +802,9 @@ export default function NotebookExplorer() {
                     onClick={() => setMobileSubTab('sub')}
                     style={{
                       ...styles.mobileTabBtn,
-                      color: mobileSubTab === 'sub' ? '#2563EB' : '#64748B',
-                      borderBottom: mobileSubTab === 'sub' ? '2.5px solid #2563EB' : '2.5px solid transparent',
-                      fontWeight: mobileSubTab === 'sub' ? 700 : 500
+                      backgroundColor: mobileSubTab === 'sub' ? '#2563EB' : '#FFFFFF',
+                      color: mobileSubTab === 'sub' ? '#FFFFFF' : '#475569',
+                      borderColor: mobileSubTab === 'sub' ? '#2563EB' : '#CBD5E1'
                     }}
                   >
                     📌 보충노트 {activeItem.subBody ? '•' : ''}
@@ -828,7 +828,7 @@ export default function NotebookExplorer() {
                       style={styles.editTitleInput}
                     />
 
-                    {/* Split Edit Textarea Fields (Left: Main Body Card, Right: Standalone SubBody Card) */}
+                    {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
                         <div style={styles.editPaneMainCard}>
@@ -1240,25 +1240,31 @@ const styles = {
 
   mobileTabBar: {
     display: 'flex',
-    backgroundColor: '#FFFFFF',
-    borderBottom: '1px solid #E2E8F0',
-    padding: '0 8px'
+    backgroundColor: '#F8FAFC',
+    borderBottom: '1px solid #CBD5E1',
+    padding: '6px 10px',
+    gap: '8px'
   },
   mobileTabBtn: {
     flex: 1,
-    padding: '12px 0',
-    background: 'none',
-    border: 'none',
-    fontSize: '14px',
+    padding: '9px 0',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: 600,
     cursor: 'pointer',
     textAlign: 'center',
-    transition: 'all 0.15s ease'
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
   },
 
   pane3Body: {
     flex: 1,
     overflowY: 'auto',
-    padding: '24px 20px'
+    padding: '20px'
   },
   pane3Empty: {
     height: '100%',
