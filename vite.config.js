@@ -9,10 +9,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*'],
       manifest: {
-        name: '인사이트 메모',
-        short_name: '메모',
+        name: '메모관리',
+        short_name: '메모관리',
         description: '탐색기 형태의 카테고리별 메모 관리 PWA',
-        theme_color: '#1C1E22',
+        theme_color: '#2563EB',
         background_color: '#FAFAF8',
         display: 'standalone',
         orientation: 'portrait-primary',
