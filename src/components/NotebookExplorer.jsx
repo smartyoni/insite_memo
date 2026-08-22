@@ -763,13 +763,13 @@ export default function NotebookExplorer() {
                       style={styles.editTitleInput}
                     />
 
-                    {/* Split Edit Textarea Fields (Left: Main Body, Right: Supplementary SubBody) */}
+                    {/* Split Edit Textarea Fields (Left: Main Body Card, Right: Standalone SubBody Card) */}
                     <div style={{
                       ...styles.splitEditFields,
                       flexDirection: isMobile ? 'column' : 'row'
                     }}>
-                      <div style={styles.editPaneHalf}>
-                        <label style={styles.fieldLabel}>기본 본문 내용</label>
+                      <div style={styles.editPaneMainCard}>
+                        <label style={styles.fieldLabel}>📄 메인 메모 본문</label>
                         <textarea
                           value={draftBody}
                           onChange={(e) => setDraftBody(e.target.value)}
@@ -778,17 +778,13 @@ export default function NotebookExplorer() {
                         />
                       </div>
 
-                      <div style={styles.editPaneHalf}>
-                        <label style={styles.fieldLabel}>📌 보충 메모 / 참고 사항 (보충 공간)</label>
+                      <div style={styles.editPaneSubCard}>
+                        <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>📌 독립 보충 노트 (참고 / 보충 공간)</label>
                         <textarea
                           value={draftSubBody}
                           onChange={(e) => setDraftSubBody(e.target.value)}
-                          placeholder="해당 메모에 대한 추가 참고 링크, 계약 조건, 부연 설명 등 보충할 내용을 자유롭게 입력하세요..."
-                          style={{
-                            ...styles.editBodyTextarea,
-                            backgroundColor: '#F8FAFC',
-                            borderColor: '#CBD5E1'
-                          }}
+                          placeholder="해당 메모와 연관된 추가 참고 링크, 계약 조건, 보충 설명을 자유롭게 작성하세요..."
+                          style={styles.editSubBodyTextarea}
                         />
                       </div>
                     </div>
@@ -798,20 +794,20 @@ export default function NotebookExplorer() {
                     ...styles.splitReadContainer,
                     flexDirection: isMobile ? 'column' : 'row'
                   }}>
-                    {/* Left Pane: Primary Note Content */}
-                    <div style={styles.leftPane}>
+                    {/* Left Card: Primary Note Content */}
+                    <div style={styles.leftPaneCard}>
                       <h1 style={styles.readTitle}>{activeItem.title}</h1>
                       <div style={styles.readBody}>
                         {renderWithLinks(activeItem.body)}
                       </div>
                     </div>
 
-                    {/* Right Pane: Supplementary Note Space (보충 메모 공간) */}
-                    <div style={styles.rightPane}>
+                    {/* Right Card: Standalone Supplementary Note Card */}
+                    <div style={styles.rightPaneCard}>
                       <div style={styles.subNoteHeader}>
                         <span style={styles.subNoteTitle}>
                           <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                          보충 메모 / 참고 사항
+                          독립 보충 노트 / 참고 사항
                         </span>
                       </div>
                       <div style={styles.subNoteBody}>
@@ -819,7 +815,7 @@ export default function NotebookExplorer() {
                           renderWithLinks(activeItem.subBody)
                         ) : (
                           <span style={styles.subNoteEmptyText}>
-                            등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 부연 설명이나 추가 참고 자료를 입력해보세요.
+                            등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 독립된 보충 노트나 추가 참고 정보를 작성해보세요.
                           </span>
                         )}
                       </div>
@@ -1193,30 +1189,36 @@ const styles = {
   splitReadContainer: {
     display: 'flex',
     gap: '24px',
-    maxWidth: '1200px',
+    maxWidth: '1280px',
     margin: '0 auto',
     width: '100%',
-    minHeight: '100%'
+    minHeight: '100%',
+    alignItems: 'stretch'
   },
-  leftPane: {
-    flex: 1,
-    minWidth: 0
-  },
-  rightPane: {
+  leftPaneCard: {
     flex: 1,
     minWidth: 0,
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
-    borderRadius: '10px',
-    padding: '20px',
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+    borderRadius: '12px',
+    padding: '24px 28px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+  },
+  rightPaneCard: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #CBD5E1',
+    borderRadius: '12px',
+    padding: '22px 24px',
+    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
     display: 'flex',
     flexDirection: 'column'
   },
   subNoteHeader: {
     paddingBottom: '12px',
     marginBottom: '14px',
-    borderBottom: '1px solid #F1F5F9',
+    borderBottom: '1px solid #E2E8F0',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between'
@@ -1258,7 +1260,7 @@ const styles = {
   },
 
   splitEditContainer: {
-    maxWidth: '1200px',
+    maxWidth: '1280px',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
@@ -1270,18 +1272,35 @@ const styles = {
     display: 'flex',
     gap: '20px',
     flex: 1,
-    minHeight: '400px'
+    minHeight: '420px'
   },
-  editPaneHalf: {
+  editPaneMainCard: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
-    minWidth: 0
+    gap: '8px',
+    minWidth: 0,
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '12px',
+    padding: '16px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+  },
+  editPaneSubCard: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    minWidth: 0,
+    backgroundColor: '#F8FAFC',
+    border: '1px solid #CBD5E1',
+    borderRadius: '12px',
+    padding: '16px',
+    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)'
   },
   fieldLabel: {
     fontSize: '13px',
-    fontWeight: 600,
+    fontWeight: 700,
     color: '#475569'
   },
 
