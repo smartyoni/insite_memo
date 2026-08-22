@@ -708,6 +708,22 @@ export default function NotebookExplorer() {
 
                   {isEditMode ? (
                     <>
+                      {/* Header Category Selector */}
+                      <div style={styles.headerCategorySelector}>
+                        <span style={styles.headerCategoryLabel}>이동:</span>
+                        <select
+                          value={draftCategoryId}
+                          onChange={(e) => setDraftCategoryId(e.target.value)}
+                          style={styles.headerCategorySelect}
+                        >
+                          {allCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <button
                         onClick={handleCancelDetailEdit}
                         style={styles.btnSecondary}
@@ -739,22 +755,6 @@ export default function NotebookExplorer() {
               <div style={styles.pane3Body}>
                 {isEditMode ? (
                   <div style={styles.splitEditContainer}>
-                    {/* Category Selector in Edit Mode */}
-                    <div style={styles.categorySelectorRow}>
-                      <span style={styles.categorySelectorLabel}>카테고리 이동:</span>
-                      <select
-                        value={draftCategoryId}
-                        onChange={(e) => setDraftCategoryId(e.target.value)}
-                        style={styles.categorySelectInput}
-                      >
-                        {allCategories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
                     <input
                       type="text"
                       value={draftTitle}
@@ -1304,26 +1304,26 @@ const styles = {
     color: '#475569'
   },
 
-  categorySelectorRow: {
+  headerCategorySelector: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#FFFFFF',
-    padding: '8px 12px',
+    gap: '6px',
+    backgroundColor: '#F1F5F9',
+    padding: '4px 8px',
     borderRadius: '6px',
-    border: '1px solid #DCE0E6'
+    border: '1px solid #CBD5E1'
   },
-  categorySelectorLabel: {
-    fontSize: '13px',
+  headerCategoryLabel: {
+    fontSize: '12px',
     fontWeight: 600,
     color: '#475569'
   },
-  categorySelectInput: {
-    backgroundColor: '#F8FAFC',
-    border: '1px solid #CBD5E1',
+  headerCategorySelect: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #94A3B8',
     borderRadius: '4px',
-    padding: '4px 10px',
-    fontSize: '13px',
+    padding: '3px 8px',
+    fontSize: '12px',
     fontWeight: 600,
     color: '#1E293B',
     outline: 'none',
