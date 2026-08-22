@@ -316,11 +316,12 @@ export default function NotebookExplorer() {
                 }}
                 style={{
                   ...styles.catRow,
-                  backgroundColor: isSelected ? '#2C3038' : 'transparent',
-                  color: isSelected ? '#FFFFFF' : '#A0A6B2'
+                  backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
+                  color: isSelected ? '#1E3A5F' : '#4A607A',
+                  fontWeight: isSelected ? 600 : 400
                 }}
               >
-                <Folder size={16} color={isSelected ? '#6FA88F' : '#6C727E'} style={{ flexShrink: 0 }} />
+                <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
 
                 {isEditing ? (
                   <input
@@ -616,15 +617,15 @@ const styles = {
     userSelect: 'none'
   },
 
-  // Pane 1: Category (Dark, 210px)
+  // Pane 1: Category (Pastel Blue, 210px)
   pane1: {
     width: '210px',
     minWidth: '210px',
     height: '100%',
-    backgroundColor: '#1C1E22',
+    backgroundColor: '#EBF3FA',
     display: 'flex',
     flexDirection: 'column',
-    borderRight: '1px solid #2B2F36'
+    borderRight: '1px solid #D4E3F3'
   },
   pane1Header: {
     height: '52px',
@@ -632,10 +633,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottom: '1px solid #2B2F36'
+    borderBottom: '1px solid #D4E3F3',
+    backgroundColor: '#E2ECF7'
   },
   pane1Title: {
-    color: '#E1E4E8',
+    color: '#2B5278',
     fontSize: '13px',
     fontWeight: 700,
     letterSpacing: '0.5px',
@@ -644,7 +646,7 @@ const styles = {
   iconBtnDark: {
     background: 'none',
     border: 'none',
-    color: '#9096A2',
+    color: '#4A729A',
     cursor: 'pointer',
     padding: '4px',
     borderRadius: '4px',
@@ -666,21 +668,21 @@ const styles = {
   },
   inputDark: {
     width: '100%',
-    backgroundColor: '#262A30',
-    border: '1px solid #3F7A63',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #3B82F6',
     borderRadius: '4px',
     padding: '6px 10px',
-    color: '#FFFFFF',
+    color: '#1E293B',
     fontSize: '13px',
     outline: 'none'
   },
   inputDarkInline: {
     flex: 1,
-    backgroundColor: '#262A30',
-    border: '1px solid #3F7A63',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #3B82F6',
     borderRadius: '3px',
     padding: '2px 6px',
-    color: '#FFFFFF',
+    color: '#1E293B',
     fontSize: '13px',
     outline: 'none'
   },
@@ -711,13 +713,13 @@ const styles = {
   actionBtnDark: {
     background: 'none',
     border: 'none',
-    color: '#7E8592',
+    color: '#7C95B1',
     cursor: 'pointer',
     padding: '2px',
     borderRadius: '3px'
   },
   actionBtnConfirm: {
-    background: 'rgba(111, 168, 143, 0.2)',
+    background: 'rgba(37, 99, 235, 0.15)',
     border: 'none',
     cursor: 'pointer',
     padding: '3px',
