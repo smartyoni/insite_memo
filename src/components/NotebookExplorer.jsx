@@ -617,10 +617,10 @@ const styles = {
     userSelect: 'none'
   },
 
-  // Pane 1: Category (Pastel Blue, 210px)
+  // Pane 1: Category (Pastel Blue, 280px)
   pane1: {
-    width: '210px',
-    minWidth: '210px',
+    width: '280px',
+    minWidth: '280px',
     height: '100%',
     backgroundColor: '#EBF3FA',
     display: 'flex',
