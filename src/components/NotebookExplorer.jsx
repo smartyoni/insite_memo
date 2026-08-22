@@ -22,7 +22,8 @@ import {
   FileText,
   ChevronRight,
   Save,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -32,6 +33,14 @@ export default function NotebookExplorer() {
   const [items, setItems] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
+
+  // Mobile responsiveness & navigation state
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [mobileView, setMobileView] = useState('categories'); // 'categories' | 'items' | 'detail'
+  const [showExitToast, setShowExitToast] = useState(false);
+
+  const lastBackPressRef = useRef(0);
+  const exitToastTimerRef = useRef(null);
 
   // Category inline editing states
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -52,6 +61,80 @@ export default function NotebookExplorer() {
   const [showSavedToast, setShowSavedToast] = useState(false);
 
   const toastTimerRef = useRef(null);
+
+  // Resize listener for mobile responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Hardware/Browser Back button handling (popstate)
+  useEffect(() => {
+    // Initial history state setup
+    window.history.replaceState({ view: 'categories' }, '');
+
+    const handlePopState = (e) => {
+      const stateView = e.state?.view;
+
+      if (stateView === 'detail') {
+        setMobileView('detail');
+      } else if (stateView === 'items') {
+        setMobileView('items');
+      } else {
+        // We are at root 'categories' level
+        setMobileView('categories');
+
+        const now = Date.now();
+        if (now - lastBackPressRef.current < 2000) {
+          // Double back press within 2 seconds -> Exit app / close
+          try {
+            window.close();
+          } catch (err) {
+            console.log('App exited');
+          }
+        } else {
+          lastBackPressRef.current = now;
+          // Push state to prevent immediate browser exit on first back press
+          window.history.pushState({ view: 'categories' }, '');
+
+          // Show "한번 더 누르면 앱이 종료됩니다." toast
+          setShowExitToast(true);
+          if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
+          exitToastTimerRef.current = setTimeout(() => {
+            setShowExitToast(false);
+          }, 2000);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Navigation Helpers
+  const navigateToItems = (catId) => {
+    setSelectedCategoryId(catId);
+    if (isMobile) {
+      setMobileView('items');
+      window.history.pushState({ view: 'items' }, '');
+    }
+  };
+
+  const navigateToDetail = (itemId) => {
+    setSelectedItemId(itemId);
+    if (isMobile) {
+      setMobileView('detail');
+      window.history.pushState({ view: 'detail' }, '');
+    }
+  };
+
+  const navigateBack = () => {
+    window.history.back();
+  };
 
   // 1. Subscribe to Categories (Top-level collection)
   useEffect(() => {
@@ -143,7 +226,7 @@ export default function NotebookExplorer() {
         order: categories.length,
         createdAt: serverTimestamp()
       });
-      setSelectedCategoryId(newRef.id);
+      navigateToItems(newRef.id);
       setNewCategoryName('');
       setIsAddingCategory(false);
     } catch (err) {
@@ -200,8 +283,7 @@ export default function NotebookExplorer() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      setSelectedItemId(newRef.id);
-      // Immediately open edit mode for new item
+      navigateToDetail(newRef.id);
       setDraftTitle('새 메모');
       setDraftBody('');
       setIsEditMode(true);
@@ -271,337 +353,391 @@ export default function NotebookExplorer() {
   // ---------------- Render ----------------
   return (
     <div style={styles.appContainer}>
-      {/* Pane 1: Category Sidebar (Dark, 210px) */}
-      <div style={styles.pane1}>
-        <div style={styles.pane1Header}>
-          <span style={styles.pane1Title}>카테고리</span>
-          <button
-            onClick={() => setIsAddingCategory(true)}
-            style={styles.iconBtnDark}
-            title="카테고리 추가"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
+      {/* Pane 1: Category Sidebar (Pastel Blue, 280px or 100% on Mobile) */}
+      {(!isMobile || mobileView === 'categories') && (
+        <div style={{
+          ...styles.pane1,
+          width: isMobile ? '100%' : '280px',
+          minWidth: isMobile ? '100%' : '280px'
+        }}>
+          <div style={styles.pane1Header}>
+            <span style={styles.pane1Title}>카테고리</span>
+            <button
+              onClick={() => setIsAddingCategory(true)}
+              style={styles.iconBtnDark}
+              title="카테고리 추가"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
 
-        <div style={styles.paneContent}>
-          {isAddingCategory && (
-            <div style={styles.inlineInputRowDark}>
-              <input
-                autoFocus
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddCategory();
-                  if (e.key === 'Escape') setIsAddingCategory(false);
-                }}
-                onBlur={handleAddCategory}
-                placeholder="카테고리명..."
-                style={styles.inputDark}
-              />
-            </div>
-          )}
-
-          {categories.map((cat) => {
-            const isSelected = cat.id === selectedCategoryId;
-            const isEditing = cat.id === editingCategoryId;
-            const isDeleting = cat.id === deletingCategoryId;
-
-            return (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  if (!isEditing && !isDeleting) setSelectedCategoryId(cat.id);
-                }}
-                style={{
-                  ...styles.catRow,
-                  backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
-                  color: isSelected ? '#1E3A5F' : '#4A607A',
-                  fontWeight: isSelected ? 600 : 400
-                }}
-              >
-                <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
-
-                {isEditing ? (
-                  <input
-                    autoFocus
-                    type="text"
-                    value={editingCategoryName}
-                    onChange={(e) => setEditingCategoryName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleUpdateCategoryName(cat.id);
-                      if (e.key === 'Escape') setEditingCategoryId(null);
-                    }}
-                    onBlur={() => handleUpdateCategoryName(cat.id)}
-                    style={styles.inputDarkInline}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <span style={styles.rowLabel}>{cat.name}</span>
-                )}
-
-                {/* Hover / Confirm Actions */}
-                <div style={styles.actionGroup}>
-                  {isDeleting ? (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
-                        style={styles.actionBtnConfirm}
-                        title="확인 삭제"
-                      >
-                        <Check size={14} color="#6FA88F" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDeletingCategoryId(null); }}
-                        style={styles.actionBtnCancel}
-                        title="취소"
-                      >
-                        <X size={14} color="#E57373" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingCategoryId(cat.id);
-                          setEditingCategoryName(cat.name);
-                        }}
-                        style={styles.actionBtnDark}
-                        title="이름 변경"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingCategoryId(cat.id);
-                        }}
-                        style={styles.actionBtnDark}
-                        title="삭제"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </>
-                  )}
-                </div>
+          <div style={styles.paneContent}>
+            {isAddingCategory && (
+              <div style={styles.inlineInputRowDark}>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddCategory();
+                    if (e.key === 'Escape') setIsAddingCategory(false);
+                  }}
+                  onBlur={handleAddCategory}
+                  placeholder="카테고리명..."
+                  style={styles.inputDark}
+                />
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
 
-      {/* Pane 2: Note Item List (Light, 280px) */}
-      <div style={styles.pane2}>
-        <div style={styles.pane2Header}>
-          <span style={styles.pane2Title}>
-            {activeCategory ? activeCategory.name : '목록'}
-          </span>
-          <button
-            onClick={handleAddItem}
-            disabled={!selectedCategoryId}
-            style={{
-              ...styles.iconBtnLight,
-              opacity: selectedCategoryId ? 1 : 0.4,
-              cursor: selectedCategoryId ? 'pointer' : 'not-allowed'
-            }}
-            title="메모 추가"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
-
-        <div style={styles.paneContent}>
-          {filteredItems.length === 0 ? (
-            <div style={styles.emptyStateText}>
-              {selectedCategoryId ? '등록된 메모가 없습니다.' : '카테고리를 선택하세요.'}
-            </div>
-          ) : (
-            filteredItems.map((item) => {
-              const isSelected = item.id === selectedItemId;
-              const isEditing = item.id === editingItemId;
-              const isDeleting = item.id === deletingItemId;
-              const previewText = item.body ? item.body.slice(0, 40) : '(내용 없음)';
+            {categories.map((cat) => {
+              const isSelected = cat.id === selectedCategoryId;
+              const isEditing = cat.id === editingCategoryId;
+              const isDeleting = cat.id === deletingCategoryId;
 
               return (
                 <div
-                  key={item.id}
+                  key={cat.id}
                   onClick={() => {
-                    if (!isEditing && !isDeleting) setSelectedItemId(item.id);
+                    if (!isEditing && !isDeleting) navigateToItems(cat.id);
                   }}
                   style={{
-                    ...styles.itemCard,
-                    backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
-                    borderColor: isSelected ? '#3F7A63' : '#ECEBE7'
+                    ...styles.catRow,
+                    backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
+                    color: isSelected ? '#1E3A5F' : '#4A607A',
+                    fontWeight: isSelected ? 600 : 400
                   }}
                 >
-                  <div style={styles.itemCardHeader}>
-                    {isEditing ? (
-                      <input
-                        autoFocus
-                        type="text"
-                        value={editingItemTitle}
-                        onChange={(e) => setEditingItemTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleUpdateItemTitle(item.id);
-                          if (e.key === 'Escape') setEditingItemId(null);
-                        }}
-                        onBlur={() => handleUpdateItemTitle(item.id)}
-                        style={styles.inputLightInline}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                  <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editingCategoryName}
+                      onChange={(e) => setEditingCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleUpdateCategoryName(cat.id);
+                        if (e.key === 'Escape') setEditingCategoryId(null);
+                      }}
+                      onBlur={() => handleUpdateCategoryName(cat.id)}
+                      style={styles.inputDarkInline}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span style={styles.rowLabel}>{cat.name}</span>
+                  )}
+
+                  {/* Hover / Confirm Actions */}
+                  <div style={styles.actionGroup}>
+                    {isDeleting ? (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                          style={styles.actionBtnConfirm}
+                          title="확인 삭제"
+                        >
+                          <Check size={14} color="#2563EB" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeletingCategoryId(null); }}
+                          style={styles.actionBtnCancel}
+                          title="취소"
+                        >
+                          <X size={14} color="#E57373" />
+                        </button>
+                      </>
                     ) : (
-                      <span style={{
-                        ...styles.itemTitle,
-                        color: isSelected ? '#22262A' : '#3C3F42'
-                      }}>
-                        {item.title || '제목 없음'}
-                      </span>
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCategoryId(cat.id);
+                            setEditingCategoryName(cat.name);
+                          }}
+                          style={styles.actionBtnDark}
+                          title="이름 변경"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingCategoryId(cat.id);
+                          }}
+                          style={styles.actionBtnDark}
+                          title="삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
                     )}
-
-                    {/* Hover Actions */}
-                    <div style={styles.actionGroupLight}>
-                      {isDeleting ? (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
-                            style={styles.actionBtnConfirm}
-                            title="확인 삭제"
-                          >
-                            <Check size={14} color="#3F7A63" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeletingItemId(null); }}
-                            style={styles.actionBtnCancel}
-                            title="취소"
-                          >
-                            <X size={14} color="#E57373" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingItemId(item.id);
-                              setEditingItemTitle(item.title || '');
-                            }}
-                            style={styles.actionBtnLight}
-                            title="제목 변경"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingItemId(item.id);
-                            }}
-                            style={styles.actionBtnLight}
-                            title="삭제"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={styles.itemPreview}>
-                    {previewText}
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Pane 3: Detail Workspace (Flex 1) */}
-      <div style={styles.pane3}>
-        {activeItem ? (
-          <>
-            {/* Header / Breadcrumb & Action Toolbar */}
-            <div style={styles.pane3Header}>
-              <div style={styles.breadcrumb}>
-                <span>{activeCategory?.name || '카테고리'}</span>
-                <ChevronRight size={14} color="#A0A6B2" style={{ margin: '0 4px' }} />
-                <span style={{ color: '#22262A', fontWeight: 600 }}>{activeItem.title}</span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {showSavedToast && (
-                  <span style={styles.toastBadge}>
-                    ✓ 저장됨
-                  </span>
-                )}
-
-                {isEditMode ? (
-                  <>
-                    <button
-                      onClick={handleCancelDetailEdit}
-                      style={styles.btnSecondary}
-                    >
-                      <RotateCcw size={14} />
-                      취소
-                    </button>
-                    <button
-                      onClick={handleSaveDetail}
-                      style={styles.btnPrimary}
-                    >
-                      <Save size={14} />
-                      저장
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setIsEditMode(true)}
-                    style={styles.btnPrimary}
-                  >
-                    <Edit2 size={14} />
-                    수정
-                  </button>
-                )}
-              </div>
+      {/* Pane 2: Note Item List (Light, 280px or 100% on Mobile) */}
+      {(!isMobile || mobileView === 'items') && (
+        <div style={{
+          ...styles.pane2,
+          width: isMobile ? '100%' : '280px',
+          minWidth: isMobile ? '100%' : '280px'
+        }}>
+          <div style={styles.pane2Header}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isMobile && (
+                <button
+                  onClick={navigateBack}
+                  style={styles.mobileBackBtn}
+                  title="카테고리로 이동"
+                >
+                  <ArrowLeft size={18} />
+                  <span>카테고리</span>
+                </button>
+              )}
+              <span style={styles.pane2Title}>
+                {activeCategory ? activeCategory.name : '목록'}
+              </span>
             </div>
+            <button
+              onClick={handleAddItem}
+              disabled={!selectedCategoryId}
+              style={{
+                ...styles.iconBtnLight,
+                opacity: selectedCategoryId ? 1 : 0.4,
+                cursor: selectedCategoryId ? 'pointer' : 'not-allowed'
+              }}
+              title="메모 추가"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
 
-            {/* Content Body */}
-            <div style={styles.pane3Body}>
-              {isEditMode ? (
-                <div style={styles.editForm}>
-                  <input
-                    type="text"
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    placeholder="제목을 입력하세요"
-                    style={styles.editTitleInput}
-                  />
-                  <textarea
-                    value={draftBody}
-                    onChange={(e) => setDraftBody(e.target.value)}
-                    placeholder="메모 내용을 입력하세요... (URL과 전화번호는 자동 링크로 변환됩니다)"
-                    style={styles.editBodyTextarea}
-                  />
-                </div>
-              ) : (
-                <div style={styles.readView}>
-                  <h1 style={styles.readTitle}>{activeItem.title}</h1>
-                  <div style={styles.readBody}>
-                    {renderWithLinks(activeItem.body)}
+          <div style={styles.paneContent}>
+            {filteredItems.length === 0 ? (
+              <div style={styles.emptyStateText}>
+                {selectedCategoryId ? '등록된 메모가 없습니다.' : '카테고리를 선택하세요.'}
+              </div>
+            ) : (
+              filteredItems.map((item) => {
+                const isSelected = item.id === selectedItemId;
+                const isEditing = item.id === editingItemId;
+                const isDeleting = item.id === deletingItemId;
+                const previewText = item.body ? item.body.slice(0, 40) : '(내용 없음)';
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (!isEditing && !isDeleting) navigateToDetail(item.id);
+                    }}
+                    style={{
+                      ...styles.itemCard,
+                      backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
+                      borderColor: isSelected ? '#3F7A63' : '#ECEBE7'
+                    }}
+                  >
+                    <div style={styles.itemCardHeader}>
+                      {isEditing ? (
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingItemTitle}
+                          onChange={(e) => setEditingItemTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateItemTitle(item.id);
+                            if (e.key === 'Escape') setEditingItemId(null);
+                          }}
+                          onBlur={() => handleUpdateItemTitle(item.id)}
+                          style={styles.inputLightInline}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span style={{
+                          ...styles.itemTitle,
+                          color: isSelected ? '#22262A' : '#3C3F42'
+                        }}>
+                          {item.title || '제목 없음'}
+                        </span>
+                      )}
+
+                      {/* Hover Actions */}
+                      <div style={styles.actionGroupLight}>
+                        {isDeleting ? (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
+                              style={styles.actionBtnConfirm}
+                              title="확인 삭제"
+                            >
+                              <Check size={14} color="#3F7A63" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeletingItemId(null); }}
+                              style={styles.actionBtnCancel}
+                              title="취소"
+                            >
+                              <X size={14} color="#E57373" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingItemId(item.id);
+                                setEditingItemTitle(item.title || '');
+                              }}
+                              style={styles.actionBtnLight}
+                              title="제목 변경"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingItemId(item.id);
+                              }}
+                              style={styles.actionBtnLight}
+                              title="삭제"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={styles.itemPreview}>
+                      {previewText}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pane 3: Detail Workspace (Flex 1 or 100% on Mobile) */}
+      {(!isMobile || mobileView === 'detail') && (
+        <div style={styles.pane3}>
+          {activeItem ? (
+            <>
+              {/* Header / Breadcrumb & Action Toolbar */}
+              <div style={styles.pane3Header}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isMobile && (
+                    <button
+                      onClick={navigateBack}
+                      style={styles.mobileBackBtn}
+                      title="목록으로 이동"
+                    >
+                      <ArrowLeft size={18} />
+                      <span>목록</span>
+                    </button>
+                  )}
+                  <div style={styles.breadcrumb}>
+                    <span>{activeCategory?.name || '카테고리'}</span>
+                    <ChevronRight size={14} color="#A0A6B2" style={{ margin: '0 4px' }} />
+                    <span style={{ color: '#22262A', fontWeight: 600 }}>{activeItem.title}</span>
                   </div>
                 </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {showSavedToast && (
+                    <span style={styles.toastBadge}>
+                      ✓ 저장됨
+                    </span>
+                  )}
+
+                  {isEditMode ? (
+                    <>
+                      <button
+                        onClick={handleCancelDetailEdit}
+                        style={styles.btnSecondary}
+                      >
+                        <RotateCcw size={14} />
+                        취소
+                      </button>
+                      <button
+                        onClick={handleSaveDetail}
+                        style={styles.btnPrimary}
+                      >
+                        <Save size={14} />
+                        저장
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditMode(true)}
+                      style={styles.btnPrimary}
+                    >
+                      <Edit2 size={14} />
+                      수정
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Content Body */}
+              <div style={styles.pane3Body}>
+                {isEditMode ? (
+                  <div style={styles.editForm}>
+                    <input
+                      type="text"
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      placeholder="제목을 입력하세요"
+                      style={styles.editTitleInput}
+                    />
+                    <textarea
+                      value={draftBody}
+                      onChange={(e) => setDraftBody(e.target.value)}
+                      placeholder="메모 내용을 입력하세요... (URL과 전화번호는 자동 링크로 변환됩니다)"
+                      style={styles.editBodyTextarea}
+                    />
+                  </div>
+                ) : (
+                  <div style={styles.readView}>
+                    <h1 style={styles.readTitle}>{activeItem.title}</h1>
+                    <div style={styles.readBody}>
+                      {renderWithLinks(activeItem.body)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={styles.pane3Empty}>
+              {isMobile && (
+                <button
+                  onClick={navigateBack}
+                  style={{ ...styles.mobileBackBtn, marginBottom: '20px' }}
+                >
+                  <ArrowLeft size={18} />
+                  <span>목록으로 돌아가기</span>
+                </button>
               )}
+              <FileText size={48} color="#D0D4DC" style={{ marginBottom: '12px' }} />
+              <p style={{ color: '#8A909A', fontSize: '15px' }}>
+                목록에서 메모를 선택하거나 새 메모를 작성하세요.
+              </p>
             </div>
-          </>
-        ) : (
-          <div style={styles.pane3Empty}>
-            <FileText size={48} color="#D0D4DC" style={{ marginBottom: '12px' }} />
-            <p style={{ color: '#8A909A', fontSize: '15px' }}>
-              왼쪽 목록에서 메모를 선택하거나 새 메모를 작성하세요.
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Exit Toast Notification for Mobile double back press */}
+      {showExitToast && (
+        <div style={styles.exitToast}>
+          한번 더 누르면 앱이 종료됩니다.
+        </div>
+      )}
     </div>
   );
 }
@@ -614,13 +750,12 @@ const styles = {
     height: '100vh',
     backgroundColor: '#FAFAF8',
     overflow: 'hidden',
-    userSelect: 'none'
+    userSelect: 'none',
+    position: 'relative'
   },
 
   // Pane 1: Category (Pastel Blue, 280px)
   pane1: {
-    width: '280px',
-    minWidth: '280px',
     height: '100%',
     backgroundColor: '#EBF3FA',
     display: 'flex',
@@ -638,10 +773,9 @@ const styles = {
   },
   pane1Title: {
     color: '#2B5278',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: 700,
-    letterSpacing: '0.5px',
-    textTransform: 'uppercase'
+    letterSpacing: '0.5px'
   },
   iconBtnDark: {
     background: 'none',
@@ -691,11 +825,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    padding: '8px 10px',
+    padding: '10px 12px',
     borderRadius: '6px',
     cursor: 'pointer',
-    marginBottom: '2px',
-    fontSize: '13px',
+    marginBottom: '3px',
+    fontSize: '14px',
     position: 'relative'
   },
   rowLabel: {
@@ -739,8 +873,6 @@ const styles = {
 
   // Pane 2: Notes List (Light, 280px)
   pane2: {
-    width: '280px',
-    minWidth: '280px',
     height: '100%',
     backgroundColor: '#FFFFFF',
     display: 'flex',
@@ -774,6 +906,20 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
+  },
+
+  mobileBackBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#2563EB',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '13px',
+    fontWeight: 600,
+    padding: '4px 6px',
+    borderRadius: '4px'
   },
 
   emptyStateText: {
@@ -849,7 +995,7 @@ const styles = {
   },
   pane3Header: {
     height: '52px',
-    padding: '0 24px',
+    padding: '0 20px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -902,7 +1048,7 @@ const styles = {
   pane3Body: {
     flex: 1,
     overflowY: 'auto',
-    padding: '32px 40px'
+    padding: '24px 20px'
   },
   pane3Empty: {
     height: '100%',
@@ -918,10 +1064,10 @@ const styles = {
     margin: '0 auto'
   },
   readTitle: {
-    fontSize: '26px',
+    fontSize: '22px',
     fontWeight: 700,
     color: '#22262A',
-    marginBottom: '24px',
+    marginBottom: '20px',
     lineHeight: 1.3
   },
   readBody: {
@@ -942,9 +1088,9 @@ const styles = {
   },
   editTitleInput: {
     width: '100%',
-    fontSize: '22px',
+    fontSize: '20px',
     fontWeight: 700,
-    padding: '12px 16px',
+    padding: '10px 14px',
     border: '1px solid #DCE0E6',
     borderRadius: '8px',
     outline: 'none',
@@ -953,11 +1099,11 @@ const styles = {
   },
   editBodyTextarea: {
     width: '100%',
-    minHeight: '450px',
+    minHeight: '400px',
     flex: 1,
     fontSize: '15px',
     lineHeight: 1.7,
-    padding: '16px',
+    padding: '14px',
     border: '1px solid #DCE0E6',
     borderRadius: '8px',
     outline: 'none',
@@ -965,5 +1111,21 @@ const styles = {
     backgroundColor: '#FFFFFF',
     resize: 'vertical',
     fontFamily: 'inherit'
+  },
+
+  exitToast: {
+    position: 'fixed',
+    bottom: '40px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(30, 41, 59, 0.92)',
+    color: '#FFFFFF',
+    padding: '10px 20px',
+    borderRadius: '20px',
+    fontSize: '13px',
+    fontWeight: 500,
+    boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+    zIndex: 9999,
+    pointerEvents: 'none'
   }
 };
