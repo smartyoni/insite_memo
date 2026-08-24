@@ -807,7 +807,7 @@ export default function NotebookExplorer() {
                       borderColor: mobileSubTab === 'sub' ? '#2563EB' : '#CBD5E1'
                     }}
                   >
-                    📌 보충노트 {activeItem.subBody ? '•' : ''}
+                    ☑️ 체크리스트 {activeItem.subBody ? '•' : ''}
                   </button>
                 </div>
               )}
@@ -832,7 +832,7 @@ export default function NotebookExplorer() {
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
                         <div style={styles.editPaneMainCard}>
-                          <label style={styles.fieldLabel}>📄 메인 메모 본문</label>
+                          <label style={styles.fieldLabel}>📄 상세내용 편집화면</label>
                           <textarea
                             value={draftBody}
                             onChange={(e) => setDraftBody(e.target.value)}
@@ -844,11 +844,11 @@ export default function NotebookExplorer() {
 
                       {(!isMobile || mobileSubTab === 'sub') && (
                         <div style={styles.editPaneSubCard}>
-                          <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>📌 독립 보충 노트 (참고 / 보충 공간)</label>
+                          <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>☑️ 체크리스트</label>
                           <textarea
                             value={draftSubBody}
                             onChange={(e) => setDraftSubBody(e.target.value)}
-                            placeholder="해당 메모와 연관된 추가 참고 링크, 계약 조건, 보충 설명을 자유롭게 작성하세요..."
+                            placeholder="체크리스트 항목, 추가 참고 링크, 보충 설명을 작성하세요..."
                             style={styles.editSubBodyTextarea}
                           />
                         </div>
@@ -867,13 +867,13 @@ export default function NotebookExplorer() {
                       </div>
                     )}
 
-                    {/* Right Card: Standalone Supplementary Note Card */}
+                    {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
                       <div style={styles.rightPaneCard}>
                         <div style={styles.subNoteHeader}>
                           <span style={styles.subNoteTitle}>
                             <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                            독립 보충 노트 / 참고 사항
+                            체크리스트
                           </span>
                         </div>
                         <div style={styles.subNoteBody}>
@@ -881,7 +881,7 @@ export default function NotebookExplorer() {
                             renderWithLinks(activeItem.subBody)
                           ) : (
                             <span style={styles.subNoteEmptyText}>
-                              등록된 보충 메모가 없습니다. 상단의 [수정] 버튼을 눌러 독립된 보충 노트나 추가 참고 정보를 작성해보세요.
+                              등록된 체크리스트가 없습니다. 상단의 [수정] 버튼을 눌러 체크리스트 항목이나 보충 정보를 작성해보세요.
                             </span>
                           )}
                         </div>
