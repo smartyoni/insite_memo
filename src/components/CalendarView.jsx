@@ -219,12 +219,64 @@ export default function CalendarView({
     });
   }
 
-  // Group items by dateKey
-  const itemsByDate = {};
+  // Handle toggle checklist item completion directly from Calendar
+  const handleToggleChecklistInCalendar = async (itemId, checkId) => {
+    const targetItem = items.find((i) => i.id === itemId);
+    if (!targetItem || !targetItem.checklists) return;
+    const updated = targetItem.checklists.map((c) =>
+      c.id === checkId ? { ...c, completed: !c.completed } : c
+    );
+    try {
+      await updateDoc(doc(db, 'items', itemId), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error toggling checklist in calendar:', err);
+    }
+  };
+
+  // Group scheduled events (notes with explicit date AND checklist items with dueDate) by dateKey
+  const eventsByDate = {};
+
+  const addEventToDate = (dateKey, eventObj) => {
+    if (!dateKey) return;
+    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+    eventsByDate[dateKey].push(eventObj);
+  };
+
   items.forEach((item) => {
-    const key = getItemDateKey(item);
-    if (!itemsByDate[key]) itemsByDate[key] = [];
-    itemsByDate[key].push(item);
+    // 1. Explicit note date
+    if (item.date) {
+      addEventToDate(item.date, {
+        id: `note_${item.id}`,
+        type: 'note',
+        rawItem: item,
+        title: item.title || '제목 없음',
+        completed: false,
+        isAllDay: true,
+        time: ''
+      });
+    }
+
+    // 2. Scheduled checklist items (ONLY those with c.dueDate!)
+    if (item.checklists && Array.isArray(item.checklists)) {
+      item.checklists.forEach((c) => {
+        if (c.dueDate) {
+          addEventToDate(c.dueDate, {
+            id: `check_${item.id}_${c.id}`,
+            type: 'checklist',
+            rawItem: item,
+            checkId: c.id,
+            title: c.text,
+            completed: !!c.completed,
+            isAllDay: c.isAllDay !== false,
+            time: c.dueTime || '09:00',
+            parentNoteTitle: item.title
+          });
+        }
+      });
+    }
   });
 
   const todayKey = formatDateKey(new Date());
@@ -311,7 +363,7 @@ export default function CalendarView({
       <div style={styles.monthGrid}>
         {calendarCells.map((cell, idx) => {
           const isToday = cell.dateKey === todayKey;
-          const dayItems = itemsByDate[cell.dateKey] || [];
+          const dayEvents = eventsByDate[cell.dateKey] || [];
           const isSunday = idx % 7 === 0;
           const isSaturday = idx % 7 === 6;
 
@@ -358,42 +410,54 @@ export default function CalendarView({
 
               {/* Event Chips */}
               <div style={styles.chipsContainer}>
-                {dayItems.slice(0, 4).map((item) => {
-                  const color = getChipColor(item.id);
-                  const hasChecklist = item.checklists && item.checklists.length > 0;
-                  const doneChecklist = hasChecklist
-                    ? item.checklists.filter((c) => c.completed).length
-                    : 0;
+                {dayEvents.slice(0, 4).map((evt) => {
+                  const color = getChipColor(evt.rawItem.id);
+                  const isChecklist = evt.type === 'checklist';
 
                   return (
                     <div
-                      key={item.id}
-                      onClick={(e) => handleOpenEditModal(item, e)}
+                      key={evt.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isChecklist) {
+                          handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                        } else {
+                          handleOpenEditModal(evt.rawItem, e);
+                        }
+                      }}
                       style={{
                         ...styles.eventChip,
-                        backgroundColor: color.bg,
-                        borderColor: color.border,
-                        color: color.text
+                        backgroundColor: evt.completed
+                          ? '#F1F5F9'
+                          : evt.isAllDay
+                          ? color.bg
+                          : '#FFFFFF',
+                        borderColor: evt.completed
+                          ? '#CBD5E1'
+                          : color.border,
+                        color: evt.completed
+                          ? '#94A3B8'
+                          : color.text,
+                        borderLeftWidth: !evt.isAllDay && !evt.completed ? '3px' : '1px',
+                        borderLeftColor: !evt.isAllDay && !evt.completed ? color.border : undefined,
+                        textDecoration: evt.completed ? 'line-through' : 'none'
                       }}
-                      title={item.title}
+                      title={`${isChecklist ? `[${evt.parentNoteTitle || '메모'}] ` : ''}${evt.title}`}
                     >
                       <span style={styles.chipText}>
-                        {hasChecklist && '☑️ '}
-                        {item.title || '제목 없음'}
+                        {isChecklist && (evt.completed ? '☑️ ' : '☐ ')}
+                        {!evt.isAllDay && evt.time && (
+                          <strong style={{ marginRight: '3px', fontSize: '10px' }}>{evt.time}</strong>
+                        )}
+                        {evt.title}
                       </span>
-
-                      {hasChecklist && (
-                        <span style={styles.chipCheckCount}>
-                          ({doneChecklist}/{item.checklists.length})
-                        </span>
-                      )}
                     </div>
                   );
                 })}
 
-                {dayItems.length > 4 && (
+                {dayEvents.length > 4 && (
                   <div style={styles.moreChipsBadge}>
-                    +{dayItems.length - 4}개 더보기
+                    +{dayEvents.length - 4}개 더보기
                   </div>
                 )}
               </div>

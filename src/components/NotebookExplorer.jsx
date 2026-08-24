@@ -30,7 +30,8 @@ import {
   CheckSquare,
   Square,
   ListChecks,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Clock
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 import CalendarView from './CalendarView';
@@ -87,8 +88,15 @@ export default function NotebookExplorer() {
 
   // Checklist local states
   const [newChecklistText, setNewChecklistText] = useState('');
+  const [newCheckDueDate, setNewCheckDueDate] = useState('');
+  const [newCheckIsAllDay, setNewCheckIsAllDay] = useState(true);
+  const [newCheckDueTime, setNewCheckDueTime] = useState('09:00');
+
   const [editingCheckId, setEditingCheckId] = useState(null);
   const [editingCheckText, setEditingCheckText] = useState('');
+  const [editingCheckDueDate, setEditingCheckDueDate] = useState('');
+  const [editingCheckIsAllDay, setEditingCheckIsAllDay] = useState(true);
+  const [editingCheckDueTime, setEditingCheckDueTime] = useState('09:00');
 
   // Global Delete Confirmation Modal State
   const [deleteModalState, setDeleteModalState] = useState({
@@ -313,10 +321,16 @@ export default function NotebookExplorer() {
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
-      completed: false
+      completed: false,
+      dueDate: newCheckDueDate || null,
+      isAllDay: newCheckIsAllDay,
+      dueTime: newCheckIsAllDay ? null : (newCheckDueTime || '09:00')
     };
     const updated = [...currentChecklists, newItem];
     setNewChecklistText('');
+    setNewCheckDueDate('');
+    setNewCheckIsAllDay(true);
+    setNewCheckDueTime('09:00');
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -330,10 +344,21 @@ export default function NotebookExplorer() {
   const handleSaveEditChecklist = async (checkId) => {
     if (!activeItem || !editingCheckText.trim()) return;
     const updated = currentChecklists.map((c) =>
-      c.id === checkId ? { ...c, text: editingCheckText.trim() } : c
+      c.id === checkId
+        ? {
+            ...c,
+            text: editingCheckText.trim(),
+            dueDate: editingCheckDueDate || null,
+            isAllDay: editingCheckIsAllDay,
+            dueTime: editingCheckIsAllDay ? null : (editingCheckDueTime || '09:00')
+          }
+        : c
     );
     setEditingCheckId(null);
     setEditingCheckText('');
+    setEditingCheckDueDate('');
+    setEditingCheckIsAllDay(true);
+    setEditingCheckDueTime('09:00');
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -1027,34 +1052,88 @@ export default function NotebookExplorer() {
                             </div>
                           )}
 
-                          {/* Input Form for new multiline checklist item */}
-                          <div style={styles.checklistInputGroup}>
-                            <textarea
-                              rows={2}
-                              value={newChecklistText}
-                              onChange={(e) => setNewChecklistText(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  handleAddChecklist();
-                                }
-                              }}
-                              placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
-                              style={styles.checklistTextarea}
-                            />
-                            <button
-                              onClick={handleAddChecklist}
-                              style={{
-                                ...styles.checklistAddBtn,
-                                opacity: newChecklistText.trim() ? 1 : 0.6,
-                                cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
-                              }}
-                              disabled={!newChecklistText.trim()}
-                              title="체크리스트 추가"
-                            >
-                              <Plus size={15} />
-                              <span>추가</span>
-                            </button>
+                          {/* Input Form for new multiline checklist item with Schedule Options */}
+                          <div style={styles.checklistInputContainer}>
+                            <div style={styles.checklistInputGroup}>
+                              <textarea
+                                rows={2}
+                                value={newChecklistText}
+                                onChange={(e) => setNewChecklistText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleAddChecklist();
+                                  }
+                                }}
+                                placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                                style={styles.checklistTextarea}
+                              />
+                              <button
+                                onClick={handleAddChecklist}
+                                style={{
+                                  ...styles.checklistAddBtn,
+                                  opacity: newChecklistText.trim() ? 1 : 0.6,
+                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
+                                }}
+                                disabled={!newChecklistText.trim()}
+                                title="체크리스트 추가"
+                              >
+                                <Plus size={15} />
+                                <span>추가</span>
+                              </button>
+                            </div>
+
+                            {/* Schedule Option Toolbar */}
+                            <div style={styles.scheduleOptionBar}>
+                              <div style={styles.scheduleField}>
+                                <CalendarIcon size={13} color="#64748B" />
+                                <input
+                                  type="date"
+                                  value={newCheckDueDate}
+                                  onChange={(e) => setNewCheckDueDate(e.target.value)}
+                                  style={styles.scheduleDateInput}
+                                  title="일정 날짜 지정"
+                                />
+                              </div>
+
+                              {newCheckDueDate && (
+                                <>
+                                  <label style={styles.allDayCheckLabel}>
+                                    <input
+                                      type="checkbox"
+                                      checked={newCheckIsAllDay}
+                                      onChange={(e) => setNewCheckIsAllDay(e.target.checked)}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    <span>종일</span>
+                                  </label>
+
+                                  {!newCheckIsAllDay && (
+                                    <div style={styles.scheduleField}>
+                                      <Clock size={13} color="#64748B" />
+                                      <input
+                                        type="time"
+                                        value={newCheckDueTime}
+                                        onChange={(e) => setNewCheckDueTime(e.target.value)}
+                                        style={styles.scheduleTimeInput}
+                                        title="시간 지정"
+                                      />
+                                    </div>
+                                  )}
+
+                                  <button
+                                    onClick={() => {
+                                      setNewCheckDueDate('');
+                                      setNewCheckIsAllDay(true);
+                                    }}
+                                    style={styles.scheduleClearBtn}
+                                    title="일정 삭제"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {/* Checklist Items List */}
@@ -1100,6 +1179,51 @@ export default function NotebookExplorer() {
                                             style={styles.checklistEditTextarea}
                                             autoFocus
                                           />
+                                          {/* Schedule Picker for Inline Edit */}
+                                          <div style={styles.scheduleOptionBar}>
+                                            <div style={styles.scheduleField}>
+                                              <CalendarIcon size={13} color="#64748B" />
+                                              <input
+                                                type="date"
+                                                value={editingCheckDueDate}
+                                                onChange={(e) => setEditingCheckDueDate(e.target.value)}
+                                                style={styles.scheduleDateInput}
+                                              />
+                                            </div>
+                                            {editingCheckDueDate && (
+                                              <>
+                                                <label style={styles.allDayCheckLabel}>
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={editingCheckIsAllDay}
+                                                    onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
+                                                  />
+                                                  <span>종일</span>
+                                                </label>
+                                                {!editingCheckIsAllDay && (
+                                                  <div style={styles.scheduleField}>
+                                                    <Clock size={13} color="#64748B" />
+                                                    <input
+                                                      type="time"
+                                                      value={editingCheckDueTime}
+                                                      onChange={(e) => setEditingCheckDueTime(e.target.value)}
+                                                      style={styles.scheduleTimeInput}
+                                                    />
+                                                  </div>
+                                                )}
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingCheckDueDate('');
+                                                    setEditingCheckIsAllDay(true);
+                                                  }}
+                                                  style={styles.scheduleClearBtn}
+                                                >
+                                                  <X size={12} />
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
+
                                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                             <button
                                               onClick={() => handleSaveEditChecklist(checkItem.id)}
@@ -1116,16 +1240,29 @@ export default function NotebookExplorer() {
                                           </div>
                                         </div>
                                       ) : (
-                                        <span
-                                          style={{
-                                            ...styles.checkitemText,
-                                            textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                            color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                            fontWeight: checkItem.completed ? 400 : 500
-                                          }}
-                                        >
-                                          {renderWithLinks(checkItem.text)}
-                                        </span>
+                                        <div>
+                                          <span
+                                            style={{
+                                              ...styles.checkitemText,
+                                              textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                              color: checkItem.completed ? '#94A3B8' : '#1E293B',
+                                              fontWeight: checkItem.completed ? 400 : 500
+                                            }}
+                                          >
+                                            {renderWithLinks(checkItem.text)}
+                                          </span>
+
+                                          {/* Schedule Badge */}
+                                          {checkItem.dueDate && (
+                                            <div style={styles.itemScheduleBadge}>
+                                              {checkItem.isAllDay !== false ? (
+                                                <span>📅 {checkItem.dueDate} (종일)</span>
+                                              ) : (
+                                                <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
 
@@ -1136,6 +1273,9 @@ export default function NotebookExplorer() {
                                           onClick={() => {
                                             setEditingCheckId(checkItem.id);
                                             setEditingCheckText(checkItem.text);
+                                            setEditingCheckDueDate(checkItem.dueDate || '');
+                                            setEditingCheckIsAllDay(checkItem.isAllDay !== false);
+                                            setEditingCheckDueTime(checkItem.dueTime || '09:00');
                                           }}
                                           style={styles.actionBtnLight}
                                           title="수정"
@@ -1208,34 +1348,88 @@ export default function NotebookExplorer() {
                           </div>
                         )}
 
-                        {/* Input Form for new multiline checklist item */}
-                        <div style={styles.checklistInputGroup}>
-                          <textarea
-                            rows={2}
-                            value={newChecklistText}
-                            onChange={(e) => setNewChecklistText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAddChecklist();
-                              }
-                            }}
-                            placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
-                            style={styles.checklistTextarea}
-                          />
-                          <button
-                            onClick={handleAddChecklist}
-                            style={{
-                              ...styles.checklistAddBtn,
-                              opacity: newChecklistText.trim() ? 1 : 0.6,
-                              cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
-                            }}
-                            disabled={!newChecklistText.trim()}
-                            title="체크리스트 추가"
-                          >
-                            <Plus size={15} />
-                            <span>추가</span>
-                          </button>
+                        {/* Input Form for new multiline checklist item with Schedule Options */}
+                        <div style={styles.checklistInputContainer}>
+                          <div style={styles.checklistInputGroup}>
+                            <textarea
+                              rows={2}
+                              value={newChecklistText}
+                              onChange={(e) => setNewChecklistText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleAddChecklist();
+                                }
+                              }}
+                              placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                              style={styles.checklistTextarea}
+                            />
+                            <button
+                              onClick={handleAddChecklist}
+                              style={{
+                                ...styles.checklistAddBtn,
+                                opacity: newChecklistText.trim() ? 1 : 0.6,
+                                cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
+                              }}
+                              disabled={!newChecklistText.trim()}
+                              title="체크리스트 추가"
+                            >
+                              <Plus size={15} />
+                              <span>추가</span>
+                            </button>
+                          </div>
+
+                          {/* Schedule Option Toolbar */}
+                          <div style={styles.scheduleOptionBar}>
+                            <div style={styles.scheduleField}>
+                              <CalendarIcon size={13} color="#64748B" />
+                              <input
+                                type="date"
+                                value={newCheckDueDate}
+                                onChange={(e) => setNewCheckDueDate(e.target.value)}
+                                style={styles.scheduleDateInput}
+                                title="일정 날짜 지정"
+                              />
+                            </div>
+
+                            {newCheckDueDate && (
+                              <>
+                                <label style={styles.allDayCheckLabel}>
+                                  <input
+                                    type="checkbox"
+                                    checked={newCheckIsAllDay}
+                                    onChange={(e) => setNewCheckIsAllDay(e.target.checked)}
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                  <span>종일</span>
+                                </label>
+
+                                {!newCheckIsAllDay && (
+                                  <div style={styles.scheduleField}>
+                                    <Clock size={13} color="#64748B" />
+                                    <input
+                                      type="time"
+                                      value={newCheckDueTime}
+                                      onChange={(e) => setNewCheckDueTime(e.target.value)}
+                                      style={styles.scheduleTimeInput}
+                                      title="시간 지정"
+                                    />
+                                  </div>
+                                )}
+
+                                <button
+                                  onClick={() => {
+                                    setNewCheckDueDate('');
+                                    setNewCheckIsAllDay(true);
+                                  }}
+                                  style={styles.scheduleClearBtn}
+                                  title="일정 삭제"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         {/* Checklist Items List */}
@@ -1281,6 +1475,51 @@ export default function NotebookExplorer() {
                                           style={styles.checklistEditTextarea}
                                           autoFocus
                                         />
+                                        {/* Schedule Picker for Inline Edit */}
+                                        <div style={styles.scheduleOptionBar}>
+                                          <div style={styles.scheduleField}>
+                                            <CalendarIcon size={13} color="#64748B" />
+                                            <input
+                                              type="date"
+                                              value={editingCheckDueDate}
+                                              onChange={(e) => setEditingCheckDueDate(e.target.value)}
+                                              style={styles.scheduleDateInput}
+                                            />
+                                          </div>
+                                          {editingCheckDueDate && (
+                                            <>
+                                              <label style={styles.allDayCheckLabel}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={editingCheckIsAllDay}
+                                                  onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
+                                                />
+                                                <span>종일</span>
+                                              </label>
+                                              {!editingCheckIsAllDay && (
+                                                <div style={styles.scheduleField}>
+                                                  <Clock size={13} color="#64748B" />
+                                                  <input
+                                                    type="time"
+                                                    value={editingCheckDueTime}
+                                                    onChange={(e) => setEditingCheckDueTime(e.target.value)}
+                                                    style={styles.scheduleTimeInput}
+                                                  />
+                                                </div>
+                                              )}
+                                              <button
+                                                onClick={() => {
+                                                  setEditingCheckDueDate('');
+                                                  setEditingCheckIsAllDay(true);
+                                                }}
+                                                style={styles.scheduleClearBtn}
+                                              >
+                                                <X size={12} />
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                           <button
                                             onClick={() => handleSaveEditChecklist(checkItem.id)}
@@ -1297,16 +1536,29 @@ export default function NotebookExplorer() {
                                         </div>
                                       </div>
                                     ) : (
-                                      <span
-                                        style={{
-                                          ...styles.checkitemText,
-                                          textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                          color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                          fontWeight: checkItem.completed ? 400 : 500
-                                        }}
-                                      >
-                                        {renderWithLinks(checkItem.text)}
-                                      </span>
+                                      <div>
+                                        <span
+                                          style={{
+                                            ...styles.checkitemText,
+                                            textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                            color: checkItem.completed ? '#94A3B8' : '#1E293B',
+                                            fontWeight: checkItem.completed ? 400 : 500
+                                          }}
+                                        >
+                                          {renderWithLinks(checkItem.text)}
+                                        </span>
+
+                                        {/* Schedule Badge */}
+                                        {checkItem.dueDate && (
+                                          <div style={styles.itemScheduleBadge}>
+                                            {checkItem.isAllDay !== false ? (
+                                              <span>📅 {checkItem.dueDate} (종일)</span>
+                                            ) : (
+                                              <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
 
@@ -1317,6 +1569,9 @@ export default function NotebookExplorer() {
                                         onClick={() => {
                                           setEditingCheckId(checkItem.id);
                                           setEditingCheckText(checkItem.text);
+                                          setEditingCheckDueDate(checkItem.dueDate || '');
+                                          setEditingCheckIsAllDay(checkItem.isAllDay !== false);
+                                          setEditingCheckDueTime(checkItem.dueTime || '09:00');
                                         }}
                                         style={styles.actionBtnLight}
                                         title="수정"
@@ -2213,6 +2468,82 @@ const styles = {
     justifyContent: 'center',
     gap: '6px',
     transition: 'all 0.15s ease'
+  },
+
+  // Checklist Schedule Option Styles
+  checklistInputContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginBottom: '10px'
+  },
+  scheduleOptionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#F8FAFC',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    border: '1px solid #E2E8F0'
+  },
+  scheduleField: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    backgroundColor: '#FFFFFF',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    border: '1px solid #CBD5E1'
+  },
+  scheduleDateInput: {
+    border: 'none',
+    fontSize: '12px',
+    color: '#334155',
+    fontWeight: 600,
+    outline: 'none',
+    backgroundColor: 'transparent'
+  },
+  scheduleTimeInput: {
+    border: 'none',
+    fontSize: '12px',
+    color: '#334155',
+    fontWeight: 600,
+    outline: 'none',
+    backgroundColor: 'transparent'
+  },
+  allDayCheckLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#475569',
+    cursor: 'pointer'
+  },
+  scheduleClearBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#94A3B8',
+    cursor: 'pointer',
+    padding: '2px',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto'
+  },
+  itemScheduleBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#2563EB',
+    backgroundColor: '#EFF6FF',
+    padding: '1px 6px',
+    borderRadius: '4px',
+    marginTop: '3px',
+    border: '1px solid #BFDBFE'
   },
 
   exitToast: {
