@@ -339,7 +339,7 @@ export default function CalendarView({
   });
   const allUsedTags = Array.from(allUsedTagsSet);
 
-  // Group scheduled events by dateKey, applying activeTagFilter
+  // Group scheduled events by dateKey
   const eventsByDate = {};
 
   const addEventToDate = (dateKey, eventObj) => {
@@ -351,38 +351,34 @@ export default function CalendarView({
   items.forEach((item) => {
     // 1. Explicit note date
     if (item.date) {
-      if (activeTagFilter === 'all' || item.tag === activeTagFilter) {
-        addEventToDate(item.date, {
-          id: `note_${item.id}`,
-          type: 'note',
-          rawItem: item,
-          title: item.title || '제목 없음',
-          completed: false,
-          isAllDay: true,
-          time: '',
-          tag: item.tag || null
-        });
-      }
+      addEventToDate(item.date, {
+        id: `note_${item.id}`,
+        type: 'note',
+        rawItem: item,
+        title: item.title || '제목 없음',
+        completed: false,
+        isAllDay: true,
+        time: '',
+        tag: item.tag || null
+      });
     }
 
     // 2. Scheduled checklist items (ONLY those with c.dueDate!)
     if (item.checklists && Array.isArray(item.checklists)) {
       item.checklists.forEach((c) => {
         if (c.dueDate) {
-          if (activeTagFilter === 'all' || c.tag === activeTagFilter) {
-            addEventToDate(c.dueDate, {
-              id: `check_${item.id}_${c.id}`,
-              type: 'checklist',
-              rawItem: item,
-              checkId: c.id,
-              title: c.text,
-              completed: !!c.completed,
-              isAllDay: c.isAllDay !== false,
-              time: c.dueTime || '09:00',
-              parentNoteTitle: item.title,
-              tag: c.tag || null
-            });
-          }
+          addEventToDate(c.dueDate, {
+            id: `check_${item.id}_${c.id}`,
+            type: 'checklist',
+            rawItem: item,
+            checkId: c.id,
+            title: c.text,
+            completed: !!c.completed,
+            isAllDay: c.isAllDay !== false,
+            time: c.dueTime || '09:00',
+            parentNoteTitle: item.title,
+            tag: c.tag || null
+          });
         }
       });
     }
