@@ -861,6 +861,9 @@ export default function NotebookExplorer() {
               const isEditing = cat.id === editingCategoryId;
               const isDeleting = cat.id === deletingCategoryId;
               const isFixed = cat.isFixed;
+              const count = cat.id === 'inbox'
+                ? items.filter((item) => !item.categoryId || item.categoryId === 'inbox').length
+                : items.filter((item) => item.categoryId === cat.id).length;
 
               return (
                 <div
@@ -896,7 +899,19 @@ export default function NotebookExplorer() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <span style={styles.rowLabel}>{cat.name}</span>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cat.name}
+                      </span>
+                      <span style={{
+                        fontSize: '12px',
+                        color: isSelected ? '#2563EB' : '#7C95B1',
+                        fontWeight: isSelected ? 700 : 500,
+                        flexShrink: 0
+                      }}>
+                        ({count})
+                      </span>
+                    </div>
                   )}
 
                   {!isFixed && (
