@@ -29,14 +29,19 @@ import {
   Bookmark,
   CheckSquare,
   Square,
-  ListChecks
+  ListChecks,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
+import CalendarView from './CalendarView';
 
 // Fixed In-box category definition
 const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true };
 
 export default function NotebookExplorer() {
+  // Main View Mode Tab state ('explorer' | 'calendar')
+  const [activeMainTab, setActiveMainTab] = useState('explorer');
+
   // Data states
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
@@ -562,6 +567,37 @@ export default function NotebookExplorer() {
           width: isMobile ? '100%' : '280px',
           minWidth: isMobile ? '100%' : '280px'
         }}>
+          {/* Main Mode Tab Switcher */}
+          <div style={styles.mainModeBar}>
+            <button
+              onClick={() => setActiveMainTab('explorer')}
+              style={{
+                ...styles.mainModeTabBtn,
+                backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
+                color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
+                fontWeight: activeMainTab === 'explorer' ? 700 : 500
+              }}
+            >
+              <FileText size={14} />
+              <span>메모 탐색기</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveMainTab('calendar');
+                if (isMobile) setMobileView('detail');
+              }}
+              style={{
+                ...styles.mainModeTabBtn,
+                backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
+                color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
+                fontWeight: activeMainTab === 'calendar' ? 700 : 500
+              }}
+            >
+              <CalendarIcon size={14} />
+              <span>구글 캘린더</span>
+            </button>
+          </div>
+
           <div style={styles.pane1Header}>
             <span style={styles.pane1Title}>카테고리</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -681,7 +717,33 @@ export default function NotebookExplorer() {
         </div>
       )}
 
-      {/* Pane 2: Note Item List (Light, 280px or 100% on Mobile) */}
+      {activeMainTab === 'calendar' ? (
+        <div style={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {isMobile && (
+            <div style={{ padding: '8px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #CBD5E1' }}>
+              <button
+                onClick={() => {
+                  setMobileView('categories');
+                }}
+                style={styles.mobileBackBtn}
+              >
+                <ArrowLeft size={16} /> 카테고리 / 메뉴
+              </button>
+            </div>
+          )}
+          <CalendarView
+            items={items}
+            categories={allCategories}
+            onNavigateToDetail={(itemId) => {
+              navigateToDetail(itemId);
+              setActiveMainTab('explorer');
+            }}
+            openDeleteModal={openDeleteModal}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Pane 2: Note Item List (Light, 280px or 100% on Mobile) */}
       {(!isMobile || mobileView === 'items') && (
         <div style={{
           ...styles.pane2,
@@ -1306,6 +1368,8 @@ export default function NotebookExplorer() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* Global Custom Delete Confirmation Modal */}
@@ -2127,6 +2191,28 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.15s',
     boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3)'
+  },
+
+  // Main Mode Bar Styles
+  mainModeBar: {
+    display: 'flex',
+    padding: '8px',
+    gap: '6px',
+    backgroundColor: '#DCE7F3',
+    borderBottom: '1px solid #C4D9EE'
+  },
+  mainModeTabBtn: {
+    flex: 1,
+    padding: '7px 0',
+    borderRadius: '6px',
+    fontSize: '12px',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.15s ease'
   },
 
   exitToast: {
