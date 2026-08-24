@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*'],
       manifest: {
-        name: '메모관리',
-        short_name: '메모관리',
-        description: '탐색기 형태의 카테고리별 메모 관리 PWA',
+        name: '노트 캘린더',
+        short_name: '노트 캘린더',
+        description: '메모와 체크리스트, 배지, 캘린더를 하나로 관리하는 스마트 노트 캘린더',
         theme_color: '#2563EB',
         background_color: '#FAFAF8',
         display: 'standalone',

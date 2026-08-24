@@ -908,7 +908,7 @@ export default function CalendarView({
           {!isMobile && (
             <div style={styles.brandGroup}>
               <CalendarIcon size={22} color="#2563EB" />
-              <span style={styles.brandTitle}>캘린더</span>
+              <span style={styles.brandTitle}>노트 캘린더</span>
             </div>
           )}
 
