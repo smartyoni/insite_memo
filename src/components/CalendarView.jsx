@@ -52,6 +52,28 @@ function formatDateKey(d) {
   return `${year}-${month}-${day}`;
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+
+function getWeekDays(currDate) {
+  const sun = new Date(currDate);
+  const dayOfWeek = sun.getDay(); // 0 = Sun
+  sun.setDate(sun.getDate() - dayOfWeek);
+
+  const weekDays = [];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(sun);
+    day.setDate(day.getDate() + i);
+    weekDays.push({
+      date: day,
+      dateKey: formatDateKey(day),
+      dayNum: day.getDate(),
+      dayName: dayNames[i]
+    });
+  }
+  return weekDays;
+}
+
 export default function CalendarView({
   items = [],
   categories = [],
@@ -59,7 +81,7 @@ export default function CalendarView({
   openDeleteModal
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('month'); // 'month' | 'week'
+  const [viewMode, setViewMode] = useState('month'); // 'month' | 'week' | 'day'
 
   // Modal for adding/editing event
   const [showEventModal, setShowEventModal] = useState(false);
@@ -75,17 +97,62 @@ export default function CalendarView({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
 
-  // Navigation handlers
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+  // Navigation handlers per viewMode
+  const handlePrev = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(new Date(year, month - 1, 1));
+    } else if (viewMode === 'week') {
+      const prev = new Date(currentDate);
+      prev.setDate(prev.getDate() - 7);
+      setCurrentDate(prev);
+    } else if (viewMode === 'day') {
+      const prev = new Date(currentDate);
+      prev.setDate(prev.getDate() - 1);
+      setCurrentDate(prev);
+    }
   };
 
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+  const handleNext = () => {
+    if (viewMode === 'month') {
+      setCurrentDate(new Date(year, month + 1, 1));
+    } else if (viewMode === 'week') {
+      const next = new Date(currentDate);
+      next.setDate(next.getDate() + 7);
+      setCurrentDate(next);
+    } else if (viewMode === 'day') {
+      const next = new Date(currentDate);
+      next.setDate(next.getDate() + 1);
+      setCurrentDate(next);
+    }
   };
 
   const handleToday = () => {
     setCurrentDate(new Date());
+  };
+
+  const getHeaderTitle = () => {
+    if (viewMode === 'month') {
+      return `${year}년 ${month + 1}월`;
+    }
+    if (viewMode === 'week') {
+      const weekDays = getWeekDays(currentDate);
+      const start = weekDays[0].date;
+      const end = weekDays[6].date;
+      const startYear = start.getFullYear();
+      const startMonth = start.getMonth() + 1;
+      const startDate = start.getDate();
+      const endMonth = end.getMonth() + 1;
+      const endDate = end.getDate();
+      if (startMonth === endMonth) {
+        return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endDate}일`;
+      }
+      return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endMonth}월 ${endDate}일`;
+    }
+    if (viewMode === 'day') {
+      const dayOfWeekNames = ['일', '월', '화', '수', '목', '금', '토'];
+      return `${year}년 ${month + 1}월 ${currentDate.getDate()}일 (${dayOfWeekNames[currentDate.getDay()]}요일)`;
+    }
+    return '';
   };
 
   // Open modal to add event for a specific date
@@ -279,7 +346,256 @@ export default function CalendarView({
     }
   });
 
-  const todayKey = formatDateKey(new Date());
+  const renderWeeklyView = () => {
+    const weekDays = getWeekDays(currentDate);
+
+    return (
+      <div style={styles.timeGridWrapper}>
+        {/* Header Row */}
+        <div style={styles.timeHeaderRow}>
+          <div style={styles.timeLabelHeader}>시간</div>
+          {weekDays.map((d, idx) => {
+            const isToday = d.dateKey === todayKey;
+            const isSun = idx === 0;
+            const isSat = idx === 6;
+            return (
+              <div key={d.dateKey} style={styles.timeColHeader}>
+                <span style={{ color: isSun ? '#EF4444' : isSat ? '#2563EB' : '#64748B', fontSize: '12px', fontWeight: 600 }}>
+                  {d.dayName}
+                </span>
+                <span
+                  style={{
+                    ...styles.dayNumBadge,
+                    backgroundColor: isToday ? '#2563EB' : 'transparent',
+                    color: isToday ? '#FFFFFF' : '#1E293B'
+                  }}
+                >
+                  {d.dayNum}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* All-Day Row */}
+        <div style={styles.allDayRow}>
+          <div style={styles.allDayLabelCell}>종일</div>
+          <div style={styles.allDayGrid}>
+            {weekDays.map((d) => {
+              const allDayEvts = (eventsByDate[d.dateKey] || []).filter((e) => e.isAllDay);
+              return (
+                <div
+                  key={d.dateKey}
+                  style={styles.allDayCol}
+                  onClick={() => handleOpenAddModal(d.dateKey)}
+                >
+                  {allDayEvts.map((evt) => {
+                    const color = getChipColor(evt.rawItem.id);
+                    const isChecklist = evt.type === 'checklist';
+                    return (
+                      <div
+                        key={evt.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                          else handleOpenEditModal(evt.rawItem, e);
+                        }}
+                        style={{
+                          ...styles.eventChip,
+                          backgroundColor: evt.completed ? '#F1F5F9' : color.bg,
+                          borderColor: evt.completed ? '#CBD5E1' : color.border,
+                          color: evt.completed ? '#94A3B8' : color.text,
+                          textDecoration: evt.completed ? 'line-through' : 'none',
+                          marginBottom: '3px'
+                        }}
+                        title={evt.title}
+                      >
+                        <span style={styles.chipText}>
+                          {isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : '📍 '}
+                          {evt.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hourly Scrollable Timeline */}
+        <div style={styles.timeBodyScroll}>
+          {HOURS.map((hourStr) => (
+            <div key={hourStr} style={styles.hourRow}>
+              <div style={styles.timeLabelCell}>{hourStr}:00</div>
+              <div style={styles.hourColsGrid}>
+                {weekDays.map((d) => {
+                  const hourEvts = (eventsByDate[d.dateKey] || []).filter(
+                    (e) => !e.isAllDay && e.time && e.time.startsWith(hourStr)
+                  );
+
+                  return (
+                    <div
+                      key={d.dateKey + '_' + hourStr}
+                      style={styles.hourColCell}
+                      onClick={() => {
+                        setEventDate(d.dateKey);
+                        setShowEventModal(true);
+                      }}
+                    >
+                      {hourEvts.map((evt) => {
+                        const color = getChipColor(evt.rawItem.id);
+                        const isChecklist = evt.type === 'checklist';
+
+                        return (
+                          <div
+                            key={evt.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                              else handleOpenEditModal(evt.rawItem, e);
+                            }}
+                            style={{
+                              ...styles.eventChip,
+                              backgroundColor: evt.completed ? '#F1F5F9' : '#FFFFFF',
+                              borderColor: evt.completed ? '#CBD5E1' : color.border,
+                              borderLeftWidth: '4px',
+                              borderLeftColor: color.border,
+                              color: evt.completed ? '#94A3B8' : color.text,
+                              textDecoration: evt.completed ? 'line-through' : 'none',
+                              marginBottom: '2px'
+                            }}
+                            title={evt.title}
+                          >
+                            <strong style={{ marginRight: '3px', fontSize: '10px' }}>{evt.time}</strong>
+                            <span>{isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : ''}{evt.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDailyView = () => {
+    const dayKey = formatDateKey(currentDate);
+    const isToday = dayKey === todayKey;
+    const dayOfWeekNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = dayOfWeekNames[currentDate.getDay()];
+    const allDayEvts = (eventsByDate[dayKey] || []).filter((e) => e.isAllDay);
+
+    return (
+      <div style={styles.timeGridWrapper}>
+        {/* Daily Header */}
+        <div style={styles.dailyHeader}>
+          <span
+            style={{
+              ...styles.dayNumBadge,
+              backgroundColor: isToday ? '#2563EB' : 'transparent',
+              color: isToday ? '#FFFFFF' : '#1E293B',
+              fontSize: '15px',
+              padding: '6px 14px'
+            }}
+          >
+            {currentDate.getDate()} ({dayName}요일)
+          </span>
+        </div>
+
+        {/* All-Day Section */}
+        {allDayEvts.length > 0 && (
+          <div style={styles.allDayRow}>
+            <div style={styles.allDayLabelCell}>종일</div>
+            <div style={{ flex: 1, padding: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {allDayEvts.map((evt) => {
+                const color = getChipColor(evt.rawItem.id);
+                const isChecklist = evt.type === 'checklist';
+                return (
+                  <div
+                    key={evt.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                      else handleOpenEditModal(evt.rawItem, e);
+                    }}
+                    style={{
+                      ...styles.eventChip,
+                      backgroundColor: evt.completed ? '#F1F5F9' : color.bg,
+                      borderColor: evt.completed ? '#CBD5E1' : color.border,
+                      color: evt.completed ? '#94A3B8' : color.text,
+                      textDecoration: evt.completed ? 'line-through' : 'none'
+                    }}
+                    title={evt.title}
+                  >
+                    <span>{isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : '📍 '}{evt.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 24-Hour Timeline */}
+        <div style={styles.timeBodyScroll}>
+          {HOURS.map((hourStr) => {
+            const hourEvts = (eventsByDate[dayKey] || []).filter(
+              (e) => !e.isAllDay && e.time && e.time.startsWith(hourStr)
+            );
+
+            return (
+              <div key={hourStr} style={styles.hourRow}>
+                <div style={styles.timeLabelCell}>{hourStr}:00</div>
+                <div
+                  style={{ ...styles.hourColCell, flex: 1 }}
+                  onClick={() => {
+                    setEventDate(dayKey);
+                    setShowEventModal(true);
+                  }}
+                >
+                  {hourEvts.map((evt) => {
+                    const color = getChipColor(evt.rawItem.id);
+                    const isChecklist = evt.type === 'checklist';
+
+                    return (
+                      <div
+                        key={evt.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                          else handleOpenEditModal(evt.rawItem, e);
+                        }}
+                        style={{
+                          ...styles.eventChip,
+                          backgroundColor: evt.completed ? '#F1F5F9' : '#FFFFFF',
+                          borderColor: evt.completed ? '#CBD5E1' : color.border,
+                          borderLeftWidth: '5px',
+                          borderLeftColor: color.border,
+                          color: evt.completed ? '#94A3B8' : color.text,
+                          textDecoration: evt.completed ? 'line-through' : 'none',
+                          marginBottom: '4px'
+                        }}
+                        title={evt.title}
+                      >
+                        <strong style={{ marginRight: '6px', fontSize: '12px' }}>{evt.time}</strong>
+                        <span style={{ fontSize: '13px' }}>
+                          {isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : ''}{evt.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={styles.container}>
@@ -296,16 +612,16 @@ export default function CalendarView({
           </button>
 
           <div style={styles.navGroup}>
-            <button onClick={handlePrevMonth} style={styles.navBtn} title="이전 달">
+            <button onClick={handlePrev} style={styles.navBtn} title="이전">
               <ChevronLeft size={18} />
             </button>
-            <button onClick={handleNextMonth} style={styles.navBtn} title="다음 달">
+            <button onClick={handleNext} style={styles.navBtn} title="다음">
               <ChevronRight size={18} />
             </button>
           </div>
 
           <span style={styles.monthTitle}>
-            {year}년 {month + 1}월
+            {getHeaderTitle()}
           </span>
         </div>
 
@@ -316,7 +632,8 @@ export default function CalendarView({
               style={{
                 ...styles.viewModeBtn,
                 backgroundColor: viewMode === 'month' ? '#2563EB' : 'transparent',
-                color: viewMode === 'month' ? '#FFFFFF' : '#475569'
+                color: viewMode === 'month' ? '#FFFFFF' : '#475569',
+                fontWeight: viewMode === 'month' ? 700 : 500
               }}
             >
               월간
@@ -326,10 +643,22 @@ export default function CalendarView({
               style={{
                 ...styles.viewModeBtn,
                 backgroundColor: viewMode === 'week' ? '#2563EB' : 'transparent',
-                color: viewMode === 'week' ? '#FFFFFF' : '#475569'
+                color: viewMode === 'week' ? '#FFFFFF' : '#475569',
+                fontWeight: viewMode === 'week' ? 700 : 500
               }}
             >
               주간
+            </button>
+            <button
+              onClick={() => setViewMode('day')}
+              style={{
+                ...styles.viewModeBtn,
+                backgroundColor: viewMode === 'day' ? '#2563EB' : 'transparent',
+                color: viewMode === 'day' ? '#FFFFFF' : '#475569',
+                fontWeight: viewMode === 'day' ? 700 : 500
+              }}
+            >
+              일간
             </button>
           </div>
 
@@ -344,127 +673,138 @@ export default function CalendarView({
         </div>
       </div>
 
-      {/* Days of Week Header */}
-      <div style={styles.weekHeaderGrid}>
-        {['일', '월', '화', '수', '목', '금', '토'].map((dayName, idx) => (
-          <div
-            key={dayName}
-            style={{
-              ...styles.weekHeaderCell,
-              color: idx === 0 ? '#EF4444' : idx === 6 ? '#2563EB' : '#64748B'
-            }}
-          >
-            {dayName}
-          </div>
-        ))}
-      </div>
-
-      {/* Month Grid Cells */}
-      <div style={styles.monthGrid}>
-        {calendarCells.map((cell, idx) => {
-          const isToday = cell.dateKey === todayKey;
-          const dayEvents = eventsByDate[cell.dateKey] || [];
-          const isSunday = idx % 7 === 0;
-          const isSaturday = idx % 7 === 6;
-
-          return (
-            <div
-              key={cell.dateKey + '_' + idx}
-              onClick={() => handleOpenAddModal(cell.dateKey)}
-              style={{
-                ...styles.cell,
-                backgroundColor: cell.isCurrentMonth ? '#FFFFFF' : '#F8FAFC'
-              }}
-            >
-              {/* Date Number Header */}
-              <div style={styles.cellHeader}>
-                <span
-                  style={{
-                    ...styles.dayNumBadge,
-                    backgroundColor: isToday ? '#2563EB' : 'transparent',
-                    color: isToday
-                      ? '#FFFFFF'
-                      : !cell.isCurrentMonth
-                      ? '#CBD5E1'
-                      : isSunday
-                      ? '#EF4444'
-                      : isSaturday
-                      ? '#2563EB'
-                      : '#1E293B'
-                  }}
-                >
-                  {cell.dayNum}
-                </span>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenAddModal(cell.dateKey);
-                  }}
-                  style={styles.cellAddBtn}
-                  title="일정 추가"
-                >
-                  <Plus size={12} />
-                </button>
+      {/* Render View Mode Grid */}
+      {viewMode === 'month' && (
+        <>
+          {/* Days of Week Header */}
+          <div style={styles.weekHeaderGrid}>
+            {['일', '월', '화', '수', '목', '금', '토'].map((dayName, idx) => (
+              <div
+                key={dayName}
+                style={{
+                  ...styles.weekHeaderCell,
+                  color: idx === 0 ? '#EF4444' : idx === 6 ? '#2563EB' : '#64748B'
+                }}
+              >
+                {dayName}
               </div>
+            ))}
+          </div>
 
-              {/* Event Chips */}
-              <div style={styles.chipsContainer}>
-                {dayEvents.slice(0, 4).map((evt) => {
-                  const color = getChipColor(evt.rawItem.id);
-                  const isChecklist = evt.type === 'checklist';
+          {/* Month Grid Cells */}
+          <div style={styles.monthGrid}>
+            {calendarCells.map((cell, idx) => {
+              const isToday = cell.dateKey === todayKey;
+              const dayEvents = eventsByDate[cell.dateKey] || [];
+              const isSunday = idx % 7 === 0;
+              const isSaturday = idx % 7 === 6;
 
-                  return (
-                    <div
-                      key={evt.id}
+              return (
+                <div
+                  key={cell.dateKey + '_' + idx}
+                  onClick={() => handleOpenAddModal(cell.dateKey)}
+                  style={{
+                    ...styles.cell,
+                    backgroundColor: cell.isCurrentMonth ? '#FFFFFF' : '#F8FAFC'
+                  }}
+                >
+                  {/* Date Number Header */}
+                  <div style={styles.cellHeader}>
+                    <span
+                      style={{
+                        ...styles.dayNumBadge,
+                        backgroundColor: isToday ? '#2563EB' : 'transparent',
+                        color: isToday
+                          ? '#FFFFFF'
+                          : !cell.isCurrentMonth
+                          ? '#CBD5E1'
+                          : isSunday
+                          ? '#EF4444'
+                          : isSaturday
+                          ? '#2563EB'
+                          : '#1E293B'
+                      }}
+                    >
+                      {cell.dayNum}
+                    </span>
+
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isChecklist) {
-                          handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                        } else {
-                          handleOpenEditModal(evt.rawItem, e);
-                        }
+                        handleOpenAddModal(cell.dateKey);
                       }}
-                      style={{
-                        ...styles.eventChip,
-                        backgroundColor: evt.completed
-                          ? '#F1F5F9'
-                          : evt.isAllDay
-                          ? color.bg
-                          : '#FFFFFF',
-                        borderColor: evt.completed
-                          ? '#CBD5E1'
-                          : color.border,
-                        color: evt.completed
-                          ? '#94A3B8'
-                          : color.text,
-                        borderLeftWidth: !evt.isAllDay && !evt.completed ? '3px' : '1px',
-                        borderLeftColor: !evt.isAllDay && !evt.completed ? color.border : undefined,
-                        textDecoration: evt.completed ? 'line-through' : 'none'
-                      }}
-                      title={`${isChecklist ? `[${evt.parentNoteTitle || '메모'}] ` : ''}${evt.title}`}
+                      style={styles.cellAddBtn}
+                      title="일정 추가"
                     >
-                      <span style={styles.chipText}>
-                        {isChecklist && (evt.completed ? '☑️ ' : '☐ ')}
-                        {!evt.isAllDay && evt.time && (
-                          <strong style={{ marginRight: '3px', fontSize: '10px' }}>{evt.time}</strong>
-                        )}
-                        {evt.title}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                {dayEvents.length > 4 && (
-                  <div style={styles.moreChipsBadge}>
-                    +{dayEvents.length - 4}개 더보기
+                      <Plus size={12} />
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+
+                  {/* Event Chips */}
+                  <div style={styles.chipsContainer}>
+                    {dayEvents.slice(0, 4).map((evt) => {
+                      const color = getChipColor(evt.rawItem.id);
+                      const isChecklist = evt.type === 'checklist';
+
+                      return (
+                        <div
+                          key={evt.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isChecklist) {
+                              handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
+                            } else {
+                              handleOpenEditModal(evt.rawItem, e);
+                            }
+                          }}
+                          style={{
+                            ...styles.eventChip,
+                            backgroundColor: evt.completed
+                              ? '#F1F5F9'
+                              : evt.isAllDay
+                              ? color.bg
+                              : '#FFFFFF',
+                            borderColor: evt.completed
+                              ? '#CBD5E1'
+                              : color.border,
+                            color: evt.completed
+                              ? '#94A3B8'
+                              : color.text,
+                            borderLeftWidth: !evt.isAllDay && !evt.completed ? '3px' : '1px',
+                            borderLeftColor: !evt.isAllDay && !evt.completed ? color.border : undefined,
+                            textDecoration: evt.completed ? 'line-through' : 'none'
+                          }}
+                          title={`${isChecklist ? `[${evt.parentNoteTitle || '메모'}] ` : ''}${evt.title}`}
+                        >
+                          <span style={styles.chipText}>
+                            {isChecklist && (evt.completed ? '☑️ ' : '☐ ')}
+                            {!evt.isAllDay && evt.time && (
+                              <strong style={{ marginRight: '3px', fontSize: '10px' }}>{evt.time}</strong>
+                            )}
+                            {evt.title}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {dayEvents.length > 4 && (
+                      <div style={styles.moreChipsBadge}>
+                        +{dayEvents.length - 4}개 더보기
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Render Weekly View */}
+      {viewMode === 'week' && renderWeeklyView()}
+
+      {/* Render Daily View */}
+      {viewMode === 'day' && renderDailyView()}
 
       {/* Google Calendar Event Add/Edit Modal */}
       {showEventModal && (
@@ -1062,5 +1402,106 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '4px'
+  },
+
+  // Time Grid Styles (Weekly & Daily Views)
+  timeGridWrapper: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF'
+  },
+  timeHeaderRow: {
+    display: 'flex',
+    borderBottom: '1px solid #E2E8F0',
+    backgroundColor: '#F8FAFC'
+  },
+  timeLabelHeader: {
+    width: '60px',
+    minWidth: '60px',
+    padding: '8px 4px',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#94A3B8',
+    textAlign: 'center',
+    borderRight: '1px solid #E2E8F0'
+  },
+  timeColHeader: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px 0',
+    borderRight: '1px solid #F1F5F9'
+  },
+  allDayRow: {
+    display: 'flex',
+    borderBottom: '2px solid #CBD5E1',
+    backgroundColor: '#FAF5FF',
+    minHeight: '40px'
+  },
+  allDayLabelCell: {
+    width: '60px',
+    minWidth: '60px',
+    padding: '8px 4px',
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#7E22CE',
+    textAlign: 'center',
+    borderRight: '1px solid #E2E8F0',
+    backgroundColor: '#F3E8FF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  allDayGrid: {
+    flex: 1,
+    display: 'flex'
+  },
+  allDayCol: {
+    flex: 1,
+    padding: '4px',
+    borderRight: '1px solid #F1F5F9',
+    minHeight: '36px',
+    cursor: 'pointer'
+  },
+  timeBodyScroll: {
+    flex: 1,
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  hourRow: {
+    display: 'flex',
+    minHeight: '48px',
+    borderBottom: '1px solid #F1F5F9'
+  },
+  timeLabelCell: {
+    width: '60px',
+    minWidth: '60px',
+    padding: '4px',
+    fontSize: '11px',
+    color: '#94A3B8',
+    textAlign: 'center',
+    borderRight: '1px solid #E2E8F0'
+  },
+  hourColsGrid: {
+    flex: 1,
+    display: 'flex'
+  },
+  hourColCell: {
+    flex: 1,
+    borderRight: '1px solid #F8FAFC',
+    padding: '2px',
+    cursor: 'pointer'
+  },
+  dailyHeader: {
+    padding: '10px 16px',
+    backgroundColor: '#F8FAFC',
+    borderBottom: '1px solid #E2E8F0',
+    display: 'flex',
+    alignItems: 'center'
   }
 };
