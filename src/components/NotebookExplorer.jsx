@@ -895,75 +895,139 @@ export default function NotebookExplorer() {
           {activeItem ? (
             <>
               {/* Header / Breadcrumb & Action Toolbar */}
-              <div style={styles.pane3Header}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isMobile && (
-                    <button
-                      onClick={navigateBack}
-                      style={styles.mobileBackBtn}
-                      title="목록으로 이동"
-                    >
-                      <ArrowLeft size={18} />
-                      <span>목록</span>
-                    </button>
-                  )}
-                  <div style={styles.breadcrumb}>
-                    <span>{allCategories.find(c => c.id === activeItem.categoryId)?.name || 'In-box'}</span>
-                    <ChevronRight size={14} color="#A0A6B2" style={{ margin: '0 4px' }} />
-                    <span style={{ color: '#22262A', fontWeight: 600 }}>{activeItem.title}</span>
+              <div style={{
+                ...styles.pane3Header,
+                height: isMobile ? 'auto' : '46px',
+                padding: isMobile ? '8px 10px' : '0 14px',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'stretch' : 'center',
+                gap: isMobile ? '6px' : '0'
+              }}>
+                {/* Top Row: Navigation + Breadcrumb Title + Actions */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: isMobile ? '100%' : 'auto',
+                  gap: '8px',
+                  flex: 1,
+                  minWidth: 0
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                    {isMobile && (
+                      <button
+                        onClick={navigateBack}
+                        style={styles.mobileBackBtn}
+                        title="목록으로 이동"
+                      >
+                        <ArrowLeft size={16} />
+                        <span>목록</span>
+                      </button>
+                    )}
+                    <div style={{
+                      ...styles.breadcrumb,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {allCategories.find(c => c.id === activeItem.categoryId)?.name || 'In-box'}
+                      </span>
+                      <ChevronRight size={14} color="#A0A6B2" style={{ margin: '0 2px', flexShrink: 0 }} />
+                      <span style={{ color: '#22262A', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {activeItem.title}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Action Buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    {showSavedToast && (
+                      <span style={styles.toastBadge}>
+                        ✓ 저장됨
+                      </span>
+                    )}
+
+                    {isEditMode ? (
+                      <>
+                        {!isMobile && (
+                          <div style={styles.headerCategorySelector}>
+                            <span style={styles.headerCategoryLabel}>이동:</span>
+                            <select
+                              value={draftCategoryId}
+                              onChange={(e) => setDraftCategoryId(e.target.value)}
+                              style={styles.headerCategorySelect}
+                            >
+                              {allCategories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={handleCancelDetailEdit}
+                          style={styles.btnSecondary}
+                        >
+                          <RotateCcw size={13} />
+                          취소
+                        </button>
+                        <button
+                          onClick={handleSaveDetail}
+                          style={styles.btnPrimary}
+                        >
+                          <Save size={13} />
+                          저장
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setIsEditMode(true)}
+                        style={styles.btnPrimary}
+                      >
+                        <Edit2 size={13} />
+                        수정
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {showSavedToast && (
-                    <span style={styles.toastBadge}>
-                      ✓ 저장됨
-                    </span>
-                  )}
-
-                  {isEditMode ? (
-                    <>
-                      {/* Header Category Selector */}
-                      <div style={styles.headerCategorySelector}>
-                        <span style={styles.headerCategoryLabel}>이동:</span>
-                        <select
-                          value={draftCategoryId}
-                          onChange={(e) => setDraftCategoryId(e.target.value)}
-                          style={styles.headerCategorySelect}
-                        >
-                          {allCategories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <button
-                        onClick={handleCancelDetailEdit}
-                        style={styles.btnSecondary}
-                      >
-                        <RotateCcw size={14} />
-                        취소
-                      </button>
-                      <button
-                        onClick={handleSaveDetail}
-                        style={styles.btnPrimary}
-                      >
-                        <Save size={14} />
-                        저장
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditMode(true)}
-                      style={styles.btnPrimary}
+                {/* Row 2 on Mobile when in Edit Mode: Category Selector Bar */}
+                {isMobile && isEditMode && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#F1F5F9',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    width: '100%'
+                  }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>카테고리 이동:</span>
+                    <select
+                      value={draftCategoryId}
+                      onChange={(e) => setDraftCategoryId(e.target.value)}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1E293B',
+                        outline: 'none'
+                      }}
                     >
-                      <Edit2 size={14} />
-                      수정
-                    </button>
-                  )}
-                </div>
+                      {allCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Sub-Tab Bar (Prominent Tab Switching Bar) */}
