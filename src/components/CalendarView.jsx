@@ -36,7 +36,17 @@ const CHIP_COLORS = [
   { bg: '#E0E7FF', border: '#A5B4FC', text: '#4338CA' }  // Indigo
 ];
 
-function getChipColor(idStr) {
+function getChipColor(idStr, tagStr) {
+  if (tagStr) {
+    const tagStyle = getTagStyle(tagStr);
+    if (tagStyle) {
+      return {
+        bg: tagStyle.bg,
+        border: tagStyle.border,
+        text: tagStyle.color
+      };
+    }
+  }
   let hash = 0;
   for (let i = 0; i < (idStr || '').length; i++) {
     hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
@@ -450,7 +460,7 @@ export default function CalendarView({
                   onClick={() => handleOpenAddModal(d.dateKey)}
                 >
                   {allDayEvts.map((evt) => {
-                    const color = getChipColor(evt.rawItem.id);
+                    const color = getChipColor(evt.rawItem.id, evt.tag);
                     const isChecklist = evt.type === 'checklist';
                     return (
                       <div
@@ -503,7 +513,7 @@ export default function CalendarView({
                       }}
                     >
                       {hourEvts.map((evt) => {
-                        const color = getChipColor(evt.rawItem.id);
+                        const color = getChipColor(evt.rawItem.id, evt.tag);
                         const isChecklist = evt.type === 'checklist';
 
                         return (
@@ -578,7 +588,7 @@ export default function CalendarView({
             <div style={styles.allDayLabelCell}>종일</div>
             <div style={{ flex: 1, padding: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {allDayEvts.map((evt) => {
-                const color = getChipColor(evt.rawItem.id);
+                const color = getChipColor(evt.rawItem.id, evt.tag);
                 const isChecklist = evt.type === 'checklist';
                 return (
                   <div
@@ -622,7 +632,7 @@ export default function CalendarView({
                   }}
                 >
                   {hourEvts.map((evt) => {
-                    const color = getChipColor(evt.rawItem.id);
+                    const color = getChipColor(evt.rawItem.id, evt.tag);
                     const isChecklist = evt.type === 'checklist';
 
                     return (
@@ -935,7 +945,7 @@ export default function CalendarView({
                   {/* Event Chips */}
                   <div style={styles.chipsContainer}>
                     {dayEvents.slice(0, 4).map((evt) => {
-                      const color = getChipColor(evt.rawItem.id);
+                      const color = getChipColor(evt.rawItem.id, evt.tag);
                       const isChecklist = evt.type === 'checklist';
 
                       return (
