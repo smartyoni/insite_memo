@@ -1187,8 +1187,8 @@ const styles = {
     overflow: 'hidden'
   },
   pane3Header: {
-    height: '52px',
-    padding: '0 20px',
+    height: '46px',
+    padding: '0 14px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1207,7 +1207,7 @@ const styles = {
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
-    padding: '7px 14px',
+    padding: '6px 12px',
     fontSize: '13px',
     fontWeight: 600,
     cursor: 'pointer',
@@ -1221,7 +1221,7 @@ const styles = {
     color: '#3C3F42',
     border: 'none',
     borderRadius: '6px',
-    padding: '7px 14px',
+    padding: '6px 12px',
     fontSize: '13px',
     fontWeight: 500,
     cursor: 'pointer',
@@ -1232,7 +1232,7 @@ const styles = {
   toastBadge: {
     backgroundColor: 'rgba(63, 122, 99, 0.12)',
     color: '#3F7A63',
-    padding: '5px 10px',
+    padding: '4px 8px',
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: 600
@@ -1242,12 +1242,12 @@ const styles = {
     display: 'flex',
     backgroundColor: '#F8FAFC',
     borderBottom: '1px solid #CBD5E1',
-    padding: '6px 10px',
-    gap: '8px'
+    padding: '4px 8px',
+    gap: '6px'
   },
   mobileTabBtn: {
     flex: 1,
-    padding: '9px 0',
+    padding: '7px 0',
     borderRadius: '6px',
     fontSize: '13px',
     fontWeight: 600,
@@ -1264,7 +1264,7 @@ const styles = {
   pane3Body: {
     flex: 1,
     overflowY: 'auto',
-    padding: '20px'
+    padding: '10px 12px'
   },
   pane3Empty: {
     height: '100%',
@@ -1278,9 +1278,7 @@ const styles = {
   // Split Read & Edit Layouts
   splitReadContainer: {
     display: 'flex',
-    gap: '24px',
-    maxWidth: '1280px',
-    margin: '0 auto',
+    gap: '10px',
     width: '100%',
     minHeight: '100%',
     alignItems: 'stretch'
@@ -1290,31 +1288,31 @@ const styles = {
     minWidth: 0,
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    padding: '24px 28px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+    borderRadius: '8px',
+    padding: '14px 16px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
   },
   rightPaneCard: {
     flex: 1,
     minWidth: 0,
     backgroundColor: '#F8FAFC',
     border: '1px solid #CBD5E1',
-    borderRadius: '12px',
-    padding: '22px 24px',
-    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
+    borderRadius: '8px',
+    padding: '14px 16px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
     display: 'flex',
     flexDirection: 'column'
   },
   subNoteHeader: {
-    paddingBottom: '12px',
-    marginBottom: '14px',
+    paddingBottom: '8px',
+    marginBottom: '10px',
     borderBottom: '1px solid #E2E8F0',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between'
   },
   subNoteTitle: {
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: 700,
     color: '#1E293B',
     display: 'flex',
@@ -1322,7 +1320,7 @@ const styles = {
   },
   subNoteBody: {
     fontSize: '14px',
-    lineHeight: 1.7,
+    lineHeight: 1.6,
     color: '#334155',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
@@ -1331,36 +1329,34 @@ const styles = {
   subNoteEmptyText: {
     color: '#94A3B8',
     fontSize: '13px',
-    lineHeight: 1.6
+    lineHeight: 1.5
   },
 
   readTitle: {
-    fontSize: '22px',
+    fontSize: '19px',
     fontWeight: 700,
     color: '#22262A',
-    marginBottom: '20px',
+    marginBottom: '12px',
     lineHeight: 1.3
   },
   readBody: {
-    fontSize: '15px',
-    lineHeight: 1.7,
+    fontSize: '14px',
+    lineHeight: 1.6,
     color: '#3C3F42',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word'
   },
 
   splitEditContainer: {
-    maxWidth: '1280px',
-    margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '10px',
     height: '100%',
     width: '100%'
   },
   splitEditFields: {
     display: 'flex',
-    gap: '20px',
+    gap: '10px',
     flex: 1,
     minHeight: '420px'
   },
@@ -1368,25 +1364,25 @@ const styles = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
     minWidth: 0,
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+    borderRadius: '8px',
+    padding: '12px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
   },
   editPaneSubCard: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
     minWidth: 0,
     backgroundColor: '#F8FAFC',
     border: '1px solid #CBD5E1',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)'
+    borderRadius: '8px',
+    padding: '12px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
   },
   fieldLabel: {
     fontSize: '13px',
@@ -1399,7 +1395,7 @@ const styles = {
     alignItems: 'center',
     gap: '6px',
     backgroundColor: '#F1F5F9',
-    padding: '4px 8px',
+    padding: '3px 6px',
     borderRadius: '6px',
     border: '1px solid #CBD5E1'
   },
@@ -1412,7 +1408,7 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1px solid #94A3B8',
     borderRadius: '4px',
-    padding: '3px 8px',
+    padding: '2px 6px',
     fontSize: '12px',
     fontWeight: 600,
     color: '#1E293B',
@@ -1422,11 +1418,11 @@ const styles = {
 
   editTitleInput: {
     width: '100%',
-    fontSize: '20px',
+    fontSize: '18px',
     fontWeight: 700,
-    padding: '10px 14px',
+    padding: '8px 12px',
     border: '1px solid #DCE0E6',
-    borderRadius: '8px',
+    borderRadius: '6px',
     outline: 'none',
     color: '#22262A',
     backgroundColor: '#FFFFFF'
@@ -1436,10 +1432,10 @@ const styles = {
     minHeight: '360px',
     flex: 1,
     fontSize: '14px',
-    lineHeight: 1.7,
-    padding: '14px',
+    lineHeight: 1.6,
+    padding: '10px 12px',
     border: '1px solid #DCE0E6',
-    borderRadius: '8px',
+    borderRadius: '6px',
     outline: 'none',
     color: '#22262A',
     backgroundColor: '#FFFFFF',
@@ -1451,10 +1447,10 @@ const styles = {
     minHeight: '360px',
     flex: 1,
     fontSize: '14px',
-    lineHeight: 1.7,
-    padding: '14px',
+    lineHeight: 1.6,
+    padding: '10px 12px',
     border: '1px solid #CBD5E1',
-    borderRadius: '8px',
+    borderRadius: '6px',
     outline: 'none',
     color: '#1E293B',
     backgroundColor: '#FFFFFF',

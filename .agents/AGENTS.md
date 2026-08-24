@@ -20,3 +20,9 @@ G:\내 드라이브\1000.앱제작\텍스트공유앱\앱제작지침.md
 ## 빌드 결과물(APK) 저장 규칙
 * 완성된 APK 파일은 빌드 후 반드시 구글 드라이브 동기화 폴더인 `G:\내 드라이브\000.앱공유` 경로에 복사 및 저장하여 배포한다.
 * **디바이스 즉시 원격 설치 규칙**: 만약 컴퓨터에 안드로이드 실기기가 USB 디버깅 상태로 연결되어 있는 경우(`adb devices` 상에서 인증된 기기 확인 시), 연결된 기기에 `adb install` 명령어를 사용하여 APK를 즉시 직접 설치한다. 기기가 연결되어 있지 않은 경우에는 기존 구글 드라이브 동기화 폴더 저장 방식으로 백업을 진행한다.
+
+## 프로젝트 기본 정보
+* **GitHub 레포지토리**: `https://github.com/smartyoni/insite_memo.git` (기본 브랜치: `main`)
+* **앱/패키지명**: `explorer-note-app`
+* **Vercel 연동**: `vercel.json` 설정 (SPA 라우팅 rewrites 적용)
+* **Firebase 프로젝트 ID**: `data-library-5cf6c`
