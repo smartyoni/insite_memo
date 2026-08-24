@@ -24,6 +24,7 @@ import {
   ListChecks
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
+import { DEFAULT_TAGS, getTagStyle } from './NotebookExplorer';
 
 // Colorful badge background colors like Google Calendar
 const CHIP_COLORS = [
@@ -99,6 +100,10 @@ export default function CalendarView({
   const [eventBody, setEventBody] = useState('');
   const [eventChecklists, setEventChecklists] = useState([]);
   const [newCheckText, setNewCheckText] = useState('');
+
+  // Tag Filter & Grouped Modal states
+  const [activeTagFilter, setActiveTagFilter] = useState('all'); // 'all' | tag name
+  const [showTagGroupModal, setShowTagGroupModal] = useState(false);
 
   // Year & Month calculations
   const year = currentDate.getFullYear();
@@ -311,7 +316,19 @@ export default function CalendarView({
     }
   };
 
-  // Group scheduled events (notes with explicit date AND checklist items with dueDate) by dateKey
+  // Collect all unique tags used across all scheduled items & notes
+  const allUsedTagsSet = new Set(['진행중', '계약서작성', '잔금', '추적관찰', '중요']);
+  items.forEach((item) => {
+    if (item.tag) allUsedTagsSet.add(item.tag);
+    if (item.checklists) {
+      item.checklists.forEach((c) => {
+        if (c.tag) allUsedTagsSet.add(c.tag);
+      });
+    }
+  });
+  const allUsedTags = Array.from(allUsedTagsSet);
+
+  // Group scheduled events by dateKey, applying activeTagFilter
   const eventsByDate = {};
 
   const addEventToDate = (dateKey, eventObj) => {
@@ -323,36 +340,69 @@ export default function CalendarView({
   items.forEach((item) => {
     // 1. Explicit note date
     if (item.date) {
-      addEventToDate(item.date, {
-        id: `note_${item.id}`,
-        type: 'note',
-        rawItem: item,
-        title: item.title || '제목 없음',
-        completed: false,
-        isAllDay: true,
-        time: ''
-      });
+      if (activeTagFilter === 'all' || item.tag === activeTagFilter) {
+        addEventToDate(item.date, {
+          id: `note_${item.id}`,
+          type: 'note',
+          rawItem: item,
+          title: item.title || '제목 없음',
+          completed: false,
+          isAllDay: true,
+          time: '',
+          tag: item.tag || null
+        });
+      }
     }
 
     // 2. Scheduled checklist items (ONLY those with c.dueDate!)
     if (item.checklists && Array.isArray(item.checklists)) {
       item.checklists.forEach((c) => {
         if (c.dueDate) {
-          addEventToDate(c.dueDate, {
-            id: `check_${item.id}_${c.id}`,
-            type: 'checklist',
-            rawItem: item,
-            checkId: c.id,
-            title: c.text,
-            completed: !!c.completed,
-            isAllDay: c.isAllDay !== false,
-            time: c.dueTime || '09:00',
-            parentNoteTitle: item.title
-          });
+          if (activeTagFilter === 'all' || c.tag === activeTagFilter) {
+            addEventToDate(c.dueDate, {
+              id: `check_${item.id}_${c.id}`,
+              type: 'checklist',
+              rawItem: item,
+              checkId: c.id,
+              title: c.text,
+              completed: !!c.completed,
+              isAllDay: c.isAllDay !== false,
+              time: c.dueTime || '09:00',
+              parentNoteTitle: item.title,
+              tag: c.tag || null
+            });
+          }
         }
       });
     }
   });
+
+  // Group events by tag for the Grouped Modal View
+  const getEventsGroupedByTag = () => {
+    const groups = {};
+    items.forEach((item) => {
+      if (item.checklists && Array.isArray(item.checklists)) {
+        item.checklists.forEach((c) => {
+          if (c.dueDate) {
+            const tagName = c.tag || '미지정';
+            if (!groups[tagName]) groups[tagName] = [];
+            groups[tagName].push({
+              id: `check_${item.id}_${c.id}`,
+              type: 'checklist',
+              title: c.text,
+              date: c.dueDate,
+              time: c.isAllDay ? '종일' : (c.dueTime || '09:00'),
+              completed: !!c.completed,
+              rawItem: item,
+              tag: c.tag,
+              parentNoteTitle: item.title
+            });
+          }
+        });
+      }
+    });
+    return groups;
+  };
 
   const renderWeeklyView = () => {
     const weekDays = getWeekDays(currentDate);
@@ -734,6 +784,85 @@ export default function CalendarView({
         </div>
       </div>
 
+      {/* Top Tag Filter Bar & Badge Grouped View Button */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        backgroundColor: '#F8FAFC',
+        borderBottom: '1px solid #E2E8F0',
+        overflowX: 'auto'
+      }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', whiteSpace: 'nowrap', marginRight: '2px' }}>
+          배지 필터:
+        </span>
+        <button
+          onClick={() => setActiveTagFilter('all')}
+          style={{
+            fontSize: '11px',
+            fontWeight: activeTagFilter === 'all' ? 700 : 500,
+            padding: '2px 8px',
+            borderRadius: '12px',
+            border: '1px solid #CBD5E1',
+            backgroundColor: activeTagFilter === 'all' ? '#1E293B' : '#FFFFFF',
+            color: activeTagFilter === 'all' ? '#FFFFFF' : '#475569',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          전체
+        </button>
+        {allUsedTags.map((tagName) => {
+          const tagStyle = getTagStyle(tagName);
+          const isSelected = activeTagFilter === tagName;
+          return (
+            <button
+              key={tagName}
+              onClick={() => setActiveTagFilter(isSelected ? 'all' : tagName)}
+              style={{
+                fontSize: '11px',
+                fontWeight: isSelected ? 700 : 600,
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: `1px solid ${tagStyle.border}`,
+                backgroundColor: isSelected ? tagStyle.color : tagStyle.bg,
+                color: isSelected ? '#FFFFFF' : tagStyle.color,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              {tagName}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setShowTagGroupModal(true)}
+          style={{
+            marginLeft: 'auto',
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 10px',
+            borderRadius: '12px',
+            backgroundColor: '#2563EB',
+            color: '#FFFFFF',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
+          }}
+          title="배지별 일정 모아보기 모달 열기"
+        >
+          <Tag size={12} />
+          <span>배지별 모아보기</span>
+        </button>
+      </div>
+
       {/* Render View Mode Grid */}
       {viewMode === 'month' && (
         <>
@@ -862,6 +991,115 @@ export default function CalendarView({
 
       {/* Render Daily View */}
       {viewMode === 'day' && renderDailyView()}
+
+      {/* Grouped Events by Tag Modal */}
+      {showTagGroupModal && (() => {
+        const tagGroups = getEventsGroupedByTag();
+        const tagKeys = Object.keys(tagGroups);
+
+        return (
+          <div style={styles.modalOverlay} onClick={() => setShowTagGroupModal(false)}>
+            <div style={{ ...styles.modalContent, maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
+              <div style={styles.modalHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Tag size={20} color="#2563EB" />
+                  <h3 style={styles.modalTitle}>배지별 일정 모아보기</h3>
+                </div>
+                <button
+                  onClick={() => setShowTagGroupModal(false)}
+                  style={styles.modalCloseBtn}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto' }}>
+                {tagKeys.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
+                    등록된 일정 배지가 없습니다. 체크리스트 항목에 배지를 부여해보세요!
+                  </div>
+                ) : (
+                  tagKeys.map((tagName) => {
+                    const tagStyle = getTagStyle(tagName) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155' };
+                    const groupEvts = tagGroups[tagName];
+
+                    return (
+                      <div
+                        key={tagName}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          padding: '10px 12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: tagStyle.bg,
+                              color: tagStyle.color,
+                              border: `1px solid ${tagStyle.border}`
+                            }}
+                          >
+                            {tagName}
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
+                            ({groupEvts.length}건)
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {groupEvts.map((evt) => (
+                            <div
+                              key={evt.id}
+                              onClick={() => {
+                                setShowTagGroupModal(false);
+                                onNavigateToDetail(evt.rawItem.id, true);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '6px',
+                                padding: '8px 10px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '1px 6px', borderRadius: '4px' }}>
+                                    📅 {evt.date} ({evt.time})
+                                  </span>
+                                  {evt.parentNoteTitle && (
+                                    <span style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      [{evt.parentNoteTitle}]
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: 500 }}>
+                                  {evt.title}
+                                </span>
+                              </div>
+                              <ChevronRight size={16} color="#94A3B8" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Google Calendar Event Add/Edit Modal */}
       {showEventModal && (
