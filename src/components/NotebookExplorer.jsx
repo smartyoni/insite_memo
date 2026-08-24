@@ -85,6 +85,43 @@ export default function NotebookExplorer() {
   const [editingCheckId, setEditingCheckId] = useState(null);
   const [editingCheckText, setEditingCheckText] = useState('');
 
+  // Global Delete Confirmation Modal State
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const openDeleteModal = (title, message, onConfirm) => {
+    setDeleteModalState({
+      isOpen: true,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalState({
+      isOpen: false,
+      title: '',
+      message: '',
+      onConfirm: null
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteModalState.onConfirm) {
+      try {
+        await deleteModalState.onConfirm();
+      } catch (err) {
+        console.error('Delete execution error:', err);
+      }
+    }
+    closeDeleteModal();
+  };
+
   const toastTimerRef = useRef(null);
 
   // Resize listener for mobile responsive layout
@@ -331,16 +368,20 @@ export default function NotebookExplorer() {
     setIsEditMode(false);
   }, [selectedItemId]);
 
-  // ESC key handler for cancelling detail edit mode
+  // ESC key handler for cancelling delete modal & detail edit mode
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isEditMode) {
-        handleCancelDetailEdit();
+      if (e.key === 'Escape') {
+        if (deleteModalState.isOpen) {
+          closeDeleteModal();
+        } else if (isEditMode) {
+          handleCancelDetailEdit();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditMode, activeItem]);
+  }, [deleteModalState.isOpen, isEditMode, activeItem]);
 
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
@@ -606,48 +647,31 @@ export default function NotebookExplorer() {
 
                   {!isFixed && (
                     <div style={styles.actionGroup}>
-                      {isDeleting ? (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
-                            style={styles.actionBtnConfirm}
-                            title="확인 삭제"
-                          >
-                            <Check size={14} color="#2563EB" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeletingCategoryId(null); }}
-                            style={styles.actionBtnCancel}
-                            title="취소"
-                          >
-                            <X size={14} color="#E57373" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingCategoryId(cat.id);
-                              setEditingCategoryName(cat.name);
-                            }}
-                            style={styles.actionBtnDark}
-                            title="이름 변경"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingCategoryId(cat.id);
-                            }}
-                            style={styles.actionBtnDark}
-                            title="삭제"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCategoryId(cat.id);
+                          setEditingCategoryName(cat.name);
+                        }}
+                        style={styles.actionBtnDark}
+                        title="이름 변경"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModal(
+                            '카테고리 삭제',
+                            `'${cat.name}' 카테고리를 삭제하시겠습니까?\n카테고리 안의 모든 메모도 함께 삭제됩니다.`,
+                            () => handleDeleteCategory(cat.id)
+                          );
+                        }}
+                        style={styles.actionBtnDark}
+                        title="삭제"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -739,48 +763,31 @@ export default function NotebookExplorer() {
 
                       {/* Hover Actions */}
                       <div style={styles.actionGroupLight}>
-                        {isDeleting ? (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
-                              style={styles.actionBtnConfirm}
-                              title="확인 삭제"
-                            >
-                              <Check size={14} color="#3F7A63" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeletingItemId(null); }}
-                              style={styles.actionBtnCancel}
-                              title="취소"
-                            >
-                              <X size={14} color="#E57373" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingItemId(item.id);
-                                setEditingItemTitle(item.title || '');
-                              }}
-                              style={styles.actionBtnLight}
-                              title="제목 변경"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingItemId(item.id);
-                              }}
-                              style={styles.actionBtnLight}
-                              title="삭제"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingItemId(item.id);
+                            setEditingItemTitle(item.title || '');
+                          }}
+                          style={styles.actionBtnLight}
+                          title="제목 변경"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteModal(
+                              '메모 삭제',
+                              `'${item.title || '제목 없음'}' 메모를 정말 삭제하시겠습니까?`,
+                              () => handleDeleteItem(item.id)
+                            );
+                          }}
+                          style={styles.actionBtnLight}
+                          title="삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </div>
 
@@ -1074,7 +1081,14 @@ export default function NotebookExplorer() {
                                           <Edit2 size={13} />
                                         </button>
                                         <button
-                                          onClick={() => handleDeleteChecklist(checkItem.id)}
+                                          onClick={() => {
+                                            const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                            openDeleteModal(
+                                              '체크리스트 항목 삭제',
+                                              `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                              () => handleDeleteChecklist(checkItem.id)
+                                            );
+                                          }}
                                           style={styles.actionBtnLight}
                                           title="삭제"
                                         >
@@ -1248,7 +1262,14 @@ export default function NotebookExplorer() {
                                         <Edit2 size={13} />
                                       </button>
                                       <button
-                                        onClick={() => handleDeleteChecklist(checkItem.id)}
+                                        onClick={() => {
+                                          const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                          openDeleteModal(
+                                            '체크리스트 항목 삭제',
+                                            `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                            () => handleDeleteChecklist(checkItem.id)
+                                          );
+                                        }}
                                         style={styles.actionBtnLight}
                                         title="삭제"
                                       >
@@ -1284,6 +1305,38 @@ export default function NotebookExplorer() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Global Custom Delete Confirmation Modal */}
+      {deleteModalState.isOpen && (
+        <div style={styles.modalOverlay} onClick={closeDeleteModal}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={styles.modalDangerIconWrapper}>
+                  <Trash2 size={18} color="#DC2626" />
+                </div>
+                <h3 style={styles.modalTitle}>{deleteModalState.title || '삭제 확인'}</h3>
+              </div>
+              <button onClick={closeDeleteModal} style={styles.modalCloseBtn} title="닫기">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <p style={styles.modalMessage}>{deleteModalState.message}</p>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button onClick={closeDeleteModal} style={styles.btnModalCancel}>
+                취소
+              </button>
+              <button onClick={handleConfirmDelete} style={styles.btnModalDelete}>
+                삭제하기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1977,6 +2030,103 @@ const styles = {
     fontSize: '13px',
     lineHeight: 1.5,
     padding: '12px 0'
+  },
+
+  // Global Delete Modal Styles
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backdropFilter: 'blur(3px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '400px',
+    padding: '20px',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  modalDangerIconWrapper: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: '50%',
+    padding: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalTitle: {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#1E293B',
+    margin: 0
+  },
+  modalCloseBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#94A3B8',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalBody: {
+    fontSize: '14px',
+    lineHeight: 1.6,
+    color: '#475569'
+  },
+  modalMessage: {
+    margin: 0,
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap'
+  },
+  modalFooter: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    paddingTop: '8px',
+    borderTop: '1px solid #F1F5F9'
+  },
+  btnModalCancel: {
+    backgroundColor: '#F1F5F9',
+    color: '#475569',
+    border: '1px solid #CBD5E1',
+    borderRadius: '6px',
+    padding: '7px 14px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background-color 0.15s'
+  },
+  btnModalDelete: {
+    backgroundColor: '#DC2626',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '7px 14px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background-color 0.15s',
+    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3)'
   },
 
   exitToast: {
