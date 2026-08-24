@@ -954,7 +954,6 @@ export default function NotebookExplorer() {
                 const isSelected = item.id === selectedItemId;
                 const isEditing = item.id === editingItemId;
                 const isDeleting = item.id === deletingItemId;
-                const previewText = item.body ? item.body.slice(0, 40) : '(내용 없음)';
 
                 return (
                   <div
@@ -1020,10 +1019,6 @@ export default function NotebookExplorer() {
                           <Trash2 size={13} />
                         </button>
                       </div>
-                    </div>
-
-                    <div style={styles.itemPreview}>
-                      {previewText}
                     </div>
                   </div>
                 );
@@ -2345,7 +2340,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '6px'
+    marginBottom: 0
   },
   itemTitle: {
     fontSize: '14px',
