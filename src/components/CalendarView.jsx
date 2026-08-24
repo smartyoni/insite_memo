@@ -405,8 +405,7 @@ export default function CalendarView({
                         key={evt.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                          else handleOpenEditModal(evt.rawItem, e);
+                          onNavigateToDetail(evt.rawItem.id, isChecklist);
                         }}
                         style={{
                           ...styles.eventChip,
@@ -460,8 +459,7 @@ export default function CalendarView({
                             key={evt.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                              else handleOpenEditModal(evt.rawItem, e);
+                              onNavigateToDetail(evt.rawItem.id, isChecklist);
                             }}
                             style={{
                               ...styles.eventChip,
@@ -535,8 +533,7 @@ export default function CalendarView({
                     key={evt.id}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                      else handleOpenEditModal(evt.rawItem, e);
+                      onNavigateToDetail(evt.rawItem.id, isChecklist);
                     }}
                     style={{
                       ...styles.eventChip,
@@ -581,8 +578,7 @@ export default function CalendarView({
                         key={evt.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isChecklist) handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                          else handleOpenEditModal(evt.rawItem, e);
+                          onNavigateToDetail(evt.rawItem.id, isChecklist);
                         }}
                         style={{
                           ...styles.eventChip,
@@ -816,11 +812,7 @@ export default function CalendarView({
                           key={evt.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isChecklist) {
-                              handleToggleChecklistInCalendar(evt.rawItem.id, evt.checkId);
-                            } else {
-                              handleOpenEditModal(evt.rawItem, e);
-                            }
+                            onNavigateToDetail(evt.rawItem.id, isChecklist);
                           }}
                           style={{
                             ...styles.eventChip,

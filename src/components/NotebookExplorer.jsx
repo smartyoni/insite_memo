@@ -85,6 +85,7 @@ export default function NotebookExplorer() {
   const [draftBody, setDraftBody] = useState('');
   const [draftSubBody, setDraftSubBody] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [navigatedFromCalendar, setNavigatedFromCalendar] = useState(false);
 
   // Checklist local states
   const [newChecklistText, setNewChecklistText] = useState('');
@@ -595,7 +596,10 @@ export default function NotebookExplorer() {
           {/* Main Mode Tab Switcher */}
           <div style={styles.mainModeBar}>
             <button
-              onClick={() => setActiveMainTab('explorer')}
+              onClick={() => {
+                setActiveMainTab('explorer');
+                setNavigatedFromCalendar(false);
+              }}
               style={{
                 ...styles.mainModeTabBtn,
                 backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
@@ -609,6 +613,7 @@ export default function NotebookExplorer() {
             <button
               onClick={() => {
                 setActiveMainTab('calendar');
+                setNavigatedFromCalendar(false);
                 if (isMobile) setMobileView('detail');
               }}
               style={{
@@ -759,9 +764,13 @@ export default function NotebookExplorer() {
           <CalendarView
             items={items}
             categories={allCategories}
-            onNavigateToDetail={(itemId) => {
+            onNavigateToDetail={(itemId, isChecklist) => {
               navigateToDetail(itemId);
               setActiveMainTab('explorer');
+              setNavigatedFromCalendar(true);
+              if (isChecklist) {
+                setMobileSubTab('sub');
+              }
             }}
             openDeleteModal={openDeleteModal}
           />
@@ -914,15 +923,43 @@ export default function NotebookExplorer() {
                   minWidth: 0
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
-                    {isMobile && (
+                    {navigatedFromCalendar ? (
                       <button
-                        onClick={navigateBack}
-                        style={styles.mobileBackBtn}
-                        title="목록으로 이동"
+                        onClick={() => {
+                          setActiveMainTab('calendar');
+                          setNavigatedFromCalendar(false);
+                        }}
+                        style={{
+                          backgroundColor: '#2563EB',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '5px 10px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
+                          flexShrink: 0
+                        }}
+                        title="구글 캘린더 화면으로 돌아가기"
                       >
-                        <ArrowLeft size={16} />
-                        <span>목록</span>
+                        <ArrowLeft size={14} />
+                        <span>캘린더</span>
                       </button>
+                    ) : (
+                      isMobile && (
+                        <button
+                          onClick={navigateBack}
+                          style={styles.mobileBackBtn}
+                          title="목록으로 이동"
+                        >
+                          <ArrowLeft size={16} />
+                          <span>목록</span>
+                        </button>
+                      )
                     )}
                     <div style={{
                       ...styles.breadcrumb,
