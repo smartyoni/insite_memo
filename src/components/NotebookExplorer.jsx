@@ -36,18 +36,56 @@ import {
 import { renderWithLinks } from '../utils/linkify';
 
 export const DEFAULT_TAGS = [
-  { name: '진행중', bg: '#FEF3C7', border: '#FDE047', color: '#B45309' },
-  { name: '계약서작성', bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF' },
-  { name: '잔금', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
-  { name: '추적관찰', bg: '#F3E8FF', border: '#D8B4FE', color: '#7E22CE' },
-  { name: '중요', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
+  { id: 'def_1', name: '진행중', bg: '#FEF3C7', border: '#FDE047', color: '#B45309' },
+  { id: 'def_2', name: '계약서작성', bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF' },
+  { id: 'def_3', name: '잔금', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
+  { id: 'def_4', name: '추적관찰', bg: '#F3E8FF', border: '#D8B4FE', color: '#7E22CE' },
+  { id: 'def_5', name: '중요', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
 ];
 
-export function getTagStyle(tagName) {
+export const TAG_COLOR_PALETTE = [
+  { bg: '#FEF3C7', border: '#FDE047', color: '#B45309', label: '주황' },
+  { bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF', label: '파랑' },
+  { bg: '#DCFCE7', border: '#86EFAC', color: '#15803D', label: '초록' },
+  { bg: '#F3E8FF', border: '#D8B4FE', color: '#7E22CE', label: '보라' },
+  { bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C', label: '빨강' },
+  { bg: '#FFEDD5', border: '#FDBA74', color: '#C2410C', label: '다홍' },
+  { bg: '#E0F2FE', border: '#7DD3FC', color: '#0369A1', label: '하늘' },
+  { bg: '#FCE7F3', border: '#F472B6', color: '#BE185D', label: '분홍' },
+  { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155', label: '회색' }
+];
+
+export function getStoredCustomTags() {
+  try {
+    const saved = localStorage.getItem('insite_custom_tags');
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveStoredCustomTags(tags) {
+  try {
+    localStorage.setItem('insite_custom_tags', JSON.stringify(tags));
+  } catch (e) {}
+}
+
+export function getTagStyle(tagName, customBadgesList = null) {
   if (!tagName) return null;
-  const found = DEFAULT_TAGS.find(t => t.name === tagName);
-  if (found) return found;
-  return { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155' };
+  const foundDefault = DEFAULT_TAGS.find(t => t.name === tagName);
+  if (foundDefault) return foundDefault;
+
+  const customList = customBadgesList || getStoredCustomTags();
+  const foundCustom = customList.find(t => t.name === tagName);
+  if (foundCustom) return foundCustom;
+
+  // Fallback color palette by string hash
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % TAG_COLOR_PALETTE.length;
+  return TAG_COLOR_PALETTE[index];
 }
 import CalendarView from './CalendarView';
 
@@ -115,6 +153,138 @@ export default function NotebookExplorer() {
   const [editingCheckDueTime, setEditingCheckDueTime] = useState('09:00');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
+
+  // Persistent Custom Badges & Management State
+  const [customBadges, setCustomBadges] = useState(getStoredCustomTags);
+  const [showAddBadgeModal, setShowAddBadgeModal] = useState(false);
+  const [showManageBadgesModal, setShowManageBadgesModal] = useState(false);
+
+  const [newBadgeName, setNewBadgeName] = useState('');
+  const [newBadgeColorIdx, setNewBadgeColorIdx] = useState(0);
+
+  const [editingBadgeId, setEditingBadgeId] = useState(null);
+  const [editingBadgeName, setEditingBadgeName] = useState('');
+  const [editingBadgeColorIdx, setEditingBadgeColorIdx] = useState(0);
+
+  const allBadges = [...DEFAULT_TAGS, ...customBadges];
+
+  const handleAddCustomBadge = () => {
+    const trimmed = newBadgeName.trim();
+    if (!trimmed) return;
+    const exists = allBadges.some(t => t.name === trimmed);
+    if (exists) {
+      setEditingCheckTag(trimmed);
+      setShowAddBadgeModal(false);
+      setNewBadgeName('');
+      return;
+    }
+
+    const colorStyle = TAG_COLOR_PALETTE[newBadgeColorIdx % TAG_COLOR_PALETTE.length];
+    const newBadge = {
+      id: 'c_' + Date.now().toString(),
+      name: trimmed,
+      bg: colorStyle.bg,
+      border: colorStyle.border,
+      color: colorStyle.color
+    };
+    const updated = [...customBadges, newBadge];
+    setCustomBadges(updated);
+    saveStoredCustomTags(updated);
+    setEditingCheckTag(trimmed);
+    setNewBadgeName('');
+    setShowAddBadgeModal(false);
+  };
+
+  const handleUpdateCustomBadge = (badgeId) => {
+    const trimmed = editingBadgeName.trim();
+    if (!trimmed) return;
+    const colorStyle = TAG_COLOR_PALETTE[editingBadgeColorIdx % TAG_COLOR_PALETTE.length];
+    const updated = customBadges.map(b =>
+      b.id === badgeId
+        ? { ...b, name: trimmed, bg: colorStyle.bg, border: colorStyle.border, color: colorStyle.color }
+        : b
+    );
+    setCustomBadges(updated);
+    saveStoredCustomTags(updated);
+    setEditingBadgeId(null);
+  };
+
+  const handleDeleteCustomBadge = (badgeId) => {
+    const updated = customBadges.filter(b => b.id !== badgeId);
+    setCustomBadges(updated);
+    saveStoredCustomTags(updated);
+  };
+
+  const renderBadgeSelectorBar = () => {
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: '2px' }}>배지 선택:</span>
+        {allBadges.map((t) => {
+          const isSelected = editingCheckTag === t.name;
+          return (
+            <button
+              key={t.id || t.name}
+              type="button"
+              onClick={() => setEditingCheckTag(isSelected ? '' : t.name)}
+              style={{
+                border: `1px solid ${t.border}`,
+                backgroundColor: isSelected ? t.color : t.bg,
+                color: isSelected ? '#FFFFFF' : t.color,
+                fontSize: '11px',
+                fontWeight: 600,
+                borderRadius: '4px',
+                padding: '2px 7px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+            >
+              {t.name}
+            </button>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => {
+            setNewBadgeName('');
+            setNewBadgeColorIdx(0);
+            setShowAddBadgeModal(true);
+          }}
+          style={{
+            border: '1px dashed #2563EB',
+            backgroundColor: '#EFF6FF',
+            color: '#2563EB',
+            fontSize: '11px',
+            fontWeight: 600,
+            borderRadius: '4px',
+            padding: '2px 7px',
+            cursor: 'pointer'
+          }}
+        >
+          + 새 배지 만들기
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowManageBadgesModal(true)}
+          style={{
+            border: '1px solid #CBD5E1',
+            backgroundColor: '#FFFFFF',
+            color: '#64748B',
+            fontSize: '11px',
+            fontWeight: 600,
+            borderRadius: '4px',
+            padding: '2px 6px',
+            cursor: 'pointer',
+            marginLeft: 'auto'
+          }}
+          title="배지 수정 및 삭제"
+        >
+          ⚙️ 관리
+        </button>
+      </div>
+    );
+  };
 
   // Global Delete Confirmation Modal State
   const [deleteModalState, setDeleteModalState] = useState({
@@ -1269,65 +1439,7 @@ export default function NotebookExplorer() {
                                           </div>
 
                                           {/* Badge Tag Selector */}
-                                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: '2px' }}>배지 선택:</span>
-                                            {DEFAULT_TAGS.map((t) => {
-                                              const isSelected = editingCheckTag === t.name;
-                                              return (
-                                                <button
-                                                  key={t.name}
-                                                  type="button"
-                                                  onClick={() => setEditingCheckTag(isSelected ? '' : t.name)}
-                                                  style={{
-                                                    border: `1px solid ${t.border}`,
-                                                    backgroundColor: isSelected ? t.color : t.bg,
-                                                    color: isSelected ? '#FFFFFF' : t.color,
-                                                    fontSize: '11px',
-                                                    fontWeight: 600,
-                                                    borderRadius: '4px',
-                                                    padding: '2px 7px',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.15s'
-                                                  }}
-                                                >
-                                                  {t.name}
-                                                </button>
-                                              );
-                                            })}
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditingCheckTag(editingCheckTag === 'custom' ? '' : 'custom')}
-                                              style={{
-                                                border: '1px solid #CBD5E1',
-                                                backgroundColor: editingCheckTag === 'custom' ? '#475569' : '#F1F5F9',
-                                                color: editingCheckTag === 'custom' ? '#FFFFFF' : '#475569',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                borderRadius: '4px',
-                                                padding: '2px 7px',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              + 직접 입력
-                                            </button>
-
-                                            {editingCheckTag === 'custom' && (
-                                              <input
-                                                type="text"
-                                                placeholder="배지 이름..."
-                                                value={customTagInput}
-                                                onChange={(e) => setCustomTagInput(e.target.value)}
-                                                style={{
-                                                  fontSize: '11px',
-                                                  padding: '2px 6px',
-                                                  border: '1px solid #CBD5E1',
-                                                  borderRadius: '4px',
-                                                  width: '90px',
-                                                  outline: 'none'
-                                                }}
-                                              />
-                                            )}
-                                          </div>
+                                          {renderBadgeSelectorBar()}
 
                                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '4px' }}>
                                             <button
@@ -1569,65 +1681,7 @@ export default function NotebookExplorer() {
                                         </div>
 
                                         {/* Badge Tag Selector */}
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-                                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: '2px' }}>배지 선택:</span>
-                                          {DEFAULT_TAGS.map((t) => {
-                                            const isSelected = editingCheckTag === t.name;
-                                            return (
-                                              <button
-                                                key={t.name}
-                                                type="button"
-                                                onClick={() => setEditingCheckTag(isSelected ? '' : t.name)}
-                                                style={{
-                                                  border: `1px solid ${t.border}`,
-                                                  backgroundColor: isSelected ? t.color : t.bg,
-                                                  color: isSelected ? '#FFFFFF' : t.color,
-                                                  fontSize: '11px',
-                                                  fontWeight: 600,
-                                                  borderRadius: '4px',
-                                                  padding: '2px 7px',
-                                                  cursor: 'pointer',
-                                                  transition: 'all 0.15s'
-                                                }}
-                                              >
-                                                {t.name}
-                                              </button>
-                                            );
-                                          })}
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditingCheckTag(editingCheckTag === 'custom' ? '' : 'custom')}
-                                            style={{
-                                              border: '1px solid #CBD5E1',
-                                              backgroundColor: editingCheckTag === 'custom' ? '#475569' : '#F1F5F9',
-                                              color: editingCheckTag === 'custom' ? '#FFFFFF' : '#475569',
-                                              fontSize: '11px',
-                                              fontWeight: 600,
-                                              borderRadius: '4px',
-                                              padding: '2px 7px',
-                                              cursor: 'pointer'
-                                            }}
-                                          >
-                                            + 직접 입력
-                                          </button>
-
-                                          {editingCheckTag === 'custom' && (
-                                            <input
-                                              type="text"
-                                              placeholder="배지 이름..."
-                                              value={customTagInput}
-                                              onChange={(e) => setCustomTagInput(e.target.value)}
-                                              style={{
-                                                fontSize: '11px',
-                                                padding: '2px 6px',
-                                                border: '1px solid #CBD5E1',
-                                                borderRadius: '4px',
-                                                width: '90px',
-                                                outline: 'none'
-                                              }}
-                                            />
-                                          )}
-                                        </div>
+                                        {renderBadgeSelectorBar()}
 
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '6px' }}>
                                           <button
@@ -1755,6 +1809,267 @@ export default function NotebookExplorer() {
         </div>
       )}
         </>
+      )}
+
+      {/* Add Custom Badge Modal */}
+      {showAddBadgeModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowAddBadgeModal(false)}>
+          <div style={{ ...styles.modalContent, maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>➕ 새 배지 만들기</h3>
+              <button onClick={() => setShowAddBadgeModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '10px 0' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  배지 이름
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: 중도금, 현장방문, 서류검토"
+                  value={newBadgeName}
+                  onChange={(e) => setNewBadgeName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    fontSize: '13px',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  배지 색상 선택
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {TAG_COLOR_PALETTE.map((pal, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setNewBadgeColorIdx(idx)}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        borderRadius: '4px',
+                        border: newBadgeColorIdx === idx ? `2px solid ${pal.color}` : `1px solid ${pal.border}`,
+                        backgroundColor: pal.bg,
+                        color: pal.color,
+                        cursor: 'pointer',
+                        boxShadow: newBadgeColorIdx === idx ? '0 0 0 2px rgba(37, 99, 235, 0.2)' : 'none'
+                      }}
+                    >
+                      {pal.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview */}
+              {newBadgeName.trim() && (() => {
+                const pal = TAG_COLOR_PALETTE[newBadgeColorIdx];
+                return (
+                  <div style={{ marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#64748B', marginRight: '6px' }}>미리보기:</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: pal.bg,
+                        color: pal.color,
+                        border: `1px solid ${pal.border}`
+                      }}
+                    >
+                      {newBadgeName.trim()}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleAddCustomBadge}
+                  style={styles.btnSmallSave}
+                >
+                  <Check size={14} /> 배지 생성
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddBadgeModal(false)}
+                  style={styles.btnSmallCancel}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Badges Modal */}
+      {showManageBadgesModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowManageBadgesModal(false)}>
+          <div style={{ ...styles.modalContent, maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>⚙️ 배지 수정 및 삭제</h3>
+              <button onClick={() => setShowManageBadgesModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto', padding: '10px 0' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>기본 배지 (수정 불가)</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                {DEFAULT_TAGS.map((t) => (
+                  <span
+                    key={t.id}
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: t.bg,
+                      color: t.color,
+                      border: `1px solid ${t.border}`
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                ))}
+              </div>
+
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B', marginTop: '6px' }}>사용자 정의 배지</div>
+              {customBadges.length === 0 ? (
+                <div style={{ fontSize: '12px', color: '#94A3B8', padding: '10px 0' }}>
+                  직접 만든 배지가 없습니다. [+ 새 배지 만들기]로 추가해보세요!
+                </div>
+              ) : (
+                customBadges.map((b) => {
+                  const isEditingThis = editingBadgeId === b.id;
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: isEditingThis ? 'column' : 'row',
+                        alignItems: isEditingThis ? 'stretch' : 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '6px',
+                        padding: '8px 10px',
+                        gap: '8px'
+                      }}
+                    >
+                      {isEditingThis ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <input
+                            type="text"
+                            value={editingBadgeName}
+                            onChange={(e) => setEditingBadgeName(e.target.value)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '12px',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '4px'
+                            }}
+                          />
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {TAG_COLOR_PALETTE.map((pal, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setEditingBadgeColorIdx(idx)}
+                                style={{
+                                  padding: '2px 6px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  borderRadius: '3px',
+                                  border: editingBadgeColorIdx === idx ? `2px solid ${pal.color}` : `1px solid ${pal.border}`,
+                                  backgroundColor: pal.bg,
+                                  color: pal.color,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {pal.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => handleUpdateCustomBadge(b.id)}
+                              style={styles.btnSmallSave}
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => setEditingBadgeId(null)}
+                              style={styles.btnSmallCancel}
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: b.bg,
+                              color: b.color,
+                              border: `1px solid ${b.border}`
+                            }}
+                          >
+                            {b.name}
+                          </span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => {
+                                setEditingBadgeId(b.id);
+                                setEditingBadgeName(b.name);
+                                const foundIdx = TAG_COLOR_PALETTE.findIndex(p => p.color === b.color);
+                                setEditingBadgeColorIdx(foundIdx >= 0 ? foundIdx : 0);
+                              }}
+                              style={styles.actionBtnLight}
+                              title="수정"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                openDeleteModal(
+                                  '배지 삭제',
+                                  `'${b.name}' 배지를 삭제하시겠습니까?`,
+                                  () => handleDeleteCustomBadge(b.id)
+                                );
+                              }}
+                              style={styles.actionBtnLight}
+                              title="삭제"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Global Custom Delete Confirmation Modal */}

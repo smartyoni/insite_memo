@@ -24,7 +24,7 @@ import {
   ListChecks
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
-import { DEFAULT_TAGS, getTagStyle } from './NotebookExplorer';
+import { DEFAULT_TAGS, getTagStyle, getStoredCustomTags } from './NotebookExplorer';
 
 // Colorful badge background colors like Google Calendar
 const CHIP_COLORS = [
@@ -317,7 +317,9 @@ export default function CalendarView({
   };
 
   // Collect all unique tags used across all scheduled items & notes
-  const allUsedTagsSet = new Set(['진행중', '계약서작성', '잔금', '추적관찰', '중요']);
+  const customBadgesList = getStoredCustomTags();
+  const allUsedTagsSet = new Set(DEFAULT_TAGS.map(t => t.name));
+  customBadgesList.forEach(b => allUsedTagsSet.add(b.name));
   items.forEach((item) => {
     if (item.tag) allUsedTagsSet.add(item.tag);
     if (item.checklists) {
