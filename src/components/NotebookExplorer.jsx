@@ -1568,7 +1568,68 @@ export default function NotebookExplorer() {
                                           )}
                                         </div>
 
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                        {/* Badge Tag Selector */}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: '2px' }}>배지 선택:</span>
+                                          {DEFAULT_TAGS.map((t) => {
+                                            const isSelected = editingCheckTag === t.name;
+                                            return (
+                                              <button
+                                                key={t.name}
+                                                type="button"
+                                                onClick={() => setEditingCheckTag(isSelected ? '' : t.name)}
+                                                style={{
+                                                  border: `1px solid ${t.border}`,
+                                                  backgroundColor: isSelected ? t.color : t.bg,
+                                                  color: isSelected ? '#FFFFFF' : t.color,
+                                                  fontSize: '11px',
+                                                  fontWeight: 600,
+                                                  borderRadius: '4px',
+                                                  padding: '2px 7px',
+                                                  cursor: 'pointer',
+                                                  transition: 'all 0.15s'
+                                                }}
+                                              >
+                                                {t.name}
+                                              </button>
+                                            );
+                                          })}
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingCheckTag(editingCheckTag === 'custom' ? '' : 'custom')}
+                                            style={{
+                                              border: '1px solid #CBD5E1',
+                                              backgroundColor: editingCheckTag === 'custom' ? '#475569' : '#F1F5F9',
+                                              color: editingCheckTag === 'custom' ? '#FFFFFF' : '#475569',
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              borderRadius: '4px',
+                                              padding: '2px 7px',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            + 직접 입력
+                                          </button>
+
+                                          {editingCheckTag === 'custom' && (
+                                            <input
+                                              type="text"
+                                              placeholder="배지 이름..."
+                                              value={customTagInput}
+                                              onChange={(e) => setCustomTagInput(e.target.value)}
+                                              style={{
+                                                fontSize: '11px',
+                                                padding: '2px 6px',
+                                                border: '1px solid #CBD5E1',
+                                                borderRadius: '4px',
+                                                width: '90px',
+                                                outline: 'none'
+                                              }}
+                                            />
+                                          )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '6px' }}>
                                           <button
                                             onClick={() => handleSaveEditChecklist(checkItem.id)}
                                             style={styles.btnSmallSave}
@@ -1585,6 +1646,27 @@ export default function NotebookExplorer() {
                                       </div>
                                     ) : (
                                       <div>
+                                        {checkItem.tag && (() => {
+                                          const tagStyle = getTagStyle(checkItem.tag);
+                                          return (
+                                            <span
+                                              style={{
+                                                display: 'inline-block',
+                                                fontSize: '11px',
+                                                fontWeight: 700,
+                                                padding: '1px 6px',
+                                                borderRadius: '4px',
+                                                backgroundColor: tagStyle.bg,
+                                                color: tagStyle.color,
+                                                border: `1px solid ${tagStyle.border}`,
+                                                marginRight: '6px',
+                                                verticalAlign: 'middle'
+                                              }}
+                                            >
+                                              {checkItem.tag}
+                                            </span>
+                                          );
+                                        })()}
                                         <span
                                           style={{
                                             ...styles.checkitemText,
