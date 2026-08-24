@@ -1090,33 +1090,7 @@ export default function NotebookExplorer() {
 
                       {(!isMobile || mobileSubTab === 'sub') && (
                         <div style={styles.rightPaneCard}>
-                          {/* Checklist Header */}
-                          <div style={styles.checklistHeader}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <ListChecks size={18} color="#2563EB" />
-                              <span style={styles.subNoteTitle}>체크리스트</span>
-                            </div>
-                            {totalCount > 0 && (
-                              <span style={styles.checklistCountBadge}>
-                                {completedCount}/{totalCount} 완료 ({progressPercent}%)
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Progress Bar */}
-                          {totalCount > 0 && (
-                            <div style={styles.progressBarTrack}>
-                              <div
-                                style={{
-                                  ...styles.progressBarFill,
-                                  width: `${progressPercent}%`,
-                                  backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {/* Input Form for new multiline checklist item with Schedule Options */}
+                          {/* Input Form for new multiline checklist item */}
                           <div style={styles.checklistInputContainer}>
                             <div style={styles.checklistInputGroup}>
                               <textarea
@@ -1145,58 +1119,6 @@ export default function NotebookExplorer() {
                                 <Plus size={15} />
                                 <span>추가</span>
                               </button>
-                            </div>
-
-                            {/* Schedule Option Toolbar */}
-                            <div style={styles.scheduleOptionBar}>
-                              <div style={styles.scheduleField}>
-                                <CalendarIcon size={13} color="#64748B" />
-                                <input
-                                  type="date"
-                                  value={newCheckDueDate}
-                                  onChange={(e) => setNewCheckDueDate(e.target.value)}
-                                  style={styles.scheduleDateInput}
-                                  title="일정 날짜 지정"
-                                />
-                              </div>
-
-                              {newCheckDueDate && (
-                                <>
-                                  <label style={styles.allDayCheckLabel}>
-                                    <input
-                                      type="checkbox"
-                                      checked={newCheckIsAllDay}
-                                      onChange={(e) => setNewCheckIsAllDay(e.target.checked)}
-                                      style={{ cursor: 'pointer' }}
-                                    />
-                                    <span>종일</span>
-                                  </label>
-
-                                  {!newCheckIsAllDay && (
-                                    <div style={styles.scheduleField}>
-                                      <Clock size={13} color="#64748B" />
-                                      <input
-                                        type="time"
-                                        value={newCheckDueTime}
-                                        onChange={(e) => setNewCheckDueTime(e.target.value)}
-                                        style={styles.scheduleTimeInput}
-                                        title="시간 지정"
-                                      />
-                                    </div>
-                                  )}
-
-                                  <button
-                                    onClick={() => {
-                                      setNewCheckDueDate('');
-                                      setNewCheckIsAllDay(true);
-                                    }}
-                                    style={styles.scheduleClearBtn}
-                                    title="일정 삭제"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </>
-                              )}
                             </div>
                           </div>
 
@@ -1386,33 +1308,7 @@ export default function NotebookExplorer() {
                     {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
                       <div style={styles.rightPaneCard}>
-                        {/* Checklist Header */}
-                        <div style={styles.checklistHeader}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <ListChecks size={18} color="#2563EB" />
-                            <span style={styles.subNoteTitle}>체크리스트</span>
-                          </div>
-                          {totalCount > 0 && (
-                            <span style={styles.checklistCountBadge}>
-                              {completedCount}/{totalCount} 완료 ({progressPercent}%)
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Progress Bar */}
-                        {totalCount > 0 && (
-                          <div style={styles.progressBarTrack}>
-                            <div
-                              style={{
-                                ...styles.progressBarFill,
-                                width: `${progressPercent}%`,
-                                backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {/* Input Form for new multiline checklist item with Schedule Options */}
+                        {/* Input Form for new multiline checklist item */}
                         <div style={styles.checklistInputContainer}>
                           <div style={styles.checklistInputGroup}>
                             <textarea
@@ -1441,58 +1337,6 @@ export default function NotebookExplorer() {
                               <Plus size={15} />
                               <span>추가</span>
                             </button>
-                          </div>
-
-                          {/* Schedule Option Toolbar */}
-                          <div style={styles.scheduleOptionBar}>
-                            <div style={styles.scheduleField}>
-                              <CalendarIcon size={13} color="#64748B" />
-                              <input
-                                type="date"
-                                value={newCheckDueDate}
-                                onChange={(e) => setNewCheckDueDate(e.target.value)}
-                                style={styles.scheduleDateInput}
-                                title="일정 날짜 지정"
-                              />
-                            </div>
-
-                            {newCheckDueDate && (
-                              <>
-                                <label style={styles.allDayCheckLabel}>
-                                  <input
-                                    type="checkbox"
-                                    checked={newCheckIsAllDay}
-                                    onChange={(e) => setNewCheckIsAllDay(e.target.checked)}
-                                    style={{ cursor: 'pointer' }}
-                                  />
-                                  <span>종일</span>
-                                </label>
-
-                                {!newCheckIsAllDay && (
-                                  <div style={styles.scheduleField}>
-                                    <Clock size={13} color="#64748B" />
-                                    <input
-                                      type="time"
-                                      value={newCheckDueTime}
-                                      onChange={(e) => setNewCheckDueTime(e.target.value)}
-                                      style={styles.scheduleTimeInput}
-                                      title="시간 지정"
-                                    />
-                                  </div>
-                                )}
-
-                                <button
-                                  onClick={() => {
-                                    setNewCheckDueDate('');
-                                    setNewCheckIsAllDay(true);
-                                  }}
-                                  style={styles.scheduleClearBtn}
-                                  title="일정 삭제"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </>
-                            )}
                           </div>
                         </div>
 
