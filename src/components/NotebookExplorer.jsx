@@ -26,7 +26,10 @@ import {
   ArrowLeft,
   Inbox,
   Zap,
-  Bookmark
+  Bookmark,
+  CheckSquare,
+  Square,
+  ListChecks
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -76,6 +79,11 @@ export default function NotebookExplorer() {
   const [draftBody, setDraftBody] = useState('');
   const [draftSubBody, setDraftSubBody] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
+
+  // Checklist local states
+  const [newChecklistText, setNewChecklistText] = useState('');
+  const [editingCheckId, setEditingCheckId] = useState(null);
+  const [editingCheckText, setEditingCheckText] = useState('');
 
   const toastTimerRef = useRef(null);
 
@@ -226,6 +234,86 @@ export default function NotebookExplorer() {
   // Get active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
+
+  // Compute active item checklists (with legacy subBody fallback)
+  const currentChecklists = activeItem?.checklists
+    ? activeItem.checklists
+    : activeItem?.subBody
+      ? activeItem.subBody.split('\n').filter((l) => l.trim().length > 0).map((line, idx) => ({
+          id: `legacy_${idx}`,
+          text: line,
+          completed: false
+        }))
+      : [];
+
+  const completedCount = currentChecklists.filter((c) => c.completed).length;
+  const totalCount = currentChecklists.length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Checklist Handlers
+  const handleToggleChecklist = async (checkId) => {
+    if (!activeItem) return;
+    const updated = currentChecklists.map((c) =>
+      c.id === checkId ? { ...c, completed: !c.completed } : c
+    );
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error toggling checklist:', err);
+    }
+  };
+
+  const handleAddChecklist = async () => {
+    if (!activeItem || !newChecklistText.trim()) return;
+    const newItem = {
+      id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      text: newChecklistText.trim(),
+      completed: false
+    };
+    const updated = [...currentChecklists, newItem];
+    setNewChecklistText('');
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error adding checklist:', err);
+    }
+  };
+
+  const handleSaveEditChecklist = async (checkId) => {
+    if (!activeItem || !editingCheckText.trim()) return;
+    const updated = currentChecklists.map((c) =>
+      c.id === checkId ? { ...c, text: editingCheckText.trim() } : c
+    );
+    setEditingCheckId(null);
+    setEditingCheckText('');
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error updating checklist:', err);
+    }
+  };
+
+  const handleDeleteChecklist = async (checkId) => {
+    if (!activeItem) return;
+    const updated = currentChecklists.filter((c) => c.id !== checkId);
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error deleting checklist:', err);
+    }
+  };
 
   // Sync draft state when active item changes
   useEffect(() => {
@@ -843,14 +931,162 @@ export default function NotebookExplorer() {
                       )}
 
                       {(!isMobile || mobileSubTab === 'sub') && (
-                        <div style={styles.editPaneSubCard}>
-                          <label style={{ ...styles.fieldLabel, color: '#1E293B' }}>☑️ 체크리스트</label>
-                          <textarea
-                            value={draftSubBody}
-                            onChange={(e) => setDraftSubBody(e.target.value)}
-                            placeholder="체크리스트 항목, 추가 참고 링크, 보충 설명을 작성하세요..."
-                            style={styles.editSubBodyTextarea}
-                          />
+                        <div style={styles.rightPaneCard}>
+                          {/* Checklist Header */}
+                          <div style={styles.checklistHeader}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <ListChecks size={18} color="#2563EB" />
+                              <span style={styles.subNoteTitle}>체크리스트</span>
+                            </div>
+                            {totalCount > 0 && (
+                              <span style={styles.checklistCountBadge}>
+                                {completedCount}/{totalCount} 완료 ({progressPercent}%)
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Progress Bar */}
+                          {totalCount > 0 && (
+                            <div style={styles.progressBarTrack}>
+                              <div
+                                style={{
+                                  ...styles.progressBarFill,
+                                  width: `${progressPercent}%`,
+                                  backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Input Form for new multiline checklist item */}
+                          <div style={styles.checklistInputGroup}>
+                            <textarea
+                              rows={2}
+                              value={newChecklistText}
+                              onChange={(e) => setNewChecklistText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  handleAddChecklist();
+                                }
+                              }}
+                              placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                              style={styles.checklistTextarea}
+                            />
+                            <button
+                              onClick={handleAddChecklist}
+                              style={{
+                                ...styles.checklistAddBtn,
+                                opacity: newChecklistText.trim() ? 1 : 0.6,
+                                cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
+                              }}
+                              disabled={!newChecklistText.trim()}
+                              title="체크리스트 추가"
+                            >
+                              <Plus size={15} />
+                              <span>추가</span>
+                            </button>
+                          </div>
+
+                          {/* Checklist Items List */}
+                          <div style={styles.checklistListContainer}>
+                            {currentChecklists.length === 0 ? (
+                              <div style={styles.checklistEmptyText}>
+                                등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목을 추가해보세요!
+                              </div>
+                            ) : (
+                              currentChecklists.map((checkItem) => {
+                                const isEditing = editingCheckId === checkItem.id;
+
+                                return (
+                                  <div
+                                    key={checkItem.id}
+                                    style={{
+                                      ...styles.checklistItemRow,
+                                      backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
+                                      borderColor: checkItem.completed ? '#E2E8F0' : '#CBD5E1'
+                                    }}
+                                  >
+                                    {/* Checkbox Toggle Button */}
+                                    <button
+                                      onClick={() => handleToggleChecklist(checkItem.id)}
+                                      style={styles.checkboxBtn}
+                                      title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                    >
+                                      {checkItem.completed ? (
+                                        <CheckSquare size={18} color="#2563EB" />
+                                      ) : (
+                                        <Square size={18} color="#94A3B8" />
+                                      )}
+                                    </button>
+
+                                    {/* Checklist Item Text Content or Inline Edit Textarea */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      {isEditing ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          <textarea
+                                            rows={2}
+                                            value={editingCheckText}
+                                            onChange={(e) => setEditingCheckText(e.target.value)}
+                                            style={styles.checklistEditTextarea}
+                                            autoFocus
+                                          />
+                                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                            <button
+                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                              style={styles.btnSmallSave}
+                                            >
+                                              <Check size={13} /> 저장
+                                            </button>
+                                            <button
+                                              onClick={() => setEditingCheckId(null)}
+                                              style={styles.btnSmallCancel}
+                                            >
+                                              <X size={13} /> 취소
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span
+                                          style={{
+                                            ...styles.checkitemText,
+                                            textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                            color: checkItem.completed ? '#94A3B8' : '#1E293B',
+                                            fontWeight: checkItem.completed ? 400 : 500
+                                          }}
+                                        >
+                                          {renderWithLinks(checkItem.text)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Item Actions */}
+                                    {!isEditing && (
+                                      <div style={styles.checkitemActions}>
+                                        <button
+                                          onClick={() => {
+                                            setEditingCheckId(checkItem.id);
+                                            setEditingCheckText(checkItem.text);
+                                          }}
+                                          style={styles.actionBtnLight}
+                                          title="수정"
+                                        >
+                                          <Edit2 size={13} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteChecklist(checkItem.id)}
+                                          style={styles.actionBtnLight}
+                                          title="삭제"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -870,19 +1106,159 @@ export default function NotebookExplorer() {
                     {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
                       <div style={styles.rightPaneCard}>
-                        <div style={styles.subNoteHeader}>
-                          <span style={styles.subNoteTitle}>
-                            <Bookmark size={16} color="#2563EB" style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                            체크리스트
-                          </span>
-                        </div>
-                        <div style={styles.subNoteBody}>
-                          {activeItem.subBody ? (
-                            renderWithLinks(activeItem.subBody)
-                          ) : (
-                            <span style={styles.subNoteEmptyText}>
-                              등록된 체크리스트가 없습니다. 상단의 [수정] 버튼을 눌러 체크리스트 항목이나 보충 정보를 작성해보세요.
+                        {/* Checklist Header */}
+                        <div style={styles.checklistHeader}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <ListChecks size={18} color="#2563EB" />
+                            <span style={styles.subNoteTitle}>체크리스트</span>
+                          </div>
+                          {totalCount > 0 && (
+                            <span style={styles.checklistCountBadge}>
+                              {completedCount}/{totalCount} 완료 ({progressPercent}%)
                             </span>
+                          )}
+                        </div>
+
+                        {/* Progress Bar */}
+                        {totalCount > 0 && (
+                          <div style={styles.progressBarTrack}>
+                            <div
+                              style={{
+                                ...styles.progressBarFill,
+                                width: `${progressPercent}%`,
+                                backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Input Form for new multiline checklist item */}
+                        <div style={styles.checklistInputGroup}>
+                          <textarea
+                            rows={2}
+                            value={newChecklistText}
+                            onChange={(e) => setNewChecklistText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddChecklist();
+                              }
+                            }}
+                            placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                            style={styles.checklistTextarea}
+                          />
+                          <button
+                            onClick={handleAddChecklist}
+                            style={{
+                              ...styles.checklistAddBtn,
+                              opacity: newChecklistText.trim() ? 1 : 0.6,
+                              cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
+                            }}
+                            disabled={!newChecklistText.trim()}
+                            title="체크리스트 추가"
+                          >
+                            <Plus size={15} />
+                            <span>추가</span>
+                          </button>
+                        </div>
+
+                        {/* Checklist Items List */}
+                        <div style={styles.checklistListContainer}>
+                          {currentChecklists.length === 0 ? (
+                            <div style={styles.checklistEmptyText}>
+                              등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목을 추가해보세요!
+                            </div>
+                          ) : (
+                            currentChecklists.map((checkItem) => {
+                              const isEditing = editingCheckId === checkItem.id;
+
+                              return (
+                                <div
+                                  key={checkItem.id}
+                                  style={{
+                                    ...styles.checklistItemRow,
+                                    backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
+                                    borderColor: checkItem.completed ? '#E2E8F0' : '#CBD5E1'
+                                  }}
+                                >
+                                  {/* Checkbox Toggle Button */}
+                                  <button
+                                    onClick={() => handleToggleChecklist(checkItem.id)}
+                                    style={styles.checkboxBtn}
+                                    title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                  >
+                                    {checkItem.completed ? (
+                                      <CheckSquare size={18} color="#2563EB" />
+                                    ) : (
+                                      <Square size={18} color="#94A3B8" />
+                                    )}
+                                  </button>
+
+                                  {/* Checklist Item Text Content or Inline Edit Textarea */}
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    {isEditing ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <textarea
+                                          rows={2}
+                                          value={editingCheckText}
+                                          onChange={(e) => setEditingCheckText(e.target.value)}
+                                          style={styles.checklistEditTextarea}
+                                          autoFocus
+                                        />
+                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                          <button
+                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                            style={styles.btnSmallSave}
+                                          >
+                                            <Check size={13} /> 저장
+                                          </button>
+                                          <button
+                                            onClick={() => setEditingCheckId(null)}
+                                            style={styles.btnSmallCancel}
+                                          >
+                                            <X size={13} /> 취소
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          ...styles.checkitemText,
+                                          textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                          color: checkItem.completed ? '#94A3B8' : '#1E293B',
+                                          fontWeight: checkItem.completed ? 400 : 500
+                                        }}
+                                      >
+                                        {renderWithLinks(checkItem.text)}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Item Actions */}
+                                  {!isEditing && (
+                                    <div style={styles.checkitemActions}>
+                                      <button
+                                        onClick={() => {
+                                          setEditingCheckId(checkItem.id);
+                                          setEditingCheckText(checkItem.text);
+                                        }}
+                                        style={styles.actionBtnLight}
+                                        title="수정"
+                                      >
+                                        <Edit2 size={13} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteChecklist(checkItem.id)}
+                                        style={styles.actionBtnLight}
+                                        title="삭제"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       </div>
@@ -1456,6 +1832,151 @@ const styles = {
     backgroundColor: '#FFFFFF',
     resize: 'vertical',
     fontFamily: 'inherit'
+  },
+
+  // Checklist Card Styles
+  checklistHeader: {
+    paddingBottom: '8px',
+    marginBottom: '8px',
+    borderBottom: '1px solid #E2E8F0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  checklistCountBadge: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#2563EB',
+    backgroundColor: '#EFF6FF',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    border: '1px solid #BFDBFE'
+  },
+  progressBarTrack: {
+    height: '4px',
+    backgroundColor: '#E2E8F0',
+    borderRadius: '2px',
+    overflow: 'hidden',
+    marginBottom: '10px'
+  },
+  progressBarFill: {
+    height: '100%',
+    transition: 'width 0.25s ease, background-color 0.25s ease'
+  },
+  checklistInputGroup: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '10px',
+    alignItems: 'stretch'
+  },
+  checklistTextarea: {
+    flex: 1,
+    fontSize: '13px',
+    padding: '6px 10px',
+    border: '1px solid #CBD5E1',
+    borderRadius: '6px',
+    outline: 'none',
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    lineHeight: 1.4,
+    backgroundColor: '#FFFFFF'
+  },
+  checklistAddBtn: {
+    backgroundColor: '#2563EB',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '0 12px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    flexShrink: 0
+  },
+  checklistListContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    overflowY: 'auto',
+    flex: 1,
+    paddingRight: '2px'
+  },
+  checklistItemRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    padding: '8px 10px',
+    borderRadius: '6px',
+    border: '1px solid',
+    transition: 'background-color 0.15s ease, border-color 0.15s ease'
+  },
+  checkboxBtn: {
+    background: 'none',
+    border: 'none',
+    padding: '2px 0 0 0',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    color: '#2563EB',
+    flexShrink: 0
+  },
+  checkitemText: {
+    fontSize: '13.5px',
+    lineHeight: 1.5,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    display: 'block'
+  },
+  checklistEditTextarea: {
+    width: '100%',
+    fontSize: '13px',
+    padding: '6px 8px',
+    border: '1px solid #2563EB',
+    borderRadius: '4px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    lineHeight: 1.4,
+    resize: 'vertical'
+  },
+  btnSmallSave: {
+    backgroundColor: '#2563EB',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px'
+  },
+  btnSmallCancel: {
+    backgroundColor: '#F1F5F9',
+    color: '#64748B',
+    border: '1px solid #CBD5E1',
+    borderRadius: '4px',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px'
+  },
+  checkitemActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+    flexShrink: 0
+  },
+  checklistEmptyText: {
+    color: '#94A3B8',
+    fontSize: '13px',
+    lineHeight: 1.5,
+    padding: '12px 0'
   },
 
   exitToast: {
