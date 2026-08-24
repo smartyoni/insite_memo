@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   collection,
   doc,
@@ -150,6 +150,57 @@ export default function CalendarView({
 
   const handleToday = () => {
     setCurrentDate(new Date());
+  };
+
+  // Mobile full-screen swipe navigation (Month / Week / Day views)
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const touchEndX = useRef(null);
+  const touchEndY = useRef(null);
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchEndX.current = e.touches[0].clientX;
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length !== 1) return;
+    touchEndX.current = e.touches[0].clientX;
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchStartY.current === null || touchEndX.current === null || touchEndY.current === null) return;
+    if (showEventModal) return;
+    if (viewMode !== 'month' && viewMode !== 'week' && viewMode !== 'day') return;
+
+    const diffX = touchStartX.current - touchEndX.current;
+    const diffY = touchStartY.current - touchEndY.current;
+
+    const minSwipeDistance = 45; // Minimum horizontal drag distance in px
+    const maxVerticalRatio = 0.75; // Ensure horizontal swipe is dominant over vertical scroll
+
+    if (
+      Math.abs(diffX) >= minSwipeDistance &&
+      Math.abs(diffY) < Math.abs(diffX) * maxVerticalRatio
+    ) {
+      if (diffX > 0) {
+        // Swiped right-to-left -> Next month / week / day
+        handleNext();
+      } else {
+        // Swiped left-to-right -> Prev month / week / day
+        handlePrev();
+      }
+    }
+
+    // Reset touch coordinates
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchEndX.current = null;
+    touchEndY.current = null;
   };
 
   const getHeaderTitle = () => {
@@ -889,7 +940,12 @@ export default function CalendarView({
   };
 
   return (
-    <div style={styles.container}>
+    <div
+      style={styles.container}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Google Calendar Toolbar (Responsive Desktop / Mobile) */}
       <div style={{
         ...styles.toolbar,
