@@ -812,7 +812,7 @@ export default function NotebookExplorer() {
               }}
             >
               <CalendarIcon size={14} />
-              <span>구글 캘린더</span>
+              <span>캘린더</span>
             </button>
           </div>
 
@@ -1132,7 +1132,7 @@ export default function NotebookExplorer() {
                           boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
                           flexShrink: 0
                         }}
-                        title="구글 캘린더 화면으로 돌아가기"
+                        title="캘린더 화면으로 돌아가기"
                       >
                         <ArrowLeft size={14} />
                         <span>캘린더</span>
