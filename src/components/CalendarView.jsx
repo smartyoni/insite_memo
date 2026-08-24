@@ -158,7 +158,7 @@ export default function CalendarView({
     }
     if (viewMode === 'day') {
       const dayOfWeekNames = ['일', '월', '화', '수', '목', '금', '토'];
-      return `${year}년 ${month + 1}월 ${currentDate.getDate()}일 (${dayOfWeekNames[currentDate.getDay()]}요일)`;
+      return `${year}년 ${month + 1}월 ${currentDate.getDate()}일 (${dayOfWeekNames[currentDate.getDay()]})`;
     }
     return '';
   };
@@ -502,17 +502,24 @@ export default function CalendarView({
       <div style={styles.timeGridWrapper}>
         {/* Daily Header */}
         <div style={styles.dailyHeader}>
-          <span
-            style={{
-              ...styles.dayNumBadge,
-              backgroundColor: isToday ? '#2563EB' : 'transparent',
-              color: isToday ? '#FFFFFF' : '#1E293B',
-              fontSize: '15px',
-              padding: '6px 14px'
-            }}
-          >
-            {currentDate.getDate()} ({dayName}요일)
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                color: isToday ? '#FFFFFF' : '#1E293B',
+                backgroundColor: isToday ? '#2563EB' : '#F1F5F9',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                border: isToday ? 'none' : '1px solid #CBD5E1',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {currentDate.getDate()}일 ({dayName})
+            </span>
+          </div>
         </div>
 
         {/* All-Day Section */}
