@@ -111,9 +111,8 @@ export default function CalendarView({
   const [eventChecklists, setEventChecklists] = useState([]);
   const [newCheckText, setNewCheckText] = useState('');
 
-  // Tag Filter & Grouped Modal states
-  const [activeTagFilter, setActiveTagFilter] = useState('all'); // 'all' | tag name
-  const [showTagGroupModal, setShowTagGroupModal] = useState(false);
+  // Badge View screen active tag selection state
+  const [selectedBadgeViewTag, setSelectedBadgeViewTag] = useState('');
 
   // Year & Month calculations
   const year = currentDate.getFullYear();
@@ -670,6 +669,164 @@ export default function CalendarView({
     );
   };
 
+  const renderBadgeView = () => {
+    const customBadgesList = getStoredCustomTags();
+    const allBadgesList = [...DEFAULT_TAGS, ...customBadgesList];
+    const eventsGrouped = getEventsGroupedByTag();
+
+    const activeTag = selectedBadgeViewTag || (allBadgesList[0] ? allBadgesList[0].name : '');
+    const activeTagStyle = getTagStyle(activeTag, customBadgesList) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155' };
+    const currentBadgeEvents = eventsGrouped[activeTag] || [];
+
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+        {/* Badge Selector Tabs */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '12px 16px',
+          borderBottom: '1px solid #E2E8F0',
+          backgroundColor: '#F8FAFC',
+          overflowX: 'auto'
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', marginRight: '4px' }}>
+            🏷️ 배지 선택:
+          </span>
+          {allBadgesList.map((b) => {
+            const isSelected = activeTag === b.name;
+            const count = (eventsGrouped[b.name] || []).length;
+            return (
+              <button
+                key={b.id || b.name}
+                onClick={() => setSelectedBadgeViewTag(b.name)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: isSelected ? 700 : 600,
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  border: `1px solid ${isSelected ? b.color : b.border}`,
+                  backgroundColor: isSelected ? b.color : b.bg,
+                  color: isSelected ? '#FFFFFF' : b.color,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: isSelected ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{b.name}</span>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                  color: isSelected ? '#FFFFFF' : b.color
+                }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Badge Schedule Content List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '4px',
+                backgroundColor: activeTagStyle.bg,
+                color: activeTagStyle.color,
+                border: `1px solid ${activeTagStyle.border}`
+              }}>
+                {activeTag}
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
+                총 {currentBadgeEvents.length}건의 일정
+              </span>
+            </div>
+          </div>
+
+          {currentBadgeEvents.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#94A3B8',
+              backgroundColor: '#F8FAFC',
+              borderRadius: '8px',
+              border: '1px dashed #CBD5E1'
+            }}>
+              <CalendarIcon size={36} color="#CBD5E1" style={{ marginBottom: '10px' }} />
+              <p style={{ fontSize: '14px', margin: 0, fontWeight: 500 }}>
+                '<strong>{activeTag}</strong>' 배지가 지정된 일정이 없습니다.
+              </p>
+              <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>
+                체크리스트 항목 수정 시 배지를 부여해 보세요!
+              </p>
+            </div>
+          ) : (
+            currentBadgeEvents.map((evt) => (
+              <div
+                key={evt.id}
+                onClick={() => onNavigateToDetail(evt.rawItem.id, true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${activeTagStyle.border}`,
+                  borderLeft: `4px solid ${activeTagStyle.color}`,
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: activeTagStyle.color,
+                      backgroundColor: activeTagStyle.bg,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: `1px solid ${activeTagStyle.border}`
+                    }}>
+                      📅 {evt.date} ({evt.time})
+                    </span>
+                    {evt.parentNoteTitle && (
+                      <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        [{evt.parentNoteTitle}]
+                      </span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: '14px',
+                    color: evt.completed ? '#94A3B8' : '#1E293B',
+                    fontWeight: 600,
+                    textDecoration: evt.completed ? 'line-through' : 'none'
+                  }}>
+                    {evt.title}
+                  </span>
+                </div>
+                <ChevronRight size={18} color="#94A3B8" />
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={styles.container}>
       {/* Google Calendar Toolbar (Responsive Desktop / Mobile) */}
@@ -781,6 +938,19 @@ export default function CalendarView({
             >
               일간
             </button>
+            <button
+              onClick={() => setViewMode('badge')}
+              style={{
+                ...styles.viewModeBtn,
+                flex: isMobile ? 1 : 'none',
+                textAlign: 'center',
+                backgroundColor: viewMode === 'badge' ? '#2563EB' : 'transparent',
+                color: viewMode === 'badge' ? '#FFFFFF' : '#475569',
+                fontWeight: viewMode === 'badge' ? 700 : 500
+              }}
+            >
+              배지
+            </button>
           </div>
 
           {!isMobile && (
@@ -794,85 +964,6 @@ export default function CalendarView({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Top Tag Filter Bar & Badge Grouped View Button */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '6px 12px',
-        backgroundColor: '#F8FAFC',
-        borderBottom: '1px solid #E2E8F0',
-        overflowX: 'auto'
-      }}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', whiteSpace: 'nowrap', marginRight: '2px' }}>
-          배지 필터:
-        </span>
-        <button
-          onClick={() => setActiveTagFilter('all')}
-          style={{
-            fontSize: '11px',
-            fontWeight: activeTagFilter === 'all' ? 700 : 500,
-            padding: '2px 8px',
-            borderRadius: '12px',
-            border: '1px solid #CBD5E1',
-            backgroundColor: activeTagFilter === 'all' ? '#1E293B' : '#FFFFFF',
-            color: activeTagFilter === 'all' ? '#FFFFFF' : '#475569',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          전체
-        </button>
-        {allUsedTags.map((tagName) => {
-          const tagStyle = getTagStyle(tagName);
-          const isSelected = activeTagFilter === tagName;
-          return (
-            <button
-              key={tagName}
-              onClick={() => setActiveTagFilter(isSelected ? 'all' : tagName)}
-              style={{
-                fontSize: '11px',
-                fontWeight: isSelected ? 700 : 600,
-                padding: '2px 8px',
-                borderRadius: '12px',
-                border: `1px solid ${tagStyle.border}`,
-                backgroundColor: isSelected ? tagStyle.color : tagStyle.bg,
-                color: isSelected ? '#FFFFFF' : tagStyle.color,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              {tagName}
-            </button>
-          );
-        })}
-
-        <button
-          onClick={() => setShowTagGroupModal(true)}
-          style={{
-            marginLeft: 'auto',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '3px 10px',
-            borderRadius: '12px',
-            backgroundColor: '#2563EB',
-            color: '#FFFFFF',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0
-          }}
-          title="배지별 일정 모아보기 모달 열기"
-        >
-          <Tag size={12} />
-          <span>배지별 모아보기</span>
-        </button>
       </div>
 
       {/* Render View Mode Grid */}
@@ -1004,114 +1095,8 @@ export default function CalendarView({
       {/* Render Daily View */}
       {viewMode === 'day' && renderDailyView()}
 
-      {/* Grouped Events by Tag Modal */}
-      {showTagGroupModal && (() => {
-        const tagGroups = getEventsGroupedByTag();
-        const tagKeys = Object.keys(tagGroups);
-
-        return (
-          <div style={styles.modalOverlay} onClick={() => setShowTagGroupModal(false)}>
-            <div style={{ ...styles.modalContent, maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
-              <div style={styles.modalHeader}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Tag size={20} color="#2563EB" />
-                  <h3 style={styles.modalTitle}>배지별 일정 모아보기</h3>
-                </div>
-                <button
-                  onClick={() => setShowTagGroupModal(false)}
-                  style={styles.modalCloseBtn}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto' }}>
-                {tagKeys.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '13px' }}>
-                    등록된 일정 배지가 없습니다. 체크리스트 항목에 배지를 부여해보세요!
-                  </div>
-                ) : (
-                  tagKeys.map((tagName) => {
-                    const tagStyle = getTagStyle(tagName) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155' };
-                    const groupEvts = tagGroups[tagName];
-
-                    return (
-                      <div
-                        key={tagName}
-                        style={{
-                          backgroundColor: '#F8FAFC',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          padding: '10px 12px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              backgroundColor: tagStyle.bg,
-                              color: tagStyle.color,
-                              border: `1px solid ${tagStyle.border}`
-                            }}
-                          >
-                            {tagName}
-                          </span>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
-                            ({groupEvts.length}건)
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {groupEvts.map((evt) => (
-                            <div
-                              key={evt.id}
-                              onClick={() => {
-                                setShowTagGroupModal(false);
-                                onNavigateToDetail(evt.rawItem.id, true);
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                backgroundColor: '#FFFFFF',
-                                border: '1px solid #E2E8F0',
-                                borderRadius: '6px',
-                                padding: '8px 10px',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '1px 6px', borderRadius: '4px' }}>
-                                    📅 {evt.date} ({evt.time})
-                                  </span>
-                                  {evt.parentNoteTitle && (
-                                    <span style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      [{evt.parentNoteTitle}]
-                                    </span>
-                                  )}
-                                </div>
-                                <span style={{ fontSize: '13px', color: '#1E293B', fontWeight: 500 }}>
-                                  {evt.title}
-                                </span>
-                              </div>
-                              <ChevronRight size={16} color="#94A3B8" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Render Dedicated Badge View Screen */}
+      {viewMode === 'badge' && renderBadgeView()}
 
       {/* Google Calendar Event Add/Edit Modal */}
       {showEventModal && (
