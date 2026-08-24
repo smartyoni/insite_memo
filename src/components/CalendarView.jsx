@@ -670,9 +670,15 @@ export default function CalendarView({
     const allBadgesList = [...DEFAULT_TAGS, ...customBadgesList];
     const eventsGrouped = getEventsGroupedByTag();
 
-    const activeTag = selectedBadgeViewTag || (allBadgesList[0] ? allBadgesList[0].name : '');
-    const activeTagStyle = getTagStyle(activeTag, customBadgesList) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155' };
-    const currentBadgeEvents = eventsGrouped[activeTag] || [];
+    const activeTag = selectedBadgeViewTag || 'today';
+    const isTodayMode = activeTag === 'today';
+    const todayEvents = eventsByDate[todayKey] || [];
+
+    const activeTagStyle = isTodayMode
+      ? { bg: '#EFF6FF', border: '#93C5FD', color: '#1D4ED8', name: '📅 오늘' }
+      : (getTagStyle(activeTag, customBadgesList) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155', name: activeTag });
+
+    const currentBadgeEvents = isTodayMode ? todayEvents : (eventsGrouped[activeTag] || []);
 
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
@@ -689,6 +695,40 @@ export default function CalendarView({
           <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', marginRight: '4px' }}>
             🏷️ 배지 선택:
           </span>
+
+          {/* Today Tab (First item) */}
+          <button
+            onClick={() => setSelectedBadgeViewTag('today')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: isTodayMode ? 700 : 600,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: isTodayMode ? '1px solid #2563EB' : '1px solid #93C5FD',
+              backgroundColor: isTodayMode ? '#2563EB' : '#EFF6FF',
+              color: isTodayMode ? '#FFFFFF' : '#1D4ED8',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: isTodayMode ? '0 2px 4px rgba(37,99,235,0.2)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>📅 오늘</span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: '10px',
+              backgroundColor: isTodayMode ? 'rgba(255,255,255,0.25)' : 'rgba(37,99,235,0.12)',
+              color: isTodayMode ? '#FFFFFF' : '#1D4ED8'
+            }}>
+              {todayEvents.length}
+            </span>
+          </button>
+
           {allBadgesList.map((b) => {
             const isSelected = activeTag === b.name;
             const count = (eventsGrouped[b.name] || []).length;
@@ -742,7 +782,7 @@ export default function CalendarView({
                 color: activeTagStyle.color,
                 border: `1px solid ${activeTagStyle.border}`
               }}>
-                {activeTag}
+                {isTodayMode ? '📅 오늘 예정 일정' : activeTag}
               </span>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
                 총 {currentBadgeEvents.length}건의 일정
@@ -761,62 +801,87 @@ export default function CalendarView({
             }}>
               <CalendarIcon size={36} color="#CBD5E1" style={{ marginBottom: '10px' }} />
               <p style={{ fontSize: '14px', margin: 0, fontWeight: 500 }}>
-                '<strong>{activeTag}</strong>' 배지가 지정된 일정이 없습니다.
+                {isTodayMode ? (
+                  '오늘 예정된 일정이 없습니다.'
+                ) : (
+                  <>
+                    '<strong>{activeTag}</strong>' 배지가 지정된 일정이 없습니다.
+                  </>
+                )}
               </p>
               <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>
-                체크리스트 항목 수정 시 배지를 부여해 보세요!
+                {isTodayMode ? '새 일정을 등록하거나 날짜를 설정해 보세요!' : '체크리스트 항목 수정 시 배지를 부여해 보세요!'}
               </p>
             </div>
           ) : (
-            currentBadgeEvents.map((evt) => (
-              <div
-                key={evt.id}
-                onClick={() => onNavigateToDetail(evt.rawItem.id, true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${activeTagStyle.border}`,
-                  borderLeft: `4px solid ${activeTagStyle.color}`,
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: activeTagStyle.color,
-                      backgroundColor: activeTagStyle.bg,
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      border: `1px solid ${activeTagStyle.border}`
-                    }}>
-                      📅 {evt.date} ({evt.time})
-                    </span>
-                    {evt.parentNoteTitle && (
-                      <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        [{evt.parentNoteTitle}]
+            currentBadgeEvents.map((evt) => {
+              const itemTagStyle = evt.tag
+                ? (getTagStyle(evt.tag, customBadgesList) || activeTagStyle)
+                : activeTagStyle;
+
+              return (
+                <div
+                  key={evt.id}
+                  onClick={() => onNavigateToDetail(evt.rawItem.id, true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: '#FFFFFF',
+                    border: `1px solid ${itemTagStyle.border}`,
+                    borderLeft: `4px solid ${itemTagStyle.color}`,
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: isTodayMode ? '#1D4ED8' : itemTagStyle.color,
+                        backgroundColor: isTodayMode ? '#EFF6FF' : itemTagStyle.bg,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: `1px solid ${isTodayMode ? '#93C5FD' : itemTagStyle.border}`
+                      }}>
+                        📅 {evt.date} ({evt.isAllDay ? '종일' : (evt.time || '09:00')})
                       </span>
-                    )}
+                      {evt.tag && (
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          backgroundColor: itemTagStyle.bg,
+                          color: itemTagStyle.color,
+                          border: `1px solid ${itemTagStyle.border}`
+                        }}>
+                          {evt.tag}
+                        </span>
+                      )}
+                      {evt.parentNoteTitle && (
+                        <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          [{evt.parentNoteTitle}]
+                        </span>
+                      )}
+                    </div>
+                    <span style={{
+                      fontSize: '14px',
+                      color: evt.completed ? '#94A3B8' : '#1E293B',
+                      fontWeight: 600,
+                      textDecoration: evt.completed ? 'line-through' : 'none'
+                    }}>
+                      {evt.title}
+                    </span>
                   </div>
-                  <span style={{
-                    fontSize: '14px',
-                    color: evt.completed ? '#94A3B8' : '#1E293B',
-                    fontWeight: 600,
-                    textDecoration: evt.completed ? 'line-through' : 'none'
-                  }}>
-                    {evt.title}
-                  </span>
+                  <ChevronRight size={18} color="#94A3B8" />
                 </div>
-                <ChevronRight size={18} color="#94A3B8" />
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
