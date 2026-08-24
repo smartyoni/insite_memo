@@ -31,7 +31,8 @@ import {
   Square,
   ListChecks,
   Calendar as CalendarIcon,
-  Clock
+  Clock,
+  Tag
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -212,76 +213,7 @@ export default function NotebookExplorer() {
     saveStoredCustomTags(updated);
   };
 
-  const renderBadgeSelectorBar = () => {
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginRight: '2px' }}>배지 선택:</span>
-        {allBadges.map((t) => {
-          const isSelected = editingCheckTag === t.name;
-          return (
-            <button
-              key={t.id || t.name}
-              type="button"
-              onClick={() => setEditingCheckTag(isSelected ? '' : t.name)}
-              style={{
-                border: `1px solid ${t.border}`,
-                backgroundColor: isSelected ? t.color : t.bg,
-                color: isSelected ? '#FFFFFF' : t.color,
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                padding: '2px 7px',
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              {t.name}
-            </button>
-          );
-        })}
 
-        <button
-          type="button"
-          onClick={() => {
-            setNewBadgeName('');
-            setNewBadgeColorIdx(0);
-            setShowAddBadgeModal(true);
-          }}
-          style={{
-            border: '1px dashed #2563EB',
-            backgroundColor: '#EFF6FF',
-            color: '#2563EB',
-            fontSize: '11px',
-            fontWeight: 600,
-            borderRadius: '4px',
-            padding: '2px 7px',
-            cursor: 'pointer'
-          }}
-        >
-          + 새 배지 만들기
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowManageBadgesModal(true)}
-          style={{
-            border: '1px solid #CBD5E1',
-            backgroundColor: '#FFFFFF',
-            color: '#64748B',
-            fontSize: '11px',
-            fontWeight: 600,
-            borderRadius: '4px',
-            padding: '2px 6px',
-            cursor: 'pointer',
-            marginLeft: 'auto'
-          }}
-          title="배지 수정 및 삭제"
-        >
-          ⚙️ 관리
-        </button>
-      </div>
-    );
-  };
 
   // Global Delete Confirmation Modal State
   const [deleteModalState, setDeleteModalState] = useState({
@@ -1378,26 +1310,28 @@ export default function NotebookExplorer() {
                                     style={{
                                       ...styles.checklistItemRow,
                                       backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
-                                      borderColor: checkItem.completed ? '#E2E8F0' : '#CBD5E1'
+                                      borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
                                     }}
                                   >
-                                    {/* Checkbox Toggle Button */}
-                                    <button
-                                      onClick={() => handleToggleChecklist(checkItem.id)}
-                                      style={styles.checkboxBtn}
-                                      title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                    >
-                                      {checkItem.completed ? (
-                                        <CheckSquare size={18} color="#2563EB" />
-                                      ) : (
-                                        <Square size={18} color="#94A3B8" />
-                                      )}
-                                    </button>
+                                    {/* Checkbox Toggle Button (Hidden when editing to maximize width) */}
+                                    {!isEditing && (
+                                      <button
+                                        onClick={() => handleToggleChecklist(checkItem.id)}
+                                        style={styles.checkboxBtn}
+                                        title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                      >
+                                        {checkItem.completed ? (
+                                          <CheckSquare size={18} color="#2563EB" />
+                                        ) : (
+                                          <Square size={18} color="#94A3B8" />
+                                        )}
+                                      </button>
+                                    )}
 
-                                    {/* Checklist Item Text Content or Inline Edit Textarea */}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                    {/* Checklist Item Text Content or Inline Edit Form */}
+                                    <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
                                       {isEditing ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                                           <textarea
                                             rows={2}
                                             value={editingCheckText}
@@ -1405,8 +1339,10 @@ export default function NotebookExplorer() {
                                             style={styles.checklistEditTextarea}
                                             autoFocus
                                           />
-                                          {/* Schedule Picker for Inline Edit */}
+
+                                          {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
                                           <div style={styles.scheduleOptionBar}>
+                                            {/* Date Picker */}
                                             <div style={styles.scheduleField}>
                                               <CalendarIcon size={13} color="#64748B" />
                                               <input
@@ -1416,6 +1352,8 @@ export default function NotebookExplorer() {
                                                 style={styles.scheduleDateInput}
                                               />
                                             </div>
+
+                                            {/* All-Day Checkbox / Time Input (Only when date is set) */}
                                             {editingCheckDueDate && (
                                               <>
                                                 <label style={styles.allDayCheckLabel}>
@@ -1438,34 +1376,64 @@ export default function NotebookExplorer() {
                                                   </div>
                                                 )}
                                                 <button
+                                                  type="button"
                                                   onClick={() => {
                                                     setEditingCheckDueDate('');
                                                     setEditingCheckIsAllDay(true);
                                                   }}
                                                   style={styles.scheduleClearBtn}
+                                                  title="일정 삭제"
                                                 >
                                                   <X size={12} />
                                                 </button>
                                               </>
                                             )}
+
+                                            {/* Badge Dropdown */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
+                                              <Tag size={13} color="#64748B" />
+                                              <select
+                                                value={editingCheckTag || ''}
+                                                onChange={(e) => setEditingCheckTag(e.target.value)}
+                                                style={styles.badgeDropdownSelect}
+                                              >
+                                                <option value="">배지 없음</option>
+                                                {allBadges.map((b) => (
+                                                  <option key={b.id || b.name} value={b.name}>
+                                                    {b.name}
+                                                  </option>
+                                                ))}
+                                              </select>
+                                            </div>
                                           </div>
 
-                                          {/* Badge Tag Selector */}
-                                          {renderBadgeSelectorBar()}
+                                          {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => setShowManageBadgesModal(true)}
+                                              style={styles.btnSmallManage}
+                                              title="배지 수정 및 삭제 관리"
+                                            >
+                                              ⚙️ 관리
+                                            </button>
 
-                                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                                            <button
-                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                              style={styles.btnSmallSave}
-                                            >
-                                              <Check size={13} /> 저장
-                                            </button>
-                                            <button
-                                              onClick={() => setEditingCheckId(null)}
-                                              style={styles.btnSmallCancel}
-                                            >
-                                              <X size={13} /> 취소
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                              <button
+                                                type="button"
+                                                onClick={() => setEditingCheckId(null)}
+                                                style={styles.btnSmallCancel}
+                                              >
+                                                <X size={13} /> 취소
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                                style={styles.btnSmallSave}
+                                              >
+                                                <Check size={13} /> 저장
+                                              </button>
+                                            </div>
                                           </div>
                                         </div>
                                       ) : (
@@ -1526,6 +1494,7 @@ export default function NotebookExplorer() {
                                             setEditingCheckDueDate(checkItem.dueDate || '');
                                             setEditingCheckIsAllDay(checkItem.isAllDay !== false);
                                             setEditingCheckDueTime(checkItem.dueTime || '09:00');
+                                            setEditingCheckTag(checkItem.tag || '');
                                           }}
                                           style={styles.actionBtnLight}
                                           title="수정"
@@ -1620,26 +1589,28 @@ export default function NotebookExplorer() {
                                   style={{
                                     ...styles.checklistItemRow,
                                     backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
-                                    borderColor: checkItem.completed ? '#E2E8F0' : '#CBD5E1'
+                                    borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
                                   }}
                                 >
-                                  {/* Checkbox Toggle Button */}
-                                  <button
-                                    onClick={() => handleToggleChecklist(checkItem.id)}
-                                    style={styles.checkboxBtn}
-                                    title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                  >
-                                    {checkItem.completed ? (
-                                      <CheckSquare size={18} color="#2563EB" />
-                                    ) : (
-                                      <Square size={18} color="#94A3B8" />
-                                    )}
-                                  </button>
+                                  {/* Checkbox Toggle Button (Hidden when editing to maximize width) */}
+                                  {!isEditing && (
+                                    <button
+                                      onClick={() => handleToggleChecklist(checkItem.id)}
+                                      style={styles.checkboxBtn}
+                                      title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                    >
+                                      {checkItem.completed ? (
+                                        <CheckSquare size={18} color="#2563EB" />
+                                      ) : (
+                                        <Square size={18} color="#94A3B8" />
+                                      )}
+                                    </button>
+                                  )}
 
-                                  {/* Checklist Item Text Content or Inline Edit Textarea */}
-                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                  {/* Checklist Item Text Content or Inline Edit Form */}
+                                  <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
                                     {isEditing ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                                         <textarea
                                           rows={2}
                                           value={editingCheckText}
@@ -1647,8 +1618,10 @@ export default function NotebookExplorer() {
                                           style={styles.checklistEditTextarea}
                                           autoFocus
                                         />
-                                        {/* Schedule Picker for Inline Edit */}
+
+                                        {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
                                         <div style={styles.scheduleOptionBar}>
+                                          {/* Date Picker */}
                                           <div style={styles.scheduleField}>
                                             <CalendarIcon size={13} color="#64748B" />
                                             <input
@@ -1658,6 +1631,8 @@ export default function NotebookExplorer() {
                                               style={styles.scheduleDateInput}
                                             />
                                           </div>
+
+                                          {/* All-Day Checkbox / Time Input (Only when date is set) */}
                                           {editingCheckDueDate && (
                                             <>
                                               <label style={styles.allDayCheckLabel}>
@@ -1680,34 +1655,64 @@ export default function NotebookExplorer() {
                                                 </div>
                                               )}
                                               <button
+                                                type="button"
                                                 onClick={() => {
                                                   setEditingCheckDueDate('');
                                                   setEditingCheckIsAllDay(true);
                                                 }}
                                                 style={styles.scheduleClearBtn}
+                                                title="일정 삭제"
                                               >
                                                 <X size={12} />
                                               </button>
                                             </>
                                           )}
+
+                                          {/* Badge Dropdown */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
+                                            <Tag size={13} color="#64748B" />
+                                            <select
+                                              value={editingCheckTag || ''}
+                                              onChange={(e) => setEditingCheckTag(e.target.value)}
+                                              style={styles.badgeDropdownSelect}
+                                            >
+                                              <option value="">배지 없음</option>
+                                              {allBadges.map((b) => (
+                                                <option key={b.id || b.name} value={b.name}>
+                                                  {b.name}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
                                         </div>
 
-                                        {/* Badge Tag Selector */}
-                                        {renderBadgeSelectorBar()}
+                                        {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowManageBadgesModal(true)}
+                                            style={styles.btnSmallManage}
+                                            title="배지 수정 및 삭제 관리"
+                                          >
+                                            ⚙️ 관리
+                                          </button>
 
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '6px' }}>
-                                          <button
-                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                            style={styles.btnSmallSave}
-                                          >
-                                            <Check size={13} /> 저장
-                                          </button>
-                                          <button
-                                            onClick={() => setEditingCheckId(null)}
-                                            style={styles.btnSmallCancel}
-                                          >
-                                            <X size={13} /> 취소
-                                          </button>
+                                          <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditingCheckId(null)}
+                                              style={styles.btnSmallCancel}
+                                            >
+                                              <X size={13} /> 취소
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                              style={styles.btnSmallSave}
+                                            >
+                                              <Check size={13} /> 저장
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
                                     ) : (
@@ -1768,6 +1773,7 @@ export default function NotebookExplorer() {
                                           setEditingCheckDueDate(checkItem.dueDate || '');
                                           setEditingCheckIsAllDay(checkItem.isAllDay !== false);
                                           setEditingCheckDueTime(checkItem.dueTime || '09:00');
+                                          setEditingCheckTag(checkItem.tag || '');
                                         }}
                                         style={styles.actionBtnLight}
                                         title="수정"
@@ -2795,6 +2801,32 @@ const styles = {
     alignItems: 'center',
     gap: '3px'
   },
+  btnSmallManage: {
+    backgroundColor: '#FFFFFF',
+    color: '#475569',
+    border: '1px solid #CBD5E1',
+    borderRadius: '4px',
+    padding: '3px 8px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    transition: 'all 0.15s ease'
+  },
+  badgeDropdownSelect: {
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    borderRadius: '4px',
+    padding: '2px 6px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#334155',
+    outline: 'none',
+    cursor: 'pointer',
+    maxWidth: '130px'
+  },
   checkitemActions: {
     display: 'flex',
     alignItems: 'center',
@@ -2937,11 +2969,12 @@ const styles = {
   scheduleOptionBar: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     backgroundColor: '#F8FAFC',
     padding: '4px 8px',
     borderRadius: '6px',
-    border: '1px solid #E2E8F0'
+    border: '1px solid #E2E8F0',
+    flexWrap: 'wrap'
   },
   scheduleField: {
     display: 'flex',
