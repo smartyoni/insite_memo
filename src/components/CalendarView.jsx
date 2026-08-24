@@ -82,6 +82,13 @@ export default function CalendarView({
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month'); // 'month' | 'week' | 'day'
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Modal for adding/editing event
   const [showEventModal, setShowEventModal] = useState(false);
@@ -600,38 +607,82 @@ export default function CalendarView({
 
   return (
     <div style={styles.container}>
-      {/* Google Calendar Toolbar */}
-      <div style={styles.toolbar}>
-        <div style={styles.toolbarLeft}>
-          <div style={styles.brandGroup}>
-            <CalendarIcon size={22} color="#2563EB" />
-            <span style={styles.brandTitle}>구글 캘린더</span>
-          </div>
+      {/* Google Calendar Toolbar (Responsive Desktop / Mobile) */}
+      <div style={{
+        ...styles.toolbar,
+        height: isMobile ? 'auto' : '56px',
+        padding: isMobile ? '8px 10px' : '0 16px',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '8px' : '0'
+      }}>
+        {/* Row 1 / Left Group: Date Title + Nav + Create */}
+        <div style={{
+          ...styles.toolbarLeft,
+          width: isMobile ? '100%' : 'auto',
+          justifyContent: isMobile ? 'space-between' : 'flex-start',
+          gap: isMobile ? '6px' : '16px'
+        }}>
+          {!isMobile && (
+            <div style={styles.brandGroup}>
+              <CalendarIcon size={22} color="#2563EB" />
+              <span style={styles.brandTitle}>구글 캘린더</span>
+            </div>
+          )}
 
-          <button onClick={handleToday} style={styles.todayBtn}>
-            오늘
-          </button>
-
-          <div style={styles.navGroup}>
-            <button onClick={handlePrev} style={styles.navBtn} title="이전">
-              <ChevronLeft size={18} />
-            </button>
-            <button onClick={handleNext} style={styles.navBtn} title="다음">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-
-          <span style={styles.monthTitle}>
+          <span style={{
+            ...styles.monthTitle,
+            fontSize: isMobile ? '15px' : '18px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
             {getHeaderTitle()}
           </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', marginLeft: isMobile ? 'auto' : 0 }}>
+            <button onClick={handleToday} style={{ ...styles.todayBtn, padding: isMobile ? '4px 8px' : '6px 14px', fontSize: isMobile ? '12px' : '13px' }}>
+              오늘
+            </button>
+
+            <div style={styles.navGroup}>
+              <button onClick={handlePrev} style={styles.navBtn} title="이전">
+                <ChevronLeft size={18} />
+              </button>
+              <button onClick={handleNext} style={styles.navBtn} title="다음">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            {isMobile && (
+              <button
+                onClick={() => handleOpenAddModal(todayKey)}
+                style={{ ...styles.createBtn, padding: '5px 10px', fontSize: '12px', borderRadius: '14px' }}
+                title="새 일정 생성"
+              >
+                <Plus size={14} />
+                <span>만들기</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div style={styles.toolbarRight}>
-          <div style={styles.viewModeGroup}>
+        {/* Row 2 / Right Group: View Mode Switcher (월간 / 주간 / 일간) */}
+        <div style={{
+          ...styles.toolbarRight,
+          width: isMobile ? '100%' : 'auto',
+          justifyContent: isMobile ? 'stretch' : 'flex-end'
+        }}>
+          <div style={{
+            ...styles.viewModeGroup,
+            width: isMobile ? '100%' : 'auto',
+            display: 'flex'
+          }}>
             <button
               onClick={() => setViewMode('month')}
               style={{
                 ...styles.viewModeBtn,
+                flex: isMobile ? 1 : 'none',
+                textAlign: 'center',
                 backgroundColor: viewMode === 'month' ? '#2563EB' : 'transparent',
                 color: viewMode === 'month' ? '#FFFFFF' : '#475569',
                 fontWeight: viewMode === 'month' ? 700 : 500
@@ -643,6 +694,8 @@ export default function CalendarView({
               onClick={() => setViewMode('week')}
               style={{
                 ...styles.viewModeBtn,
+                flex: isMobile ? 1 : 'none',
+                textAlign: 'center',
                 backgroundColor: viewMode === 'week' ? '#2563EB' : 'transparent',
                 color: viewMode === 'week' ? '#FFFFFF' : '#475569',
                 fontWeight: viewMode === 'week' ? 700 : 500
@@ -654,6 +707,8 @@ export default function CalendarView({
               onClick={() => setViewMode('day')}
               style={{
                 ...styles.viewModeBtn,
+                flex: isMobile ? 1 : 'none',
+                textAlign: 'center',
                 backgroundColor: viewMode === 'day' ? '#2563EB' : 'transparent',
                 color: viewMode === 'day' ? '#FFFFFF' : '#475569',
                 fontWeight: viewMode === 'day' ? 700 : 500
@@ -663,14 +718,16 @@ export default function CalendarView({
             </button>
           </div>
 
-          <button
-            onClick={() => handleOpenAddModal(todayKey)}
-            style={styles.createBtn}
-            title="새 일정 / 메모 생성"
-          >
-            <Plus size={16} />
-            <span>만들기</span>
-          </button>
+          {!isMobile && (
+            <button
+              onClick={() => handleOpenAddModal(todayKey)}
+              style={styles.createBtn}
+              title="새 일정 / 메모 생성"
+            >
+              <Plus size={16} />
+              <span>만들기</span>
+            </button>
+          )}
         </div>
       </div>
 
