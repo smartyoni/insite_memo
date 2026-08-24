@@ -36,11 +36,8 @@ import {
 import { renderWithLinks } from '../utils/linkify';
 
 export const DEFAULT_TAGS = [
-  { id: 'def_1', name: '진행중', bg: '#FEF3C7', border: '#FDE047', color: '#B45309' },
-  { id: 'def_2', name: '계약서작성', bg: '#DBEAFE', border: '#93C5FD', color: '#1E40AF' },
-  { id: 'def_3', name: '잔금', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
-  { id: 'def_4', name: '추적관찰', bg: '#F3E8FF', border: '#D8B4FE', color: '#7E22CE' },
-  { id: 'def_5', name: '중요', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
+  { id: 'def_1', name: '계약서작성', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
+  { id: 'def_2', name: '잔금', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
 ];
 
 export const TAG_COLOR_PALETTE = [
