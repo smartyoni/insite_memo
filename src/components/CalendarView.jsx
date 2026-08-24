@@ -96,6 +96,7 @@ export default function CalendarView({
   // Year & Month calculations
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
+  const todayKey = formatDateKey(new Date());
 
   // Navigation handlers per viewMode
   const handlePrev = () => {
