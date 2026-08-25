@@ -32,7 +32,9 @@ import {
   ListChecks,
   Calendar as CalendarIcon,
   Clock,
-  Tag
+  Tag,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -90,6 +92,19 @@ import CalendarView from './CalendarView';
 // Fixed In-box category definition
 const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true };
 
+// Helper to safely extract milliseconds timestamp from item updated/created time
+function getItemTimestamp(item) {
+  if (!item) return 0;
+  const ts = item.updatedAt || item.createdAt;
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+  if (ts.seconds) return ts.seconds * 1000;
+  if (typeof ts === 'number') return ts;
+  if (typeof ts === 'string') return new Date(ts).getTime();
+  return 0;
+}
+
 export default function NotebookExplorer() {
   // Main View Mode Tab state ('explorer' | 'calendar')
   const [activeMainTab, setActiveMainTab] = useState('explorer');
@@ -99,6 +114,9 @@ export default function NotebookExplorer() {
   const [items, setItems] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('inbox');
   const [selectedItemId, setSelectedItemId] = useState(null);
+
+  // Item List Sort Order State (Default: 'asc' for ascending order)
+  const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
 
   // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
   const allCategories = [
@@ -386,9 +404,9 @@ export default function NotebookExplorer() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Subscribe to Items
+  // 2. Subscribe to Items (Default order: ascending)
   useEffect(() => {
-    const q = query(collection(db, 'items'), orderBy('updatedAt', 'desc'));
+    const q = query(collection(db, 'items'), orderBy('updatedAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const itemList = snapshot.docs.map((d) => ({
         id: d.id,
@@ -468,8 +486,18 @@ export default function NotebookExplorer() {
     }
   }, [items, customBadges]);
 
-  // Filter items by selected category
-  const filteredItems = items.filter((item) => item.categoryId === selectedCategoryId);
+  // Filter & Sort items by selected category (Default: ascending order)
+  const filteredItems = items
+    .filter((item) => item.categoryId === selectedCategoryId)
+    .sort((a, b) => {
+      const tA = getItemTimestamp(a);
+      const tB = getItemTimestamp(b);
+      if (tA === tB) {
+        const comp = (a.title || '').localeCompare(b.title || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+        return itemSortOrder === 'asc' ? comp : -comp;
+      }
+      return itemSortOrder === 'asc' ? tA - tB : tB - tA;
+    });
 
   // Auto-select first item when category changes if current selected item not in category
   useEffect(() => {
@@ -1020,13 +1048,31 @@ export default function NotebookExplorer() {
                 {activeCategory ? activeCategory.name : '목록'}
               </span>
             </div>
-            <button
-              onClick={handleAddItem}
-              style={styles.iconBtnLight}
-              title="메모 추가"
-            >
-              <Plus size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                style={{
+                  ...styles.iconBtnLight,
+                  padding: '4px 6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  fontSize: '11px',
+                  color: '#4B5563'
+                }}
+                title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
+              >
+                {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
+              </button>
+              <button
+                onClick={handleAddItem}
+                style={styles.iconBtnLight}
+                title="메모 추가"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
           <div style={styles.paneContent}>
