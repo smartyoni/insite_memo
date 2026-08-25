@@ -1185,208 +1185,208 @@ export default function NotebookExplorer() {
                                       borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
                                     }}
                                   >
-                                    {/* Checkbox Toggle Button (Hidden when editing to maximize width) */}
-                                    {!isEditing && (
-                                      <button
-                                        onClick={() => handleToggleChecklist(checkItem.id)}
-                                        style={styles.checkboxBtn}
-                                        title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                      >
-                                        {checkItem.completed ? (
-                                          <CheckSquare size={18} color="#2563EB" />
-                                        ) : (
-                                          <Square size={18} color="#94A3B8" />
-                                        )}
-                                      </button>
-                                    )}
+                                    {isEditing ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                        <textarea
+                                          rows={2}
+                                          value={editingCheckText}
+                                          onChange={(e) => setEditingCheckText(e.target.value)}
+                                          style={styles.checklistEditTextarea}
+                                          autoFocus
+                                        />
 
-                                    {/* Checklist Item Text Content or Inline Edit Form */}
-                                    <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-                                      {isEditing ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                                          <textarea
-                                            rows={2}
-                                            value={editingCheckText}
-                                            onChange={(e) => setEditingCheckText(e.target.value)}
-                                            style={styles.checklistEditTextarea}
-                                            autoFocus
-                                          />
-
-                                          {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
-                                          <div style={styles.scheduleOptionBar}>
-                                            {/* Date Picker */}
-                                            <div style={styles.scheduleField}>
-                                              <CalendarIcon size={13} color="#64748B" />
-                                              <input
-                                                type="date"
-                                                value={editingCheckDueDate}
-                                                onChange={(e) => setEditingCheckDueDate(e.target.value)}
-                                                style={styles.scheduleDateInput}
-                                              />
-                                            </div>
-
-                                            {/* All-Day Checkbox / Time Input (Only when date is set) */}
-                                            {editingCheckDueDate && (
-                                              <>
-                                                <label style={styles.allDayCheckLabel}>
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={editingCheckIsAllDay}
-                                                    onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
-                                                  />
-                                                  <span>종일</span>
-                                                </label>
-                                                {!editingCheckIsAllDay && (
-                                                  <div style={styles.scheduleField}>
-                                                    <Clock size={13} color="#64748B" />
-                                                    <input
-                                                      type="time"
-                                                      value={editingCheckDueTime}
-                                                      onChange={(e) => setEditingCheckDueTime(e.target.value)}
-                                                      style={styles.scheduleTimeInput}
-                                                    />
-                                                  </div>
-                                                )}
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setEditingCheckDueDate('');
-                                                    setEditingCheckIsAllDay(true);
-                                                  }}
-                                                  style={styles.scheduleClearBtn}
-                                                  title="일정 삭제"
-                                                >
-                                                  <X size={12} />
-                                                </button>
-                                              </>
-                                            )}
-
-                                            {/* Badge Dropdown */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
-                                              <Tag size={13} color="#64748B" />
-                                              <select
-                                                value={editingCheckTag || ''}
-                                                onChange={(e) => setEditingCheckTag(e.target.value)}
-                                                style={styles.badgeDropdownSelect}
-                                              >
-                                                <option value="">배지 없음</option>
-                                                {allBadges.map((b) => (
-                                                  <option key={b.id || b.name} value={b.name}>
-                                                    {b.name}
-                                                  </option>
-                                                ))}
-                                              </select>
-                                            </div>
+                                        {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
+                                        <div style={styles.scheduleOptionBar}>
+                                          {/* Date Picker */}
+                                          <div style={styles.scheduleField}>
+                                            <CalendarIcon size={13} color="#64748B" />
+                                            <input
+                                              type="date"
+                                              value={editingCheckDueDate}
+                                              onChange={(e) => setEditingCheckDueDate(e.target.value)}
+                                              style={styles.scheduleDateInput}
+                                            />
                                           </div>
 
-                                          {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
-                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                                            <button
-                                              type="button"
-                                              onClick={() => setShowManageBadgesModal(true)}
-                                              style={styles.btnSmallManage}
-                                              title="배지 수정 및 삭제 관리"
-                                            >
-                                              ⚙️ 관리
-                                            </button>
+                                          {/* All-Day Checkbox / Time Input (Only when date is set) */}
+                                          {editingCheckDueDate && (
+                                            <>
+                                              <label style={styles.allDayCheckLabel}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={editingCheckIsAllDay}
+                                                  onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
+                                                />
+                                                <span>종일</span>
+                                              </label>
+                                              {!editingCheckIsAllDay && (
+                                                <div style={styles.scheduleField}>
+                                                  <Clock size={13} color="#64748B" />
+                                                  <input
+                                                    type="time"
+                                                    value={editingCheckDueTime}
+                                                    onChange={(e) => setEditingCheckDueTime(e.target.value)}
+                                                    style={styles.scheduleTimeInput}
+                                                  />
+                                                </div>
+                                              )}
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setEditingCheckDueDate('');
+                                                  setEditingCheckIsAllDay(true);
+                                                }}
+                                                style={styles.scheduleClearBtn}
+                                                title="일정 삭제"
+                                              >
+                                                <X size={12} />
+                                              </button>
+                                            </>
+                                          )}
 
-                                            <div style={{ display: 'flex', gap: '6px' }}>
-                                              <button
-                                                type="button"
-                                                onClick={() => setEditingCheckId(null)}
-                                                style={styles.btnSmallCancel}
-                                              >
-                                                <X size={13} /> 취소
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                                style={styles.btnSmallSave}
-                                              >
-                                                <Check size={13} /> 저장
-                                              </button>
-                                            </div>
+                                          {/* Badge Dropdown */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
+                                            <Tag size={13} color="#64748B" />
+                                            <select
+                                              value={editingCheckTag || ''}
+                                              onChange={(e) => setEditingCheckTag(e.target.value)}
+                                              style={styles.badgeDropdownSelect}
+                                            >
+                                              <option value="">배지 없음</option>
+                                              {allBadges.map((b) => (
+                                                <option key={b.id || b.name} value={b.name}>
+                                                  {b.name}
+                                                </option>
+                                              ))}
+                                            </select>
                                           </div>
                                         </div>
-                                      ) : (
-                                        <div>
-                                          {checkItem.tag && (() => {
-                                            const tagStyle = getTagStyle(checkItem.tag);
-                                            return (
-                                              <span
-                                                style={{
-                                                  display: 'inline-block',
-                                                  fontSize: '11px',
-                                                  fontWeight: 700,
-                                                  padding: '1px 6px',
-                                                  borderRadius: '4px',
-                                                  backgroundColor: tagStyle.bg,
-                                                  color: tagStyle.color,
-                                                  border: `1px solid ${tagStyle.border}`,
-                                                  marginRight: '6px',
-                                                  verticalAlign: 'middle'
-                                                }}
-                                              >
-                                                {checkItem.tag}
-                                              </span>
-                                            );
-                                          })()}
+
+                                        {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowManageBadgesModal(true)}
+                                            style={styles.btnSmallManage}
+                                            title="배지 수정 및 삭제 관리"
+                                          >
+                                            ⚙️ 관리
+                                          </button>
+
+                                          <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditingCheckId(null)}
+                                              style={styles.btnSmallCancel}
+                                            >
+                                              <X size={13} /> 취소
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                              style={styles.btnSmallSave}
+                                            >
+                                              <Check size={13} /> 저장
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '6px' }}>
+                                        {/* Top Content Row: Checkbox + Pure Text */}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+                                          <button
+                                            onClick={() => handleToggleChecklist(checkItem.id)}
+                                            style={styles.checkboxBtn}
+                                            title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                          >
+                                            {checkItem.completed ? (
+                                              <CheckSquare size={18} color="#2563EB" />
+                                            ) : (
+                                              <Square size={18} color="#94A3B8" />
+                                            )}
+                                          </button>
                                           <span
                                             style={{
                                               ...styles.checkitemText,
+                                              flex: 1,
+                                              minWidth: 0,
                                               textDecoration: checkItem.completed ? 'line-through' : 'none',
                                               color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                              fontWeight: checkItem.completed ? 400 : 500
+                                              fontWeight: checkItem.completed ? 400 : 500,
+                                              paddingTop: '1px'
                                             }}
                                           >
                                             {renderWithLinks(checkItem.text)}
                                           </span>
-
-                                          {/* Schedule Badge */}
-                                          {checkItem.dueDate && (
-                                            <div style={styles.itemScheduleBadge}>
-                                              {checkItem.isAllDay !== false ? (
-                                                <span>📅 {checkItem.dueDate} (종일)</span>
-                                              ) : (
-                                                <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
-                                              )}
-                                            </div>
-                                          )}
                                         </div>
-                                      )}
-                                    </div>
 
-                                    {/* Item Actions */}
-                                    {!isEditing && (
-                                      <div style={styles.checkitemActions}>
-                                        <button
-                                          onClick={() => {
-                                            setEditingCheckId(checkItem.id);
-                                            setEditingCheckText(checkItem.text);
-                                            setEditingCheckDueDate(checkItem.dueDate || '');
-                                            setEditingCheckIsAllDay(checkItem.isAllDay !== false);
-                                            setEditingCheckDueTime(checkItem.dueTime || '09:00');
-                                            setEditingCheckTag(checkItem.tag || '');
-                                          }}
-                                          style={styles.actionBtnLight}
-                                          title="수정"
-                                        >
-                                          <Edit2 size={13} />
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                            openDeleteModal(
-                                              '체크리스트 항목 삭제',
-                                              `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                              () => handleDeleteChecklist(checkItem.id)
-                                            );
-                                          }}
-                                          style={styles.actionBtnLight}
-                                          title="삭제"
-                                        >
-                                          <Trash2 size={13} />
-                                        </button>
+                                        {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
+                                        <div style={styles.checkitemStatusBar}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                                            {checkItem.tag && (() => {
+                                              const tagStyle = getTagStyle(checkItem.tag);
+                                              return (
+                                                <span
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    padding: '1px 6px',
+                                                    borderRadius: '4px',
+                                                    backgroundColor: tagStyle.bg,
+                                                    color: tagStyle.color,
+                                                    border: `1px solid ${tagStyle.border}`
+                                                  }}
+                                                >
+                                                  {checkItem.tag}
+                                                </span>
+                                              );
+                                            })()}
+
+                                            {checkItem.dueDate && (
+                                              <div style={styles.itemScheduleBadge}>
+                                                {checkItem.isAllDay !== false ? (
+                                                  <span>📅 {checkItem.dueDate} (종일)</span>
+                                                ) : (
+                                                  <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div style={styles.checkitemActions}>
+                                            <button
+                                              onClick={() => {
+                                                setEditingCheckId(checkItem.id);
+                                                setEditingCheckText(checkItem.text);
+                                                setEditingCheckDueDate(checkItem.dueDate || '');
+                                                setEditingCheckIsAllDay(checkItem.isAllDay !== false);
+                                                setEditingCheckDueTime(checkItem.dueTime || '09:00');
+                                                setEditingCheckTag(checkItem.tag || '');
+                                              }}
+                                              style={styles.actionBtnLight}
+                                              title="수정"
+                                            >
+                                              <Edit2 size={13} />
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                openDeleteModal(
+                                                  '체크리스트 항목 삭제',
+                                                  `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                  () => handleDeleteChecklist(checkItem.id)
+                                                );
+                                              }}
+                                              style={styles.actionBtnLight}
+                                              title="삭제"
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </div>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -1533,208 +1533,208 @@ export default function NotebookExplorer() {
                                     borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
                                   }}
                                 >
-                                  {/* Checkbox Toggle Button (Hidden when editing to maximize width) */}
-                                  {!isEditing && (
-                                    <button
-                                      onClick={() => handleToggleChecklist(checkItem.id)}
-                                      style={styles.checkboxBtn}
-                                      title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                    >
-                                      {checkItem.completed ? (
-                                        <CheckSquare size={18} color="#2563EB" />
-                                      ) : (
-                                        <Square size={18} color="#94A3B8" />
-                                      )}
-                                    </button>
-                                  )}
+                                  {isEditing ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                      <textarea
+                                        rows={2}
+                                        value={editingCheckText}
+                                        onChange={(e) => setEditingCheckText(e.target.value)}
+                                        style={styles.checklistEditTextarea}
+                                        autoFocus
+                                      />
 
-                                  {/* Checklist Item Text Content or Inline Edit Form */}
-                                  <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-                                    {isEditing ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                                        <textarea
-                                          rows={2}
-                                          value={editingCheckText}
-                                          onChange={(e) => setEditingCheckText(e.target.value)}
-                                          style={styles.checklistEditTextarea}
-                                          autoFocus
-                                        />
-
-                                        {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
-                                        <div style={styles.scheduleOptionBar}>
-                                          {/* Date Picker */}
-                                          <div style={styles.scheduleField}>
-                                            <CalendarIcon size={13} color="#64748B" />
-                                            <input
-                                              type="date"
-                                              value={editingCheckDueDate}
-                                              onChange={(e) => setEditingCheckDueDate(e.target.value)}
-                                              style={styles.scheduleDateInput}
-                                            />
-                                          </div>
-
-                                          {/* All-Day Checkbox / Time Input (Only when date is set) */}
-                                          {editingCheckDueDate && (
-                                            <>
-                                              <label style={styles.allDayCheckLabel}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={editingCheckIsAllDay}
-                                                  onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
-                                                />
-                                                <span>종일</span>
-                                              </label>
-                                              {!editingCheckIsAllDay && (
-                                                <div style={styles.scheduleField}>
-                                                  <Clock size={13} color="#64748B" />
-                                                  <input
-                                                    type="time"
-                                                    value={editingCheckDueTime}
-                                                    onChange={(e) => setEditingCheckDueTime(e.target.value)}
-                                                    style={styles.scheduleTimeInput}
-                                                  />
-                                                </div>
-                                              )}
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setEditingCheckDueDate('');
-                                                  setEditingCheckIsAllDay(true);
-                                                }}
-                                                style={styles.scheduleClearBtn}
-                                                title="일정 삭제"
-                                              >
-                                                <X size={12} />
-                                              </button>
-                                            </>
-                                          )}
-
-                                          {/* Badge Dropdown */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
-                                            <Tag size={13} color="#64748B" />
-                                            <select
-                                              value={editingCheckTag || ''}
-                                              onChange={(e) => setEditingCheckTag(e.target.value)}
-                                              style={styles.badgeDropdownSelect}
-                                            >
-                                              <option value="">배지 없음</option>
-                                              {allBadges.map((b) => (
-                                                <option key={b.id || b.name} value={b.name}>
-                                                  {b.name}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </div>
+                                      {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
+                                      <div style={styles.scheduleOptionBar}>
+                                        {/* Date Picker */}
+                                        <div style={styles.scheduleField}>
+                                          <CalendarIcon size={13} color="#64748B" />
+                                          <input
+                                            type="date"
+                                            value={editingCheckDueDate}
+                                            onChange={(e) => setEditingCheckDueDate(e.target.value)}
+                                            style={styles.scheduleDateInput}
+                                          />
                                         </div>
 
-                                        {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
-                                          <button
-                                            type="button"
-                                            onClick={() => setShowManageBadgesModal(true)}
-                                            style={styles.btnSmallManage}
-                                            title="배지 수정 및 삭제 관리"
-                                          >
-                                            ⚙️ 관리
-                                          </button>
+                                        {/* All-Day Checkbox / Time Input (Only when date is set) */}
+                                        {editingCheckDueDate && (
+                                          <>
+                                            <label style={styles.allDayCheckLabel}>
+                                              <input
+                                                type="checkbox"
+                                                checked={editingCheckIsAllDay}
+                                                onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
+                                              />
+                                              <span>종일</span>
+                                            </label>
+                                            {!editingCheckIsAllDay && (
+                                              <div style={styles.scheduleField}>
+                                                <Clock size={13} color="#64748B" />
+                                                <input
+                                                  type="time"
+                                                  value={editingCheckDueTime}
+                                                  onChange={(e) => setEditingCheckDueTime(e.target.value)}
+                                                  style={styles.scheduleTimeInput}
+                                                />
+                                              </div>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingCheckDueDate('');
+                                                setEditingCheckIsAllDay(true);
+                                              }}
+                                              style={styles.scheduleClearBtn}
+                                              title="일정 삭제"
+                                            >
+                                              <X size={12} />
+                                            </button>
+                                          </>
+                                        )}
 
-                                          <div style={{ display: 'flex', gap: '6px' }}>
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditingCheckId(null)}
-                                              style={styles.btnSmallCancel}
-                                            >
-                                              <X size={13} /> 취소
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                              style={styles.btnSmallSave}
-                                            >
-                                              <Check size={13} /> 저장
-                                            </button>
-                                          </div>
+                                        {/* Badge Dropdown */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
+                                          <Tag size={13} color="#64748B" />
+                                          <select
+                                            value={editingCheckTag || ''}
+                                            onChange={(e) => setEditingCheckTag(e.target.value)}
+                                            style={styles.badgeDropdownSelect}
+                                          >
+                                            <option value="">배지 없음</option>
+                                            {allBadges.map((b) => (
+                                              <option key={b.id || b.name} value={b.name}>
+                                                {b.name}
+                                              </option>
+                                            ))}
+                                          </select>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <div>
-                                        {checkItem.tag && (() => {
-                                          const tagStyle = getTagStyle(checkItem.tag);
-                                          return (
-                                            <span
-                                              style={{
-                                                display: 'inline-block',
-                                                fontSize: '11px',
-                                                fontWeight: 700,
-                                                padding: '1px 6px',
-                                                borderRadius: '4px',
-                                                backgroundColor: tagStyle.bg,
-                                                color: tagStyle.color,
-                                                border: `1px solid ${tagStyle.border}`,
-                                                marginRight: '6px',
-                                                verticalAlign: 'middle'
-                                              }}
-                                            >
-                                              {checkItem.tag}
-                                            </span>
-                                          );
-                                        })()}
+
+                                      {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowManageBadgesModal(true)}
+                                          style={styles.btnSmallManage}
+                                          title="배지 수정 및 삭제 관리"
+                                        >
+                                          ⚙️ 관리
+                                        </button>
+
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingCheckId(null)}
+                                            style={styles.btnSmallCancel}
+                                          >
+                                            <X size={13} /> 취소
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                            style={styles.btnSmallSave}
+                                          >
+                                            <Check size={13} /> 저장
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '6px' }}>
+                                      {/* Top Content Row: Checkbox + Pure Text */}
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+                                        <button
+                                          onClick={() => handleToggleChecklist(checkItem.id)}
+                                          style={styles.checkboxBtn}
+                                          title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                        >
+                                          {checkItem.completed ? (
+                                            <CheckSquare size={18} color="#2563EB" />
+                                          ) : (
+                                            <Square size={18} color="#94A3B8" />
+                                          )}
+                                        </button>
                                         <span
                                           style={{
                                             ...styles.checkitemText,
+                                            flex: 1,
+                                            minWidth: 0,
                                             textDecoration: checkItem.completed ? 'line-through' : 'none',
                                             color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                            fontWeight: checkItem.completed ? 400 : 500
+                                            fontWeight: checkItem.completed ? 400 : 500,
+                                            paddingTop: '1px'
                                           }}
                                         >
                                           {renderWithLinks(checkItem.text)}
                                         </span>
-
-                                        {/* Schedule Badge */}
-                                        {checkItem.dueDate && (
-                                          <div style={styles.itemScheduleBadge}>
-                                            {checkItem.isAllDay !== false ? (
-                                              <span>📅 {checkItem.dueDate} (종일)</span>
-                                            ) : (
-                                              <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
-                                            )}
-                                          </div>
-                                        )}
                                       </div>
-                                    )}
-                                  </div>
 
-                                  {/* Item Actions */}
-                                  {!isEditing && (
-                                    <div style={styles.checkitemActions}>
-                                      <button
-                                        onClick={() => {
-                                          setEditingCheckId(checkItem.id);
-                                          setEditingCheckText(checkItem.text);
-                                          setEditingCheckDueDate(checkItem.dueDate || '');
-                                          setEditingCheckIsAllDay(checkItem.isAllDay !== false);
-                                          setEditingCheckDueTime(checkItem.dueTime || '09:00');
-                                          setEditingCheckTag(checkItem.tag || '');
-                                        }}
-                                        style={styles.actionBtnLight}
-                                        title="수정"
-                                      >
-                                        <Edit2 size={13} />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                          openDeleteModal(
-                                            '체크리스트 항목 삭제',
-                                            `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                            () => handleDeleteChecklist(checkItem.id)
-                                          );
-                                        }}
-                                        style={styles.actionBtnLight}
-                                        title="삭제"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
+                                      {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
+                                      <div style={styles.checkitemStatusBar}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                                          {checkItem.tag && (() => {
+                                            const tagStyle = getTagStyle(checkItem.tag);
+                                            return (
+                                              <span
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  fontSize: '11px',
+                                                  fontWeight: 700,
+                                                  padding: '1px 6px',
+                                                  borderRadius: '4px',
+                                                  backgroundColor: tagStyle.bg,
+                                                  color: tagStyle.color,
+                                                  border: `1px solid ${tagStyle.border}`
+                                                }}
+                                              >
+                                                {checkItem.tag}
+                                              </span>
+                                            );
+                                          })()}
+
+                                          {checkItem.dueDate && (
+                                            <div style={styles.itemScheduleBadge}>
+                                              {checkItem.isAllDay !== false ? (
+                                                <span>📅 {checkItem.dueDate} (종일)</span>
+                                              ) : (
+                                                <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div style={styles.checkitemActions}>
+                                          <button
+                                            onClick={() => {
+                                              setEditingCheckId(checkItem.id);
+                                              setEditingCheckText(checkItem.text);
+                                              setEditingCheckDueDate(checkItem.dueDate || '');
+                                              setEditingCheckIsAllDay(checkItem.isAllDay !== false);
+                                              setEditingCheckDueTime(checkItem.dueTime || '09:00');
+                                              setEditingCheckTag(checkItem.tag || '');
+                                            }}
+                                            style={styles.actionBtnLight}
+                                            title="수정"
+                                          >
+                                            <Edit2 size={13} />
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                              openDeleteModal(
+                                                '체크리스트 항목 삭제',
+                                                `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                () => handleDeleteChecklist(checkItem.id)
+                                              );
+                                            }}
+                                            style={styles.actionBtnLight}
+                                            title="삭제"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -2681,12 +2681,23 @@ const styles = {
   },
   checklistItemRow: {
     display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: '6px',
     padding: '8px 10px',
     borderRadius: '6px',
     border: '1px solid',
     transition: 'background-color 0.15s ease, border-color 0.15s ease'
+  },
+  checkitemStatusBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '6px',
+    paddingTop: '6px',
+    borderTop: '1px dashed #E2E8F0',
+    width: '100%',
+    minHeight: '22px'
   },
   checkboxBtn: {
     background: 'none',
@@ -2973,7 +2984,7 @@ const styles = {
     backgroundColor: '#EFF6FF',
     padding: '1px 6px',
     borderRadius: '4px',
-    marginTop: '3px',
+    marginTop: 0,
     border: '1px solid #BFDBFE'
   },
 
