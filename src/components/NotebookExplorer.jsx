@@ -1073,53 +1073,55 @@ export default function NotebookExplorer() {
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
                         <div style={styles.editPaneMainCard}>
-                          {/* Title Header Input Line with Right-aligned Action Buttons */}
+                          {/* Top Control Bar: Category Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '10px',
-                            marginBottom: '10px'
+                            justifyContent: 'flex-end',
+                            gap: '6px',
+                            marginBottom: '10px',
+                            paddingBottom: '8px',
+                            borderBottom: '1px solid #F1F5F9'
                           }}>
-                            <input
-                              type="text"
-                              value={draftTitle}
-                              onChange={(e) => setDraftTitle(e.target.value)}
-                              placeholder="제목을 입력하세요"
-                              style={{ ...styles.editTitleInput, flex: 1 }}
-                            />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                              <div style={styles.headerCategorySelector}>
-                                <span style={styles.headerCategoryLabel}>이동:</span>
-                                <select
-                                  value={draftCategoryId}
-                                  onChange={(e) => setDraftCategoryId(e.target.value)}
-                                  style={styles.headerCategorySelect}
-                                >
-                                  {allCategories.map((cat) => (
-                                    <option key={cat.id} value={cat.id}>
-                                      {cat.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <button
-                                onClick={handleCancelDetailEdit}
-                                style={styles.btnSecondary}
+                            <div style={styles.headerCategorySelector}>
+                              <span style={styles.headerCategoryLabel}>이동:</span>
+                              <select
+                                value={draftCategoryId}
+                                onChange={(e) => setDraftCategoryId(e.target.value)}
+                                style={styles.headerCategorySelect}
                               >
-                                <RotateCcw size={13} />
-                                취소
-                              </button>
-                              <button
-                                onClick={handleSaveDetail}
-                                style={styles.btnPrimary}
-                              >
-                                <Save size={13} />
-                                저장
-                              </button>
+                                {allCategories.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
+
+                            <button
+                              onClick={handleCancelDetailEdit}
+                              style={styles.btnSecondary}
+                            >
+                              <RotateCcw size={13} />
+                              취소
+                            </button>
+                            <button
+                              onClick={handleSaveDetail}
+                              style={styles.btnPrimary}
+                            >
+                              <Save size={13} />
+                              저장
+                            </button>
                           </div>
+
+                          {/* Standalone Full-Width Title Input Box */}
+                          <input
+                            type="text"
+                            value={draftTitle}
+                            onChange={(e) => setDraftTitle(e.target.value)}
+                            placeholder="제목을 입력하세요"
+                            style={{ ...styles.editTitleInput, width: '100%', marginBottom: '10px' }}
+                          />
 
                           <textarea
                             value={draftBody}
