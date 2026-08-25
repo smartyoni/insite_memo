@@ -168,7 +168,7 @@ export default function NotebookExplorer() {
 
   const allBadges = [...DEFAULT_TAGS, ...customBadges];
 
-  const handleAddCustomBadge = () => {
+  const handleAddCustomBadge = async () => {
     const trimmed = newBadgeName.trim();
     if (!trimmed) return;
     const exists = allBadges.some(t => t.name === trimmed);
@@ -190,12 +190,17 @@ export default function NotebookExplorer() {
     const updated = [...customBadges, newBadge];
     setCustomBadges(updated);
     saveStoredCustomTags(updated);
+    try {
+      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
+    } catch (err) {
+      console.error('Error saving custom badge to Firestore:', err);
+    }
     setEditingCheckTag(trimmed);
     setNewBadgeName('');
     setShowAddBadgeModal(false);
   };
 
-  const handleUpdateCustomBadge = (badgeId) => {
+  const handleUpdateCustomBadge = async (badgeId) => {
     const trimmed = editingBadgeName.trim();
     if (!trimmed) return;
     const colorStyle = TAG_COLOR_PALETTE[editingBadgeColorIdx % TAG_COLOR_PALETTE.length];
@@ -206,13 +211,23 @@ export default function NotebookExplorer() {
     );
     setCustomBadges(updated);
     saveStoredCustomTags(updated);
+    try {
+      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
+    } catch (err) {
+      console.error('Error updating custom badge in Firestore:', err);
+    }
     setEditingBadgeId(null);
   };
 
-  const handleDeleteCustomBadge = (badgeId) => {
+  const handleDeleteCustomBadge = async (badgeId) => {
     const updated = customBadges.filter(b => b.id !== badgeId);
     setCustomBadges(updated);
     saveStoredCustomTags(updated);
+    try {
+      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
+    } catch (err) {
+      console.error('Error deleting custom badge in Firestore:', err);
+    }
   };
 
 
@@ -385,6 +400,73 @@ export default function NotebookExplorer() {
     });
     return () => unsubscribe();
   }, []);
+
+  // 3. Subscribe to Custom Badges (Tags) in Firestore
+  useEffect(() => {
+    const customTagsDocRef = doc(db, 'settings', 'custom_tags');
+    const unsubscribe = onSnapshot(customTagsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (Array.isArray(data.tags)) {
+          setCustomBadges(data.tags);
+          saveStoredCustomTags(data.tags);
+        }
+      } else {
+        const localTags = getStoredCustomTags();
+        if (localTags && localTags.length > 0) {
+          setDoc(customTagsDocRef, { tags: localTags }).catch(console.error);
+        }
+      }
+    }, (err) => {
+      console.error("Firestore custom_tags snapshot error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 4. Auto sync items tags into customBadges if not already present
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+
+    let hasNewTag = false;
+    const currentCustomTags = [...customBadges];
+    const knownTagNames = new Set([...DEFAULT_TAGS.map(t => t.name), ...currentCustomTags.map(t => t.name)]);
+
+    items.forEach((item) => {
+      const checkAndAddTag = (tagName) => {
+        if (tagName && typeof tagName === 'string' && tagName.trim().length > 0) {
+          const trimmed = tagName.trim();
+          if (!knownTagNames.has(trimmed)) {
+            knownTagNames.add(trimmed);
+            let hash = 0;
+            for (let i = 0; i < trimmed.length; i++) {
+              hash = trimmed.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colorIdx = Math.abs(hash) % TAG_COLOR_PALETTE.length;
+            const colorStyle = TAG_COLOR_PALETTE[colorIdx];
+            currentCustomTags.push({
+              id: 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              name: trimmed,
+              bg: colorStyle.bg,
+              border: colorStyle.border,
+              color: colorStyle.color
+            });
+            hasNewTag = true;
+          }
+        }
+      };
+
+      checkAndAddTag(item.tag);
+      if (item.checklists && Array.isArray(item.checklists)) {
+        item.checklists.forEach(c => checkAndAddTag(c.tag));
+      }
+    });
+
+    if (hasNewTag) {
+      setCustomBadges(currentCustomTags);
+      saveStoredCustomTags(currentCustomTags);
+      setDoc(doc(db, 'settings', 'custom_tags'), { tags: currentCustomTags }).catch(console.error);
+    }
+  }, [items, customBadges]);
 
   // Filter items by selected category
   const filteredItems = items.filter((item) => item.categoryId === selectedCategoryId);
