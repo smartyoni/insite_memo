@@ -100,10 +100,12 @@ export default function NotebookExplorer() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('inbox');
   const [selectedItemId, setSelectedItemId] = useState(null);
 
-  // Combine fixed In-box category at the very top
+  // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
   const allCategories = [
     INBOX_CATEGORY,
-    ...categories.filter((c) => c.id !== 'inbox')
+    ...categories
+      .filter((c) => c.id !== 'inbox')
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' }))
   ];
 
   // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
