@@ -1287,17 +1287,17 @@ export default function CalendarView({
                 <label style={styles.fieldLabel}>☑️ 체크리스트</label>
 
                 <div style={styles.modalCheckInputGroup}>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={newCheckText}
                     onChange={(e) => setNewCheckText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Enter' && e.ctrlKey) {
                         e.preventDefault();
                         handleAddCheckInModal();
                       }
                     }}
-                    placeholder="새 체크 항목 입력 후 Enter"
+                    placeholder="새 체크 항목 입력... (Ctrl+Enter 항목 추가)"
                     style={styles.modalCheckInput}
                   />
                   <button
@@ -1761,7 +1761,9 @@ const styles = {
   },
   modalCheckText: {
     flex: 1,
-    fontSize: '13px'
+    fontSize: '13px',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
   },
   modalCheckDelBtn: {
     background: 'none',

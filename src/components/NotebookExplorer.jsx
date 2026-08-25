@@ -1265,12 +1265,12 @@ export default function NotebookExplorer() {
                                 value={newChecklistText}
                                 onChange={(e) => setNewChecklistText(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                  if (e.key === 'Enter' && e.ctrlKey) {
                                     e.preventDefault();
                                     handleAddChecklist();
                                   }
                                 }}
-                                placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                                 style={styles.checklistTextarea}
                               />
                               <button
@@ -1544,12 +1544,12 @@ export default function NotebookExplorer() {
                               value={newChecklistText}
                               onChange={(e) => setNewChecklistText(e.target.value)}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
+                                if (e.key === 'Enter' && e.ctrlKey) {
                                   e.preventDefault();
                                   handleAddChecklist();
                                 }
                               }}
-                              placeholder="새 체크리스트 항목 입력... (Shift+Enter 줄바꿈)"
+                              placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                               style={styles.checklistTextarea}
                             />
                             <button
@@ -2757,7 +2757,7 @@ const styles = {
     lineHeight: 1.5,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
-    display: 'block'
+    display: 'inline'
   },
   checklistEditTextarea: {
     width: '100%',
