@@ -184,6 +184,10 @@ export default function CalendarView({
 
   const handleTouchStart = (e) => {
     if (e.touches.length !== 1) return;
+    if (e.target.closest && e.target.closest('.badge-selector-tabs')) {
+      touchStartX.current = null;
+      return;
+    }
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchEndX.current = e.touches[0].clientX;
@@ -199,7 +203,6 @@ export default function CalendarView({
   const handleTouchEnd = () => {
     if (touchStartX.current === null || touchStartY.current === null || touchEndX.current === null || touchEndY.current === null) return;
     if (showEventModal) return;
-    if (viewMode !== 'month' && viewMode !== 'week' && viewMode !== '3day' && viewMode !== 'day') return;
 
     const diffX = touchStartX.current - touchEndX.current;
     const diffY = touchStartY.current - touchEndY.current;
@@ -211,12 +214,29 @@ export default function CalendarView({
       Math.abs(diffX) >= minSwipeDistance &&
       Math.abs(diffY) < Math.abs(diffX) * maxVerticalRatio
     ) {
-      if (diffX > 0) {
-        // Swiped right-to-left -> Next month / week / 3day / day
-        handleNext();
+      if (isMobile) {
+        const mobileViewModes = ['badge', '3day', 'day'];
+        const currentIdx = mobileViewModes.indexOf(viewMode);
+        if (diffX > 0) {
+          // Swiped right-to-left -> Next view (배지 -> 3일 -> 일간)
+          if (currentIdx !== -1 && currentIdx < mobileViewModes.length - 1) {
+            setViewMode(mobileViewModes[currentIdx + 1]);
+          }
+        } else {
+          // Swiped left-to-right -> Prev view (일간 -> 3일 -> 배지)
+          if (currentIdx > 0) {
+            setViewMode(mobileViewModes[currentIdx - 1]);
+          }
+        }
       } else {
-        // Swiped left-to-right -> Prev month / week / 3day / day
-        handlePrev();
+        if (viewMode !== 'month' && viewMode !== 'week' && viewMode !== '3day' && viewMode !== 'day') return;
+        if (diffX > 0) {
+          // Swiped right-to-left -> Next month / week / 3day / day
+          handleNext();
+        } else {
+          // Swiped left-to-right -> Prev month / week / 3day / day
+          handlePrev();
+        }
       }
     }
 
@@ -933,7 +953,7 @@ export default function CalendarView({
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
         {/* Badge Selector Tabs */}
-        <div style={{
+        <div className="badge-selector-tabs" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
