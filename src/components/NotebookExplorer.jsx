@@ -2214,7 +2214,8 @@ const styles = {
     height: '100vh',
     backgroundColor: '#FAFAF8',
     overflow: 'hidden',
-    userSelect: 'none',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
     position: 'relative'
   },
 
