@@ -486,16 +486,18 @@ export default function NotebookExplorer() {
     }
   }, [items, customBadges]);
 
-  // Filter & Sort items by selected category (Default: ascending order)
+  // Filter & Sort items by selected category (Default: ascending order by title / 가나다순)
   const filteredItems = items
     .filter((item) => item.categoryId === selectedCategoryId)
     .sort((a, b) => {
-      const tA = getItemTimestamp(a);
-      const tB = getItemTimestamp(b);
-      if (tA === tB) {
-        const comp = (a.title || '').localeCompare(b.title || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+      const titleA = (a.title || '').trim();
+      const titleB = (b.title || '').trim();
+      const comp = titleA.localeCompare(titleB, 'ko-KR', { numeric: true, sensitivity: 'base' });
+      if (comp !== 0) {
         return itemSortOrder === 'asc' ? comp : -comp;
       }
+      const tA = getItemTimestamp(a);
+      const tB = getItemTimestamp(b);
       return itemSortOrder === 'asc' ? tA - tB : tB - tA;
     });
 
