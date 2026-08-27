@@ -128,7 +128,7 @@ export default function CalendarView({
   const [newCheckText, setNewCheckText] = useState('');
 
   // Badge View screen active tag selection state
-  const [selectedBadgeViewTag, setSelectedBadgeViewTag] = useState('');
+  const [selectedBadgeViewTag, setSelectedBadgeViewTag] = useState('all');
 
   // Year & Month calculations
   const year = currentDate.getFullYear();
@@ -480,6 +480,21 @@ export default function CalendarView({
   const getEventsGroupedByTag = () => {
     const groups = {};
     items.forEach((item) => {
+      if (item.date) {
+        const tagName = item.tag || '미지정';
+        if (!groups[tagName]) groups[tagName] = [];
+        groups[tagName].push({
+          id: `note_${item.id}`,
+          type: 'note',
+          title: item.title || '제목 없음',
+          date: item.date,
+          time: '종일',
+          completed: false,
+          rawItem: item,
+          tag: item.tag,
+          parentNoteTitle: item.title
+        });
+      }
       if (item.checklists && Array.isArray(item.checklists)) {
         item.checklists.forEach((c) => {
           if (c.dueDate) {
@@ -896,16 +911,24 @@ export default function CalendarView({
     const customBadgesList = getStoredCustomTags();
     const allBadgesList = [...DEFAULT_TAGS, ...customBadgesList];
     const eventsGrouped = getEventsGroupedByTag();
+    const allEventsList = Object.values(eventsGrouped).flat().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    const activeTag = selectedBadgeViewTag || 'today';
+    const activeTag = selectedBadgeViewTag || 'all';
+    const isAllMode = activeTag === 'all';
     const isTodayMode = activeTag === 'today';
     const todayEvents = eventsByDate[todayKey] || [];
 
-    const activeTagStyle = isTodayMode
+    const activeTagStyle = isAllMode
+      ? { bg: '#F1F5F9', border: '#475569', color: '#0F172A', name: '전체' }
+      : isTodayMode
       ? { bg: '#EFF6FF', border: '#93C5FD', color: '#1D4ED8', name: '📅 오늘' }
       : (getTagStyle(activeTag, customBadgesList) || { bg: '#F1F5F9', border: '#CBD5E1', color: '#334155', name: activeTag });
 
-    const currentBadgeEvents = isTodayMode ? todayEvents : (eventsGrouped[activeTag] || []);
+    const currentBadgeEvents = isAllMode
+      ? allEventsList
+      : isTodayMode
+      ? todayEvents
+      : (eventsGrouped[activeTag] || []);
 
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
@@ -919,11 +942,40 @@ export default function CalendarView({
           backgroundColor: '#F8FAFC',
           overflowX: 'auto'
         }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', marginRight: '4px' }}>
-            🏷️ 배지 선택:
-          </span>
+          {/* All Tab (First item, to the left of Today) */}
+          <button
+            onClick={() => setSelectedBadgeViewTag('all')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: isAllMode ? 700 : 600,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: isAllMode ? '1px solid #475569' : '1px solid #CBD5E1',
+              backgroundColor: isAllMode ? '#475569' : '#F1F5F9',
+              color: isAllMode ? '#FFFFFF' : '#334155',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: isAllMode ? '0 2px 4px rgba(71,85,105,0.2)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>전체</span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: '10px',
+              backgroundColor: isAllMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)',
+              color: isAllMode ? '#FFFFFF' : '#475569'
+            }}>
+              {allEventsList.length}
+            </span>
+          </button>
 
-          {/* Today Tab (First item) */}
+          {/* Today Tab (Second item) */}
           <button
             onClick={() => setSelectedBadgeViewTag('today')}
             style={{
@@ -1009,7 +1061,7 @@ export default function CalendarView({
                 color: activeTagStyle.color,
                 border: `1px solid ${activeTagStyle.border}`
               }}>
-                {isTodayMode ? '📅 오늘 예정 일정' : activeTag}
+                {isAllMode ? '전체 일정' : isTodayMode ? '📅 오늘 예정 일정' : activeTag}
               </span>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
                 총 {currentBadgeEvents.length}건의 일정
