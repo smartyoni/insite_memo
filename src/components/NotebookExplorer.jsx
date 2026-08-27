@@ -818,6 +818,55 @@ export default function NotebookExplorer() {
     setIsEditMode(false);
   };
 
+  const renderMainModeBar = () => (
+    <div style={isMobile ? {
+      ...styles.mainModeBar,
+      borderBottom: 'none',
+      borderTop: '1px solid #CBD5E1',
+      backgroundColor: '#F8FAFC',
+      padding: '6px 8px'
+    } : styles.mainModeBar}>
+      <button
+        onClick={() => {
+          setActiveMainTab('explorer');
+          setNavigatedFromCalendar(false);
+        }}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'explorer' ? 700 : 500
+        }}
+      >
+        <FileText size={14} />
+        <span>메모 탐색기</span>
+      </button>
+      <button
+        onClick={() => {
+          setActiveMainTab('calendar');
+          setNavigatedFromCalendar(false);
+          if (isMobile) setMobileView('detail');
+        }}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'calendar' ? 700 : 500
+        }}
+      >
+        <CalendarIcon size={14} />
+        <span>캘린더</span>
+      </button>
+    </div>
+  );
+
+  const renderMobileFooter = (screenHeader) => (
+    <div style={styles.mobileFooterContainer}>
+      {screenHeader}
+      {renderMainModeBar()}
+    </div>
+  );
+
   // ---------------- Render ----------------
   return (
     <div style={styles.appContainer}>
@@ -828,61 +877,30 @@ export default function NotebookExplorer() {
           width: isMobile ? '100%' : '280px',
           minWidth: isMobile ? '100%' : '280px'
         }}>
-          {/* Main Mode Tab Switcher */}
-          <div style={styles.mainModeBar}>
-            <button
-              onClick={() => {
-                setActiveMainTab('explorer');
-                setNavigatedFromCalendar(false);
-              }}
-              style={{
-                ...styles.mainModeTabBtn,
-                backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
-                color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
-                fontWeight: activeMainTab === 'explorer' ? 700 : 500
-              }}
-            >
-              <FileText size={14} />
-              <span>메모 탐색기</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveMainTab('calendar');
-                setNavigatedFromCalendar(false);
-                if (isMobile) setMobileView('detail');
-              }}
-              style={{
-                ...styles.mainModeTabBtn,
-                backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
-                color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
-                fontWeight: activeMainTab === 'calendar' ? 700 : 500
-              }}
-            >
-              <CalendarIcon size={14} />
-              <span>캘린더</span>
-            </button>
-          </div>
-
-          <div style={styles.pane1Header}>
-            <span style={styles.pane1Title}>카테고리</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                onClick={handleQuickAddNote}
-                style={styles.quickAddBtn}
-                title="빠른 메모 생성 (In-box에 자동 저장)"
-              >
-                <Zap size={13} fill="#2563EB" color="#2563EB" />
-                <span>빠른입력</span>
-              </button>
-              <button
-                onClick={() => setIsAddingCategory(true)}
-                style={styles.iconBtnDark}
-                title="카테고리 추가"
-              >
-                <Plus size={18} />
-              </button>
+          {/* Main Mode Tab Switcher & Header for Desktop */}
+          {!isMobile && renderMainModeBar()}
+          {!isMobile && (
+            <div style={styles.pane1Header}>
+              <span style={styles.pane1Title}>카테고리</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={handleQuickAddNote}
+                  style={styles.quickAddBtn}
+                  title="빠른 메모 생성 (In-box에 자동 저장)"
+                >
+                  <Zap size={13} fill="#2563EB" color="#2563EB" />
+                  <span>빠른입력</span>
+                </button>
+                <button
+                  onClick={() => setIsAddingCategory(true)}
+                  style={styles.iconBtnDark}
+                  title="카테고리 추가"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={styles.paneContent}>
             {isAddingCategory && (
@@ -994,13 +1012,56 @@ export default function NotebookExplorer() {
               );
             })}
           </div>
+
+          {/* Mobile Footer for Pane 1 */}
+          {isMobile && renderMobileFooter(
+            <div style={{
+              ...styles.pane1Header,
+              borderBottom: 'none',
+              borderTop: '1px solid #D4E3F3'
+            }}>
+              <span style={styles.pane1Title}>카테고리</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={handleQuickAddNote}
+                  style={styles.quickAddBtn}
+                  title="빠른 메모 생성 (In-box에 자동 저장)"
+                >
+                  <Zap size={13} fill="#2563EB" color="#2563EB" />
+                  <span>빠른입력</span>
+                </button>
+                <button
+                  onClick={() => setIsAddingCategory(true)}
+                  style={styles.iconBtnDark}
+                  title="카테고리 추가"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {activeMainTab === 'calendar' ? (
         <div style={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {isMobile && (
-            <div style={{ padding: '8px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #CBD5E1' }}>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <CalendarView
+              items={items}
+              categories={allCategories}
+              onNavigateToDetail={(itemId, isChecklist) => {
+                navigateToDetail(itemId);
+                setActiveMainTab('explorer');
+                setNavigatedFromCalendar(true);
+                if (isChecklist) {
+                  setMobileSubTab('sub');
+                }
+              }}
+              openDeleteModal={openDeleteModal}
+            />
+          </div>
+          {isMobile && renderMobileFooter(
+            <div style={{ padding: '8px 12px', backgroundColor: '#F8FAFC', borderTop: '1px solid #CBD5E1', display: 'flex', alignItems: 'center' }}>
               <button
                 onClick={() => {
                   setMobileView('categories');
@@ -1011,19 +1072,6 @@ export default function NotebookExplorer() {
               </button>
             </div>
           )}
-          <CalendarView
-            items={items}
-            categories={allCategories}
-            onNavigateToDetail={(itemId, isChecklist) => {
-              navigateToDetail(itemId);
-              setActiveMainTab('explorer');
-              setNavigatedFromCalendar(true);
-              if (isChecklist) {
-                setMobileSubTab('sub');
-              }
-            }}
-            openDeleteModal={openDeleteModal}
-          />
         </div>
       ) : (
         <>
@@ -1034,48 +1082,40 @@ export default function NotebookExplorer() {
           width: isMobile ? '100%' : '280px',
           minWidth: isMobile ? '100%' : '280px'
         }}>
-          <div style={styles.pane2Header}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isMobile && (
+          {!isMobile && (
+            <div style={styles.pane2Header}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={styles.pane2Title}>
+                  {activeCategory ? activeCategory.name : '목록'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <button
-                  onClick={navigateBack}
-                  style={styles.mobileBackBtn}
-                  title="카테고리로 이동"
+                  onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  style={{
+                    ...styles.iconBtnLight,
+                    padding: '4px 6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '11px',
+                    color: '#4B5563'
+                  }}
+                  title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
                 >
-                  <ArrowLeft size={18} />
-                  <span>카테고리</span>
+                  {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                  <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
                 </button>
-              )}
-              <span style={styles.pane2Title}>
-                {activeCategory ? activeCategory.name : '목록'}
-              </span>
+                <button
+                  onClick={handleAddItem}
+                  style={styles.iconBtnLight}
+                  title="메모 추가"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                style={{
-                  ...styles.iconBtnLight,
-                  padding: '4px 6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  fontSize: '11px',
-                  color: '#4B5563'
-                }}
-                title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
-              >
-                {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-              </button>
-              <button
-                onClick={handleAddItem}
-                style={styles.iconBtnLight}
-                title="메모 추가"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          </div>
+          )}
 
           <div style={styles.paneContent}>
             {filteredItems.length === 0 ? (
@@ -1158,6 +1198,54 @@ export default function NotebookExplorer() {
               })
             )}
           </div>
+
+          {/* Mobile Footer for Pane 2 */}
+          {isMobile && renderMobileFooter(
+            <div style={{
+              ...styles.pane2Header,
+              borderBottom: 'none',
+              borderTop: '1px solid #ECEBE7'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={navigateBack}
+                  style={styles.mobileBackBtn}
+                  title="카테고리로 이동"
+                >
+                  <ArrowLeft size={18} />
+                  <span>카테고리</span>
+                </button>
+                <span style={styles.pane2Title}>
+                  {activeCategory ? activeCategory.name : '목록'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  style={{
+                    ...styles.iconBtnLight,
+                    padding: '4px 6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '11px',
+                    color: '#4B5563'
+                  }}
+                  title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
+                >
+                  {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                  <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
+                </button>
+                <button
+                  onClick={handleAddItem}
+                  style={styles.iconBtnLight}
+                  title="메모 추가"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1166,33 +1254,6 @@ export default function NotebookExplorer() {
         <div style={styles.pane3}>
           {activeItem ? (
             <>
-              {/* Mobile Sub-Tab Bar (Prominent Tab Switching Bar) */}
-              {isMobile && (
-                <div style={styles.mobileTabBar}>
-                  <button
-                    onClick={() => setMobileSubTab('main')}
-                    style={{
-                      ...styles.mobileTabBtn,
-                      backgroundColor: mobileSubTab === 'main' ? '#2563EB' : '#FFFFFF',
-                      color: mobileSubTab === 'main' ? '#FFFFFF' : '#475569',
-                      borderColor: mobileSubTab === 'main' ? '#2563EB' : '#CBD5E1'
-                    }}
-                  >
-                    📄 상세내용
-                  </button>
-                  <button
-                    onClick={() => setMobileSubTab('sub')}
-                    style={{
-                      ...styles.mobileTabBtn,
-                      backgroundColor: mobileSubTab === 'sub' ? '#2563EB' : '#FFFFFF',
-                      color: mobileSubTab === 'sub' ? '#FFFFFF' : '#475569',
-                      borderColor: mobileSubTab === 'sub' ? '#2563EB' : '#CBD5E1'
-                    }}
-                  >
-                    ☑️ 체크리스트 {activeItem.subBody ? '•' : ''}
-                  </button>
-                </div>
-              )}
 
               {/* Content Body - Split 2-pane Workspace (Touch Swipe enabled) */}
               <div
@@ -1880,23 +1941,58 @@ export default function NotebookExplorer() {
                   </div>
                 )}
               </div>
+
+              {/* Mobile Footer for Pane 3 Detail */}
+              {isMobile && renderMobileFooter(
+                <div style={{
+                  ...styles.mobileTabBar,
+                  borderBottom: 'none',
+                  borderTop: '1px solid #CBD5E1'
+                }}>
+                  <button
+                    onClick={() => setMobileSubTab('main')}
+                    style={{
+                      ...styles.mobileTabBtn,
+                      backgroundColor: mobileSubTab === 'main' ? '#2563EB' : '#FFFFFF',
+                      color: mobileSubTab === 'main' ? '#FFFFFF' : '#475569',
+                      borderColor: mobileSubTab === 'main' ? '#2563EB' : '#CBD5E1'
+                    }}
+                  >
+                    📄 상세내용
+                  </button>
+                  <button
+                    onClick={() => setMobileSubTab('sub')}
+                    style={{
+                      ...styles.mobileTabBtn,
+                      backgroundColor: mobileSubTab === 'sub' ? '#2563EB' : '#FFFFFF',
+                      color: mobileSubTab === 'sub' ? '#FFFFFF' : '#475569',
+                      borderColor: mobileSubTab === 'sub' ? '#2563EB' : '#CBD5E1'
+                    }}
+                  >
+                    ☑️ 체크리스트 {activeItem.subBody ? '•' : ''}
+                  </button>
+                </div>
+              )}
             </>
           ) : (
-            <div style={styles.pane3Empty}>
-              {isMobile && (
-                <button
-                  onClick={navigateBack}
-                  style={{ ...styles.mobileBackBtn, marginBottom: '20px' }}
-                >
-                  <ArrowLeft size={18} />
-                  <span>목록으로 돌아가기</span>
-                </button>
-              )}
-              <FileText size={48} color="#D0D4DC" style={{ marginBottom: '12px' }} />
-              <p style={{ color: '#8A909A', fontSize: '15px' }}>
-                목록에서 메모를 선택하거나 새 메모를 작성하세요.
-              </p>
-            </div>
+            <>
+              <div style={styles.pane3Empty}>
+                {isMobile && (
+                  <button
+                    onClick={navigateBack}
+                    style={{ ...styles.mobileBackBtn, marginBottom: '20px' }}
+                  >
+                    <ArrowLeft size={18} />
+                    <span>목록으로 돌아가기</span>
+                  </button>
+                )}
+                <FileText size={48} color="#D0D4DC" style={{ marginBottom: '12px' }} />
+                <p style={{ color: '#8A909A', fontSize: '15px' }}>
+                  목록에서 메모를 선택하거나 새 메모를 작성하세요.
+                </p>
+              </div>
+              {isMobile && renderMobileFooter(null)}
+            </>
           )}
         </div>
       )}
@@ -2211,12 +2307,24 @@ const styles = {
   appContainer: {
     display: 'flex',
     width: '100vw',
-    height: '100vh',
+    height: '100dvh',
     backgroundColor: '#FAFAF8',
     overflow: 'hidden',
     userSelect: 'text',
     WebkitUserSelect: 'text',
     position: 'relative'
+  },
+
+  mobileFooterContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderTop: '1px solid #CBD5E1',
+    flexShrink: 0,
+    paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))',
+    boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
+    zIndex: 90
   },
 
   // Pane 1: Category (Pastel Blue, 280px)
