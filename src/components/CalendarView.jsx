@@ -85,6 +85,22 @@ function getWeekDays(currDate) {
   return weekDays;
 }
 
+function get3Days(currDate) {
+  const days = [];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  for (let i = 0; i < 3; i++) {
+    const day = new Date(currDate);
+    day.setDate(day.getDate() + i);
+    days.push({
+      date: day,
+      dateKey: formatDateKey(day),
+      dayNum: day.getDate(),
+      dayName: dayNames[day.getDay()]
+    });
+  }
+  return days;
+}
+
 export default function CalendarView({
   items = [],
   categories = [],
@@ -92,7 +108,7 @@ export default function CalendarView({
   openDeleteModal
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('month'); // 'month' | 'week' | 'day'
+  const [viewMode, setViewMode] = useState('badge'); // 'badge' | '3day' | 'day' | 'month' | 'week'
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -127,6 +143,10 @@ export default function CalendarView({
       const prev = new Date(currentDate);
       prev.setDate(prev.getDate() - 7);
       setCurrentDate(prev);
+    } else if (viewMode === '3day') {
+      const prev = new Date(currentDate);
+      prev.setDate(prev.getDate() - 3);
+      setCurrentDate(prev);
     } else if (viewMode === 'day') {
       const prev = new Date(currentDate);
       prev.setDate(prev.getDate() - 1);
@@ -141,6 +161,10 @@ export default function CalendarView({
       const next = new Date(currentDate);
       next.setDate(next.getDate() + 7);
       setCurrentDate(next);
+    } else if (viewMode === '3day') {
+      const next = new Date(currentDate);
+      next.setDate(next.getDate() + 3);
+      setCurrentDate(next);
     } else if (viewMode === 'day') {
       const next = new Date(currentDate);
       next.setDate(next.getDate() + 1);
@@ -152,7 +176,7 @@ export default function CalendarView({
     setCurrentDate(new Date());
   };
 
-  // Mobile full-screen swipe navigation (Month / Week / Day views)
+  // Mobile full-screen swipe navigation (Month / Week / 3day / Day views)
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const touchEndX = useRef(null);
@@ -175,7 +199,7 @@ export default function CalendarView({
   const handleTouchEnd = () => {
     if (touchStartX.current === null || touchStartY.current === null || touchEndX.current === null || touchEndY.current === null) return;
     if (showEventModal) return;
-    if (viewMode !== 'month' && viewMode !== 'week' && viewMode !== 'day') return;
+    if (viewMode !== 'month' && viewMode !== 'week' && viewMode !== '3day' && viewMode !== 'day') return;
 
     const diffX = touchStartX.current - touchEndX.current;
     const diffY = touchStartY.current - touchEndY.current;
@@ -188,10 +212,10 @@ export default function CalendarView({
       Math.abs(diffY) < Math.abs(diffX) * maxVerticalRatio
     ) {
       if (diffX > 0) {
-        // Swiped right-to-left -> Next month / week / day
+        // Swiped right-to-left -> Next month / week / 3day / day
         handleNext();
       } else {
-        // Swiped left-to-right -> Prev month / week / day
+        // Swiped left-to-right -> Prev month / week / 3day / day
         handlePrev();
       }
     }
@@ -220,6 +244,23 @@ export default function CalendarView({
         return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endDate}일`;
       }
       return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endMonth}월 ${endDate}일`;
+    }
+    if (viewMode === '3day') {
+      const threeDays = get3Days(currentDate);
+      const start = threeDays[0].date;
+      const end = threeDays[2].date;
+      const startYear = start.getFullYear();
+      const startMonth = start.getMonth() + 1;
+      const startDate = start.getDate();
+      const endYear = end.getFullYear();
+      const endMonth = end.getMonth() + 1;
+      const endDate = end.getDate();
+      if (startYear === endYear && startMonth === endMonth) {
+        return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endDate}일`;
+      } else if (startYear === endYear) {
+        return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endMonth}월 ${endDate}일`;
+      }
+      return `${startYear}년 ${startMonth}월 ${startDate}일 ~ ${endYear}년 ${endMonth}월 ${endDate}일`;
     }
     if (viewMode === 'day') {
       const dayOfWeekNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -545,6 +586,141 @@ export default function CalendarView({
               <div style={styles.timeLabelCell}>{hourStr}:00</div>
               <div style={styles.hourColsGrid}>
                 {weekDays.map((d) => {
+                  const hourEvts = (eventsByDate[d.dateKey] || []).filter(
+                    (e) => !e.isAllDay && e.time && e.time.startsWith(hourStr)
+                  );
+
+                  return (
+                    <div
+                      key={d.dateKey + '_' + hourStr}
+                      style={styles.hourColCell}
+                      onClick={() => {
+                        setEventDate(d.dateKey);
+                        setShowEventModal(true);
+                      }}
+                    >
+                      {hourEvts.map((evt) => {
+                        const color = getChipColor(evt.rawItem.id, evt.tag);
+                        const isChecklist = evt.type === 'checklist';
+
+                        return (
+                          <div
+                            key={evt.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToDetail(evt.rawItem.id, isChecklist);
+                            }}
+                            style={{
+                              ...styles.eventChip,
+                              backgroundColor: evt.completed ? '#F1F5F9' : '#FFFFFF',
+                              borderColor: evt.completed ? '#CBD5E1' : color.border,
+                              borderLeftWidth: '4px',
+                              borderLeftColor: color.border,
+                              color: evt.completed ? '#94A3B8' : color.text,
+                              textDecoration: evt.completed ? 'line-through' : 'none',
+                              marginBottom: '2px'
+                            }}
+                            title={evt.title}
+                          >
+                            <strong style={{ marginRight: '3px', fontSize: '10px' }}>{evt.time}</strong>
+                            <span>{isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : ''}{evt.title}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const render3DayView = () => {
+    const days = get3Days(currentDate);
+
+    return (
+      <div style={styles.timeGridWrapper}>
+        {/* Header Row */}
+        <div style={styles.timeHeaderRow}>
+          <div style={styles.timeLabelHeader}>시간</div>
+          {days.map((d) => {
+            const isToday = d.dateKey === todayKey;
+            const isSun = d.date.getDay() === 0;
+            const isSat = d.date.getDay() === 6;
+            return (
+              <div key={d.dateKey} style={styles.timeColHeader}>
+                <span style={{ color: isSun ? '#EF4444' : isSat ? '#2563EB' : '#64748B', fontSize: '12px', fontWeight: 600 }}>
+                  {d.dayName}
+                </span>
+                <span
+                  style={{
+                    ...styles.dayNumBadge,
+                    backgroundColor: isToday ? '#2563EB' : 'transparent',
+                    color: isToday ? '#FFFFFF' : '#1E293B'
+                  }}
+                >
+                  {d.dayNum}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* All-Day Row */}
+        <div style={styles.allDayRow}>
+          <div style={styles.allDayLabelCell}>종일</div>
+          <div style={styles.allDayGrid}>
+            {days.map((d) => {
+              const allDayEvts = (eventsByDate[d.dateKey] || []).filter((e) => e.isAllDay);
+              return (
+                <div
+                  key={d.dateKey}
+                  style={styles.allDayCol}
+                  onClick={() => handleOpenAddModal(d.dateKey)}
+                >
+                  {allDayEvts.map((evt) => {
+                    const color = getChipColor(evt.rawItem.id, evt.tag);
+                    const isChecklist = evt.type === 'checklist';
+                    return (
+                      <div
+                        key={evt.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigateToDetail(evt.rawItem.id, isChecklist);
+                        }}
+                        style={{
+                          ...styles.eventChip,
+                          backgroundColor: evt.completed ? '#F1F5F9' : color.bg,
+                          borderColor: evt.completed ? '#CBD5E1' : color.border,
+                          color: evt.completed ? '#94A3B8' : color.text,
+                          textDecoration: evt.completed ? 'line-through' : 'none',
+                          marginBottom: '3px'
+                        }}
+                        title={evt.title}
+                      >
+                        <span style={styles.chipText}>
+                          {isChecklist ? (evt.completed ? '☑️ ' : '☐ ') : '📍 '}
+                          {evt.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hourly Scrollable Timeline */}
+        <div style={styles.timeBodyScroll}>
+          {HOURS.map((hourStr) => (
+            <div key={hourStr} style={styles.hourRow}>
+              <div style={styles.timeLabelCell}>{hourStr}:00</div>
+              <div style={styles.hourColsGrid}>
+                {days.map((d) => {
                   const hourEvts = (eventsByDate[d.dateKey] || []).filter(
                     (e) => !e.isAllDay && e.time && e.time.startsWith(hourStr)
                   );
@@ -1005,7 +1181,7 @@ export default function CalendarView({
           </div>
         </div>
 
-        {/* Row 2 / Right Group: View Mode Switcher (월간 / 주간 / 일간) */}
+        {/* Row 2 / Right Group: View Mode Switcher */}
         <div style={{
           ...styles.toolbarRight,
           width: isMobile ? '100%' : 'auto',
@@ -1016,58 +1192,107 @@ export default function CalendarView({
             width: isMobile ? '100%' : 'auto',
             display: 'flex'
           }}>
-            <button
-              onClick={() => setViewMode('month')}
-              style={{
-                ...styles.viewModeBtn,
-                flex: isMobile ? 1 : 'none',
-                textAlign: 'center',
-                backgroundColor: viewMode === 'month' ? '#2563EB' : 'transparent',
-                color: viewMode === 'month' ? '#FFFFFF' : '#475569',
-                fontWeight: viewMode === 'month' ? 700 : 500
-              }}
-            >
-              월간
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              style={{
-                ...styles.viewModeBtn,
-                flex: isMobile ? 1 : 'none',
-                textAlign: 'center',
-                backgroundColor: viewMode === 'week' ? '#2563EB' : 'transparent',
-                color: viewMode === 'week' ? '#FFFFFF' : '#475569',
-                fontWeight: viewMode === 'week' ? 700 : 500
-              }}
-            >
-              주간
-            </button>
-            <button
-              onClick={() => setViewMode('day')}
-              style={{
-                ...styles.viewModeBtn,
-                flex: isMobile ? 1 : 'none',
-                textAlign: 'center',
-                backgroundColor: viewMode === 'day' ? '#2563EB' : 'transparent',
-                color: viewMode === 'day' ? '#FFFFFF' : '#475569',
-                fontWeight: viewMode === 'day' ? 700 : 500
-              }}
-            >
-              일간
-            </button>
-            <button
-              onClick={() => setViewMode('badge')}
-              style={{
-                ...styles.viewModeBtn,
-                flex: isMobile ? 1 : 'none',
-                textAlign: 'center',
-                backgroundColor: viewMode === 'badge' ? '#2563EB' : 'transparent',
-                color: viewMode === 'badge' ? '#FFFFFF' : '#475569',
-                fontWeight: viewMode === 'badge' ? 700 : 500
-              }}
-            >
-              배지
-            </button>
+            {isMobile ? (
+              <>
+                <button
+                  onClick={() => setViewMode('badge')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    flex: 1,
+                    textAlign: 'center',
+                    backgroundColor: viewMode === 'badge' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'badge' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'badge' ? 700 : 500
+                  }}
+                >
+                  배지
+                </button>
+                <button
+                  onClick={() => setViewMode('3day')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    flex: 1,
+                    textAlign: 'center',
+                    backgroundColor: viewMode === '3day' ? '#2563EB' : 'transparent',
+                    color: viewMode === '3day' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === '3day' ? 700 : 500
+                  }}
+                >
+                  3일
+                </button>
+                <button
+                  onClick={() => setViewMode('day')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    flex: 1,
+                    textAlign: 'center',
+                    backgroundColor: viewMode === 'day' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'day' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'day' ? 700 : 500
+                  }}
+                >
+                  일간
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setViewMode('month')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    backgroundColor: viewMode === 'month' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'month' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'month' ? 700 : 500
+                  }}
+                >
+                  월간
+                </button>
+                <button
+                  onClick={() => setViewMode('week')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    backgroundColor: viewMode === 'week' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'week' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'week' ? 700 : 500
+                  }}
+                >
+                  주간
+                </button>
+                <button
+                  onClick={() => setViewMode('3day')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    backgroundColor: viewMode === '3day' ? '#2563EB' : 'transparent',
+                    color: viewMode === '3day' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === '3day' ? 700 : 500
+                  }}
+                >
+                  3일
+                </button>
+                <button
+                  onClick={() => setViewMode('day')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    backgroundColor: viewMode === 'day' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'day' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'day' ? 700 : 500
+                  }}
+                >
+                  일간
+                </button>
+                <button
+                  onClick={() => setViewMode('badge')}
+                  style={{
+                    ...styles.viewModeBtn,
+                    backgroundColor: viewMode === 'badge' ? '#2563EB' : 'transparent',
+                    color: viewMode === 'badge' ? '#FFFFFF' : '#475569',
+                    fontWeight: viewMode === 'badge' ? 700 : 500
+                  }}
+                >
+                  배지
+                </button>
+              </>
+            )}
           </div>
 
           {!isMobile && (
@@ -1208,6 +1433,9 @@ export default function CalendarView({
 
       {/* Render Weekly View */}
       {viewMode === 'week' && renderWeeklyView()}
+
+      {/* Render 3-Day View */}
+      {viewMode === '3day' && render3DayView()}
 
       {/* Render Daily View */}
       {viewMode === 'day' && renderDailyView()}
