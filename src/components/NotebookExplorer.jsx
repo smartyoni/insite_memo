@@ -1715,7 +1715,7 @@ export default function NotebookExplorer() {
                   {/* Canvas Main 2-Column Area (Left: Editor / Right: Live Preview) */}
                   <div style={{ flex: 1, display: 'flex', gap: '24px', overflow: 'hidden', minHeight: 0, flexDirection: isMobile ? 'column' : 'row' }}>
                     {/* Left Panel: Field Editor List */}
-                    <div style={{ flex: '1 1 58%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
+                    <div style={{ flex: '1 1 50%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
                       <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>✏️ 템플릿 항목 편집기</span>
                       </div>
@@ -1836,7 +1836,7 @@ export default function NotebookExplorer() {
 
                     {/* Right Panel: Live Preview Card */}
                     <div style={{
-                      flex: '0 0 38%',
+                      flex: '1 1 50%',
                       minWidth: isMobile ? '100%' : '300px',
                       backgroundColor: '#F8FAFC',
                       borderRadius: '16px',
