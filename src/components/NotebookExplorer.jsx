@@ -1965,25 +1965,41 @@ export default function NotebookExplorer() {
                                   {activeTpl.fields.map((field) => {
                                     const fieldVal = draftTemplateValues[field.id];
 
-                                    return (
-                                      <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                            {field.type === 'phone' && <Phone size={14} color="#10B981" />}
-                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                    if (field.type === 'phone') {
+                                      return (
+                                        <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                            <Phone size={14} color="#10B981" />
                                             {field.label}
                                           </label>
-
-                                          {field.type === 'phone' && fieldVal && (
+                                          <input
+                                            type="tel"
+                                            value={fieldVal || ''}
+                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                            placeholder={field.placeholder || '010-0000-0000'}
+                                            style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
+                                          />
+                                          {fieldVal && (
                                             <a
                                               href={`tel:${fieldVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10B981', textDecoration: 'none', fontWeight: 600 }}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
                                             >
                                               <Phone size={12} />
                                               전화 걸기
                                             </a>
                                           )}
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                            {field.label}
+                                          </label>
                                         </div>
 
                                         {field.type === 'text' && (() => {
@@ -2000,16 +2016,6 @@ export default function NotebookExplorer() {
                                             />
                                           );
                                         })()}
-
-                                        {field.type === 'phone' && (
-                                          <input
-                                            type="tel"
-                                            value={fieldVal || ''}
-                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                            placeholder={field.placeholder || '010-0000-0000'}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
-                                          />
-                                        )}
 
                                         {field.type === 'checklist' && (
                                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
@@ -2425,34 +2431,43 @@ export default function NotebookExplorer() {
                                     const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
                                     const currentVal = val !== undefined ? val : defaultTextVal;
 
-                                    return (
-                                      <div key={field.id} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                            {field.type === 'phone' && <Phone size={14} color="#10B981" />}
-                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
-                                            {field.label}
-                                          </span>
-                                          {field.type === 'phone' && currentVal && (
+                                    if (field.type === 'phone') {
+                                      return (
+                                        <div key={field.id} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                              <Phone size={14} color="#10B981" />
+                                              {field.label}
+                                            </span>
+                                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              {currentVal || '(전화번호 없음)'}
+                                            </span>
+                                          </div>
+                                          {currentVal && (
                                             <a
                                               href={`tel:${currentVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ color: '#10B981', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                              style={{ color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
                                             >
                                               <Phone size={12} /> 전화 걸기
                                             </a>
                                           )}
                                         </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div key={field.id} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                            {field.label}
+                                          </span>
+                                        </div>
 
                                         {field.type === 'text' && (
                                           <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
                                             {renderWithLinks(currentVal || '(내용 없음)')}
-                                          </div>
-                                        )}
-
-                                        {field.type === 'phone' && (
-                                          <div style={{ padding: '8px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>
-                                            {currentVal || '(전화번호 없음)'}
                                           </div>
                                         )}
 
