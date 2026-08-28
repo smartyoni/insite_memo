@@ -20,6 +20,7 @@ import {
   X,
   Folder,
   FileText,
+  Clipboard,
   ChevronRight,
   Save,
   RotateCcw,
@@ -90,7 +91,8 @@ export function getTagStyle(tagName, customBadgesList = null) {
 import CalendarView from './CalendarView';
 
 // Fixed In-box category definition
-const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true };
+const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'explorer' };
+const CLIPBOARD_INBOX_CATEGORY = { id: 'clipboard_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clipboard' };
 
 // Helper to safely extract milliseconds timestamp from item updated/created time
 function getItemTimestamp(item) {
@@ -106,7 +108,7 @@ function getItemTimestamp(item) {
 }
 
 export default function NotebookExplorer() {
-  // Main View Mode Tab state ('explorer' | 'calendar')
+  // Main View Mode Tab state ('explorer' | 'clipboard' | 'calendar')
   const [activeMainTab, setActiveMainTab] = useState('explorer');
 
   // Data states
@@ -119,10 +121,18 @@ export default function NotebookExplorer() {
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
 
   // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
+  const currentFixedCategory = activeMainTab === 'clipboard' ? CLIPBOARD_INBOX_CATEGORY : INBOX_CATEGORY;
+  const filteredCategories = categories.filter((c) => {
+    if (c.id === 'inbox' || c.id === 'clipboard_inbox') return false;
+    if (activeMainTab === 'clipboard') {
+      return c.scope === 'clipboard';
+    }
+    return !c.scope || c.scope === 'explorer';
+  });
+
   const allCategories = [
-    INBOX_CATEGORY,
-    ...categories
-      .filter((c) => c.id !== 'inbox')
+    currentFixedCategory,
+    ...filteredCategories
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' }))
   ];
 
@@ -656,10 +666,12 @@ export default function NotebookExplorer() {
       return;
     }
     try {
+      const currentScope = activeMainTab === 'clipboard' ? 'clipboard' : 'explorer';
       const newRef = doc(collection(db, 'categories'));
       await setDoc(newRef, {
         name: newCategoryName.trim(),
         order: categories.length,
+        scope: currentScope,
         createdAt: serverTimestamp()
       });
       navigateToItems(newRef.id);
@@ -671,7 +683,7 @@ export default function NotebookExplorer() {
   };
 
   const handleUpdateCategoryName = async (catId) => {
-    if (catId === 'inbox') return;
+    if (catId === 'inbox' || catId === 'clipboard_inbox') return;
     if (!editingCategoryName.trim()) {
       setEditingCategoryId(null);
       return;
@@ -687,7 +699,7 @@ export default function NotebookExplorer() {
   };
 
   const handleDeleteCategory = async (catId) => {
-    if (catId === 'inbox') return;
+    if (catId === 'inbox' || catId === 'clipboard_inbox') return;
     try {
       const batch = writeBatch(db);
       batch.delete(doc(db, 'categories', catId));
@@ -699,7 +711,7 @@ export default function NotebookExplorer() {
 
       setDeletingCategoryId(null);
       if (selectedCategoryId === catId) {
-        setSelectedCategoryId('inbox');
+        setSelectedCategoryId(activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox');
       }
     } catch (err) {
       console.error('Error deleting category and child items:', err);
@@ -708,19 +720,20 @@ export default function NotebookExplorer() {
 
   // ---------------- Quick Add Note (Fast Entry to In-box) ----------------
   const handleQuickAddNote = async () => {
+    const targetInboxId = activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox';
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
-        categoryId: 'inbox',
+        categoryId: targetInboxId,
         title: '새 빠른 메모',
         body: '',
         subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      setSelectedCategoryId('inbox');
+      setSelectedCategoryId(targetInboxId);
       navigateToDetail(newRef.id);
-      setDraftCategoryId('inbox');
+      setDraftCategoryId(targetInboxId);
       setDraftTitle('새 빠른 메모');
       setDraftBody('');
       setDraftSubBody('');
@@ -732,7 +745,10 @@ export default function NotebookExplorer() {
 
   // ---------------- Item Handlers ----------------
   const handleAddItem = async () => {
-    const targetCatId = selectedCategoryId || 'inbox';
+    let targetCatId = selectedCategoryId;
+    if (!targetCatId || (activeMainTab === 'clipboard' && targetCatId === 'inbox') || (activeMainTab === 'explorer' && targetCatId === 'clipboard_inbox')) {
+      targetCatId = activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox';
+    }
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -830,6 +846,11 @@ export default function NotebookExplorer() {
         onClick={() => {
           setActiveMainTab('explorer');
           setNavigatedFromCalendar(false);
+          if (selectedCategoryId === 'clipboard_inbox' || categories.find(c => c.id === selectedCategoryId && c.scope === 'clipboard')) {
+            setSelectedCategoryId('inbox');
+            setSelectedItemId(null);
+          }
+          if (isMobile) setMobileView('categories');
         }}
         style={{
           ...styles.mainModeTabBtn,
@@ -840,6 +861,26 @@ export default function NotebookExplorer() {
       >
         <FileText size={14} />
         <span>노트</span>
+      </button>
+      <button
+        onClick={() => {
+          setActiveMainTab('clipboard');
+          setNavigatedFromCalendar(false);
+          if (selectedCategoryId === 'inbox' || categories.find(c => c.id === selectedCategoryId && (!c.scope || c.scope === 'explorer'))) {
+            setSelectedCategoryId('clipboard_inbox');
+            setSelectedItemId(null);
+          }
+          if (isMobile) setMobileView('categories');
+        }}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'clipboard' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'clipboard' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'clipboard' ? 700 : 500
+        }}
+      >
+        <Clipboard size={14} />
+        <span>클립보드</span>
       </button>
       <button
         onClick={() => {
@@ -880,7 +921,7 @@ export default function NotebookExplorer() {
           {/* Main Mode Tab Switcher & Header for Desktop */}
           {!isMobile && renderMainModeBar()}
 
-          {activeMainTab === 'explorer' ? (
+          {activeMainTab !== 'calendar' ? (
             <>
               {!isMobile && (
                 <div style={styles.pane1Header}>
@@ -929,8 +970,11 @@ export default function NotebookExplorer() {
                   const isEditing = cat.id === editingCategoryId;
                   const isDeleting = cat.id === deletingCategoryId;
                   const isFixed = cat.isFixed;
-                  const count = cat.id === 'inbox'
-                    ? items.filter((item) => !item.categoryId || item.categoryId === 'inbox').length
+                  const count = (cat.id === 'inbox' || cat.id === 'clipboard_inbox')
+                    ? items.filter((item) => {
+                        if (cat.id === 'inbox') return !item.categoryId || item.categoryId === 'inbox';
+                        return item.categoryId === 'clipboard_inbox';
+                      }).length
                     : items.filter((item) => item.categoryId === cat.id).length;
 
                   return (
