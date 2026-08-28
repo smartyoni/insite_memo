@@ -92,13 +92,15 @@ import CalendarView from './CalendarView';
 
 // Fixed In-box category definitions
 const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'explorer' };
+const BLOG_INBOX_CATEGORY = { id: 'blog_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'blog' };
 const CLIPBOARD_INBOX_CATEGORY = { id: 'clipboard_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clipboard' };
 const BALANCE_INBOX_CATEGORY = { id: 'balance_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'balance' };
 const CLIP_INBOX_CATEGORY = { id: 'clip_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clip' };
 
-const FIXED_INBOX_IDS = ['inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox'];
+const FIXED_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox'];
 
 const getScopeForTab = (tab) => {
+  if (tab === 'blog') return 'blog';
   if (tab === 'clipboard') return 'clipboard';
   if (tab === 'balance') return 'balance';
   if (tab === 'clip') return 'clip';
@@ -106,6 +108,7 @@ const getScopeForTab = (tab) => {
 };
 
 const getInboxIdForTab = (tab) => {
+  if (tab === 'blog') return 'blog_inbox';
   if (tab === 'clipboard') return 'clipboard_inbox';
   if (tab === 'balance') return 'balance_inbox';
   if (tab === 'clip') return 'clip_inbox';
@@ -113,6 +116,7 @@ const getInboxIdForTab = (tab) => {
 };
 
 const getFixedCategoryForTab = (tab) => {
+  if (tab === 'blog') return BLOG_INBOX_CATEGORY;
   if (tab === 'clipboard') return CLIPBOARD_INBOX_CATEGORY;
   if (tab === 'balance') return BALANCE_INBOX_CATEGORY;
   if (tab === 'clip') return CLIP_INBOX_CATEGORY;
@@ -904,6 +908,17 @@ export default function NotebookExplorer() {
         }}
       >
         <span>노트</span>
+      </button>
+      <button
+        onClick={() => handleTabSwitch('blog')}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'blog' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'blog' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'blog' ? 700 : 500
+        }}
+      >
+        <span>블로그</span>
       </button>
       <button
         onClick={() => handleTabSwitch('clipboard')}
