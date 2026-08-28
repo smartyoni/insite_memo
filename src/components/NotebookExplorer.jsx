@@ -1447,7 +1447,7 @@ export default function NotebookExplorer() {
                               borderColor: isSelected ? '#3F7A63' : '#ECEBE7'
                             }}
                           >
-                            <div style={styles.itemHeader}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                 {isEditing ? (
                                   <input
@@ -1465,9 +1465,13 @@ export default function NotebookExplorer() {
                                   />
                                 ) : (
                                   <span style={{
-                                    ...styles.itemTitleText,
+                                    fontSize: '13px',
+                                    fontWeight: isSelected ? 700 : 600,
                                     color: isSelected ? '#163326' : '#2D3748',
-                                    fontWeight: isSelected ? 700 : 500
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    flex: 1
                                   }}>
                                     {item.title || '제목 없음'}
                                   </span>
