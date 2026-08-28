@@ -2402,7 +2402,74 @@ export default function NotebookExplorer() {
                         </div>
 
                         <div style={styles.readBody}>
-                          {renderWithLinks(activeItem.body)}
+                          {activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
+                            (() => {
+                              const activeTpl = templates.find(t => t.id === activeItem.templateId);
+                              const values = activeItem.templateValues || {};
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                  <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span>📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨</span>
+                                  </div>
+                                  {activeTpl.fields && activeTpl.fields.map((field) => {
+                                    const val = values[field.id];
+                                    const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                    const currentVal = val !== undefined ? val : defaultTextVal;
+
+                                    return (
+                                      <div key={field.id} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                            {field.type === 'phone' && <Phone size={14} color="#10B981" />}
+                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                            {field.label}
+                                          </span>
+                                          {field.type === 'phone' && currentVal && (
+                                            <a
+                                              href={`tel:${currentVal.replace(/[^0-9]/g, '')}`}
+                                              style={{ color: '#10B981', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                              <Phone size={12} /> 전화 걸기
+                                            </a>
+                                          )}
+                                        </div>
+
+                                        {field.type === 'text' && (
+                                          <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
+                                            {renderWithLinks(currentVal || '(내용 없음)')}
+                                          </div>
+                                        )}
+
+                                        {field.type === 'phone' && (
+                                          <div style={{ padding: '8px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>
+                                            {currentVal || '(전화번호 없음)'}
+                                          </div>
+                                        )}
+
+                                        {field.type === 'checklist' && (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                                            {(Array.isArray(currentVal) ? currentVal : (field.defaultItems || []).map(t => ({ text: t, completed: false }))).map((chk, cIdx) => (
+                                              <div key={cIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ color: chk.completed ? '#10B981' : '#CBD5E1', fontWeight: 700, fontSize: '14px' }}>
+                                                  {chk.completed ? '☑' : '☐'}
+                                                </span>
+                                                <span style={{ fontSize: '13px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
+                                                  {chk.text}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            renderWithLinks(activeItem.body)
+                          )}
                         </div>
                       </div>
                     )}
