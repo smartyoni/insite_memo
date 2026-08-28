@@ -1607,17 +1607,7 @@ export default function NotebookExplorer() {
                               </div>
                             </div>
 
-                            {/* Preview text snippet */}
-                            <div style={{
-                              fontSize: '12px',
-                              color: isSelected ? '#2E5042' : '#64748B',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              marginTop: '4px'
-                            }}>
-                              {item.body ? item.body.slice(0, 50) : '(내용 없음)'}
-                            </div>
+
                           </div>
                         );
                       })
