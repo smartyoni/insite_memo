@@ -1699,10 +1699,10 @@ export default function NotebookExplorer() {
                               />
                             </div>
 
-                            {/* Placeholder Input (non-checklist) */}
+                            {/* Placeholder/Default Value Input (non-checklist) */}
                             {field.type !== 'checklist' && (
                               <div style={{ flex: 1, minWidth: '180px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>안내 문구 (Placeholder)</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>초기내용</label>
                                 <input
                                   type="text"
                                   value={field.placeholder || ''}
@@ -1711,7 +1711,7 @@ export default function NotebookExplorer() {
                                     updated[idx].placeholder = e.target.value;
                                     setTplDraftFields(updated);
                                   }}
-                                  placeholder="입력 힌트 텍스트"
+                                  placeholder="예: 소재지/임대료/계약기간 (/ 는 줄바꿈)"
                                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
                                 />
                               </div>
@@ -1832,11 +1832,17 @@ export default function NotebookExplorer() {
                                     if (val) {
                                       const targetTpl = templates.find(t => t.id === val);
                                       if (targetTpl && targetTpl.fields) {
-                                        // Initialize values with default items
+                                        // Initialize values with default items and converted initial text
                                         const initialVals = { ...draftTemplateValues };
                                         targetTpl.fields.forEach(f => {
-                                          if (f.type === 'checklist' && !initialVals[f.id]) {
-                                            initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
+                                          if (f.type === 'checklist') {
+                                            if (!initialVals[f.id]) {
+                                              initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
+                                            }
+                                          } else {
+                                            if (initialVals[f.id] === undefined && f.placeholder) {
+                                              initialVals[f.id] = f.placeholder.replace(/\//g, '\n');
+                                            }
                                           }
                                         });
                                         setDraftTemplateValues(initialVals);
@@ -1959,15 +1965,20 @@ export default function NotebookExplorer() {
                                           )}
                                         </div>
 
-                                        {field.type === 'text' && (
-                                          <textarea
-                                            value={fieldVal || ''}
-                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                            placeholder={field.placeholder || '내용을 입력하세요'}
-                                            rows={3}
-                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit' }}
-                                          />
-                                        )}
+                                        {field.type === 'text' && (() => {
+                                          const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                          const currentTextVal = fieldVal !== undefined ? fieldVal : defaultTextVal;
+                                          const lineCount = currentTextVal.split('\n').length;
+                                          return (
+                                            <textarea
+                                              value={currentTextVal}
+                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                              placeholder="내용을 입력하세요"
+                                              rows={Math.max(3, lineCount)}
+                                              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                            />
+                                          );
+                                        })()}
 
                                         {field.type === 'phone' && (
                                           <input
