@@ -943,6 +943,17 @@ export default function NotebookExplorer() {
         <span>블로그</span>
       </button>
       <button
+        onClick={() => handleTabSwitch('balance')}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'balance' ? 700 : 500
+        }}
+      >
+        <span>앱개발</span>
+      </button>
+      <button
         onClick={() => handleTabSwitch('clipboard')}
         style={{
           ...styles.mainModeTabBtn,
@@ -952,17 +963,6 @@ export default function NotebookExplorer() {
         }}
       >
         <span>계약</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('balance')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'balance' ? 700 : 500
-        }}
-      >
-        <span>잔금</span>
       </button>
       <button
         onClick={() => handleTabSwitch('clip')}
