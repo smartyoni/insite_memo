@@ -1077,88 +1077,110 @@ export default function NotebookExplorer() {
   const renderMainModeBar = () => (
     <div style={isMobile ? {
       ...styles.mainModeBar,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
       borderBottom: 'none',
       borderTop: '1px solid #CBD5E1',
       backgroundColor: '#F8FAFC',
       padding: '6px 8px'
-    } : styles.mainModeBar}>
-      <button
-        onClick={() => handleTabSwitch('explorer')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'explorer' ? 700 : 500
-        }}
-      >
-        <span>노트</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('blog')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'blog' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'blog' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'blog' ? 700 : 500
-        }}
-      >
-        <span>블로그</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('balance')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'balance' ? 700 : 500
-        }}
-      >
-        <span>앱개발</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('clipboard')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'clipboard' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'clipboard' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'clipboard' ? 700 : 500
-        }}
-      >
-        <span>계약</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('clip')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'clip' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'clip' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'clip' ? 700 : 500
-        }}
-      >
-        <span>클립</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('template')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'template' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'template' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'template' ? 700 : 500
-        }}
-      >
-        <span>템플릿</span>
-      </button>
-      <button
-        onClick={() => handleTabSwitch('calendar')}
-        style={{
-          ...styles.mainModeTabBtn,
-          backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
-          color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
-          fontWeight: activeMainTab === 'calendar' ? 700 : 500
-        }}
-      >
-        <span>캘린더</span>
-      </button>
+    } : {
+      ...styles.mainModeBar,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px'
+    }}>
+      {/* Top Row: 노트, 블로그, 앱개발, 캘린더 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
+        <button
+          onClick={() => handleTabSwitch('explorer')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'explorer' ? 700 : 500
+          }}
+        >
+          <span>노트</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('blog')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'blog' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'blog' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'blog' ? 700 : 500
+          }}
+        >
+          <span>블로그</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('balance')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'balance' ? 700 : 500
+          }}
+        >
+          <span>앱개발</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('calendar')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'calendar' ? 700 : 500
+          }}
+        >
+          <span>캘린더</span>
+        </button>
+      </div>
+
+      {/* Bottom Row: 계약, 클립, 템플릿 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
+        <button
+          onClick={() => handleTabSwitch('clipboard')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'clipboard' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'clipboard' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'clipboard' ? 700 : 500
+          }}
+        >
+          <span>계약</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('clip')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'clip' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'clip' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'clip' ? 700 : 500
+          }}
+        >
+          <span>클립</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('template')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'template' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'template' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'template' ? 700 : 500
+          }}
+        >
+          <span>템플릿</span>
+        </button>
+      </div>
     </div>
   );
 
