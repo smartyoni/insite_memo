@@ -370,7 +370,8 @@ export default function NotebookExplorer() {
 
   // Hardware/Browser Back button handling (popstate)
   useEffect(() => {
-    window.history.replaceState({ view: 'categories' }, '');
+    // Push dummy guard state so the browser back button can be intercepted at top level
+    window.history.pushState({ view: 'categories', isGuard: true }, '');
 
     const handlePopState = (e) => {
       const stateView = e.state?.view;
@@ -389,9 +390,11 @@ export default function NotebookExplorer() {
           } catch (err) {
             console.log('App exited');
           }
+          window.history.back();
         } else {
           lastBackPressRef.current = now;
-          window.history.pushState({ view: 'categories' }, '');
+          // Re-push guard state to capture the next back press
+          window.history.pushState({ view: 'categories', isGuard: true }, '');
 
           setShowExitToast(true);
           if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
