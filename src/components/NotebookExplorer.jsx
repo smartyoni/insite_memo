@@ -41,7 +41,8 @@ import {
   Phone,
   MessageSquare,
   Type,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -1711,121 +1712,204 @@ export default function NotebookExplorer() {
                     </button>
                   </div>
 
-                  {/* Canvas Elements List */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {tplDraftFields.length === 0 ? (
-                      <div style={{ padding: '48px 24px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '2px dashed #CBD5E1' }}>
-                        <p style={{ fontSize: '16px', color: '#334155', fontWeight: 700, margin: 0 }}>
-                          배치된 템플릿 요소가 없습니다.
-                        </p>
-                        <p style={{ fontSize: '13px', color: '#64748B', marginTop: '8px' }}>
-                          상단의 <strong>[요소 추가]</strong> 버튼을 클릭하여 텍스트 입력창, 전화번호 박스, 날짜/시간 박스, 체크리스트를 넓은 화면에서 시원하게 디자인해보세요!
-                        </p>
+                  {/* Canvas Main 2-Column Area (Left: Editor / Right: Live Preview) */}
+                  <div style={{ flex: 1, display: 'flex', gap: '24px', overflow: 'hidden', minHeight: 0, flexDirection: isMobile ? 'column' : 'row' }}>
+                    {/* Left Panel: Field Editor List */}
+                    <div style={{ flex: '1 1 58%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>✏️ 템플릿 항목 편집기</span>
                       </div>
-                    ) : (
-                      tplDraftFields.map((field, idx) => (
-                        <div key={field.id} style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
-                            {/* Label Input */}
-                            <div style={{ flex: 1, minWidth: '180px' }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                                항목명 (Label)
-                                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
-                                  ({field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'})
-                                </span>
-                              </label>
-                              <input
-                                type="text"
-                                value={field.label}
-                                onChange={(e) => {
-                                  const updated = [...tplDraftFields];
-                                  updated[idx].label = e.target.value;
-                                  setTplDraftFields(updated);
-                                }}
-                                placeholder="예: 미팅 안건, 담당자 연락처, 체크 항목"
-                                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
-                              />
-                            </div>
-
-                            {/* Placeholder/Default Value Input (non-checklist) */}
-                            {field.type !== 'checklist' && (
-                              <div style={{ flex: 1, minWidth: '180px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>초기내용</label>
+                      {tplDraftFields.length === 0 ? (
+                        <div style={{ padding: '48px 24px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '2px dashed #CBD5E1' }}>
+                          <p style={{ fontSize: '16px', color: '#334155', fontWeight: 700, margin: 0 }}>
+                            배치된 템플릿 요소가 없습니다.
+                          </p>
+                          <p style={{ fontSize: '13px', color: '#64748B', marginTop: '8px' }}>
+                            상단의 <strong>[요소 추가]</strong> 버튼을 클릭하여 텍스트 입력창, 전화번호 박스, 날짜/시간 박스, 체크리스트를 디자인해보세요!
+                          </p>
+                        </div>
+                      ) : (
+                        tplDraftFields.map((field, idx) => (
+                          <div key={field.id} style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+                              {/* Label Input */}
+                              <div style={{ flex: 1, minWidth: '160px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                                  항목명 (Label)
+                                  <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                                    ({field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'})
+                                  </span>
+                                </label>
                                 <input
                                   type="text"
-                                  value={field.placeholder || ''}
+                                  value={field.label}
                                   onChange={(e) => {
                                     const updated = [...tplDraftFields];
-                                    const val = field.type === 'phone' ? autoFormatPhoneNumber(e.target.value) : e.target.value;
-                                    updated[idx].placeholder = val;
+                                    updated[idx].label = e.target.value;
                                     setTplDraftFields(updated);
                                   }}
-                                  placeholder="예: 소재지/임대료/계약기간 (/ 는 줄바꿈)"
+                                  placeholder="예: 미팅 안건, 담당자 연락처, 체크 항목"
                                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
                                 />
                               </div>
-                            )}
 
-                            {/* Controls (Move Up/Down & Delete) in same line */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '4px', marginLeft: 'auto' }}>
-                              <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1, padding: '6px' }} title="위로 이동">
-                                <ArrowUp size={16} />
-                              </button>
-                              <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1, padding: '6px' }} title="아래로 이동">
-                                <ArrowDown size={16} />
-                              </button>
-                              <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={{ ...styles.iconBtn, padding: '6px' }} title="요소 삭제">
-                                <Trash2 size={16} color="#EF4444" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {field.type === 'checklist' && (
-                            <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed #CBD5E1' }}>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>기본 체크리스트 세부 요소들 배치</label>
-                              {(field.defaultItems || []).map((subItemText, subIdx) => (
-                                <div key={subIdx} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                              {/* Placeholder/Default Value Input (non-checklist) */}
+                              {field.type !== 'checklist' && (
+                                <div style={{ flex: 1.2, minWidth: '160px' }}>
+                                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>초기내용</label>
                                   <input
                                     type="text"
-                                    value={subItemText}
+                                    value={field.placeholder || ''}
                                     onChange={(e) => {
                                       const updated = [...tplDraftFields];
-                                      if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
-                                      updated[idx].defaultItems[subIdx] = e.target.value;
+                                      const val = field.type === 'phone' ? autoFormatPhoneNumber(e.target.value) : e.target.value;
+                                      updated[idx].placeholder = val;
                                       setTplDraftFields(updated);
                                     }}
-                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                                    placeholder="예: 소재지/임대료/계약기간 (/ 는 줄바꿈)"
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
                                   />
-                                  <button
-                                    onClick={() => {
-                                      const updated = [...tplDraftFields];
-                                      if (updated[idx].defaultItems) {
-                                        updated[idx].defaultItems.splice(subIdx, 1);
-                                      }
-                                      setTplDraftFields(updated);
-                                    }}
-                                    style={styles.iconBtn}
-                                  >
-                                    <Trash2 size={14} color="#EF4444" />
-                                  </button>
                                 </div>
-                              ))}
-                              <button
-                                onClick={() => {
-                                  const updated = [...tplDraftFields];
-                                  if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
-                                  updated[idx].defaultItems.push(`체크 요소 ${updated[idx].defaultItems.length + 1}`);
-                                  setTplDraftFields(updated);
-                                }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', fontSize: '12px', cursor: 'pointer', marginTop: '4px' }}
-                              >
-                                <Plus size={14} /> 요소 추가
-                              </button>
+                              )}
+
+                              {/* Controls (Move Up/Down & Delete) in same line */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '4px', marginLeft: 'auto' }}>
+                                <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1, padding: '6px' }} title="위로 이동">
+                                  <ArrowUp size={16} />
+                                </button>
+                                <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1, padding: '6px' }} title="아래로 이동">
+                                  <ArrowDown size={16} />
+                                </button>
+                                <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={{ ...styles.iconBtn, padding: '6px' }} title="요소 삭제">
+                                  <Trash2 size={16} color="#EF4444" />
+                                </button>
+                              </div>
                             </div>
-                          )}
+
+                            {field.type === 'checklist' && (
+                              <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed #CBD5E1' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>기본 체크리스트 세부 요소들 배치</label>
+                                {(field.defaultItems || []).map((subItemText, subIdx) => (
+                                  <div key={subIdx} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                                    <input
+                                      type="text"
+                                      value={subItemText}
+                                      onChange={(e) => {
+                                        const updated = [...tplDraftFields];
+                                        if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
+                                        updated[idx].defaultItems[subIdx] = e.target.value;
+                                        setTplDraftFields(updated);
+                                      }}
+                                      style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const updated = [...tplDraftFields];
+                                        if (updated[idx].defaultItems) {
+                                          updated[idx].defaultItems.splice(subIdx, 1);
+                                        }
+                                        setTplDraftFields(updated);
+                                      }}
+                                      style={styles.iconBtn}
+                                    >
+                                      <Trash2 size={14} color="#EF4444" />
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  onClick={() => {
+                                    const updated = [...tplDraftFields];
+                                    if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
+                                    updated[idx].defaultItems.push(`체크 요소 ${updated[idx].defaultItems.length + 1}`);
+                                    setTplDraftFields(updated);
+                                  }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', fontSize: '12px', cursor: 'pointer', marginTop: '4px' }}
+                                >
+                                  <Plus size={14} /> 요소 추가
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Right Panel: Live Preview Card */}
+                    <div style={{
+                      flex: '0 0 38%',
+                      minWidth: isMobile ? '100%' : '300px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
+                      overflowY: 'auto',
+                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Eye size={16} /> 실시간 메모 미리보기
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#3B82F6', backgroundColor: '#EFF6FF', padding: '3px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                          Live Preview
+                        </span>
+                      </div>
+
+                      {/* Mock Note Card */}
+                      <div style={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '14px',
+                        padding: '18px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '14px'
+                      }}>
+                        <div style={{ fontSize: '17px', fontWeight: 700, color: '#0F172A', borderBottom: '2px solid #3B82F6', paddingBottom: '8px', wordBreak: 'break-all' }}>
+                          {tplDraftTitle.trim() || '제목 없는 템플릿'}
                         </div>
-                      ))
-                    )}
+
+                        {tplDraftFields.length === 0 ? (
+                          <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                            왼쪽에서 항목을 추가하면<br />이곳에 실시간 메모 형태가 나타납니다.
+                          </div>
+                        ) : (
+                          tplDraftFields.map((field) => (
+                            <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {field.type === 'phone' && <Phone size={12} color="#10B981" />}
+                                {field.type === 'datetime' && <CalendarIcon size={12} color="#8B5CF6" />}
+                                {field.type === 'checklist' && <CheckSquare size={12} color="#F59E0B" />}
+                                {field.type === 'text' && <Type size={12} color="#2563EB" />}
+                                {field.label || '(항목명 미입력)'}
+                              </div>
+
+                              {field.type === 'checklist' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                                  {(field.defaultItems && field.defaultItems.length > 0) ? (
+                                    field.defaultItems.map((sub, sIdx) => (
+                                      <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#334155' }}>
+                                        <Square size={14} color="#94A3B8" />
+                                        <span>{sub}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div style={{ fontSize: '12px', color: '#94A3B8' }}>등록된 체크 항목 없음</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: '13px', color: field.placeholder ? '#1E293B' : '#94A3B8', fontWeight: 500 }}>
+                                  {field.placeholder || '(초기 내용 설정 안됨)'}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : activeItem ? (
