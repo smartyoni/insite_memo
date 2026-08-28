@@ -879,166 +879,179 @@ export default function NotebookExplorer() {
         }}>
           {/* Main Mode Tab Switcher & Header for Desktop */}
           {!isMobile && renderMainModeBar()}
-          {!isMobile && (
-            <div style={styles.pane1Header}>
-              <span style={styles.pane1Title}>카테고리</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  onClick={handleQuickAddNote}
-                  style={styles.quickAddBtn}
-                  title="빠른 메모 생성 (In-box에 자동 저장)"
-                >
-                  <Zap size={13} fill="#2563EB" color="#2563EB" />
-                  <span>빠른입력</span>
-                </button>
-                <button
-                  onClick={() => setIsAddingCategory(true)}
-                  style={styles.iconBtnDark}
-                  title="카테고리 추가"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-            </div>
-          )}
 
-          <div style={styles.paneContent}>
-            {isAddingCategory && (
-              <div style={styles.inlineInputRowDark}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddCategory();
-                    if (e.key === 'Escape') setIsAddingCategory(false);
-                  }}
-                  onBlur={handleAddCategory}
-                  placeholder="카테고리명..."
-                  style={styles.inputDark}
-                />
-              </div>
-            )}
+          {activeMainTab === 'explorer' ? (
+            <>
+              {!isMobile && (
+                <div style={styles.pane1Header}>
+                  <span style={styles.pane1Title}>카테고리</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={handleQuickAddNote}
+                      style={styles.quickAddBtn}
+                      title="빠른 메모 생성 (In-box에 자동 저장)"
+                    >
+                      <Zap size={13} fill="#2563EB" color="#2563EB" />
+                      <span>빠른입력</span>
+                    </button>
+                    <button
+                      onClick={() => setIsAddingCategory(true)}
+                      style={styles.iconBtnDark}
+                      title="카테고리 추가"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            {allCategories.map((cat) => {
-              const isSelected = cat.id === selectedCategoryId;
-              const isEditing = cat.id === editingCategoryId;
-              const isDeleting = cat.id === deletingCategoryId;
-              const isFixed = cat.isFixed;
-              const count = cat.id === 'inbox'
-                ? items.filter((item) => !item.categoryId || item.categoryId === 'inbox').length
-                : items.filter((item) => item.categoryId === cat.id).length;
-
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => {
-                    if (!isEditing && !isDeleting) navigateToItems(cat.id);
-                  }}
-                  style={{
-                    ...styles.catRow,
-                    backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
-                    color: isSelected ? '#1E3A5F' : '#4A607A',
-                    fontWeight: isSelected ? 600 : 400
-                  }}
-                >
-                  {isFixed ? (
-                    <Inbox size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
-                  ) : (
-                    <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
-                  )}
-
-                  {isEditing ? (
+              <div style={styles.paneContent}>
+                {isAddingCategory && (
+                  <div style={styles.inlineInputRowDark}>
                     <input
                       autoFocus
                       type="text"
-                      value={editingCategoryName}
-                      onChange={(e) => setEditingCategoryName(e.target.value)}
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleUpdateCategoryName(cat.id);
-                        if (e.key === 'Escape') setEditingCategoryId(null);
+                        if (e.key === 'Enter') handleAddCategory();
+                        if (e.key === 'Escape') setIsAddingCategory(false);
                       }}
-                      onBlur={() => handleUpdateCategoryName(cat.id)}
-                      style={styles.inputDarkInline}
-                      onClick={(e) => e.stopPropagation()}
+                      onBlur={handleAddCategory}
+                      placeholder="카테고리명..."
+                      style={styles.inputDark}
                     />
-                  ) : (
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {cat.name}
-                      </span>
-                      <span style={{
-                        fontSize: '12px',
-                        color: isSelected ? '#2563EB' : '#7C95B1',
-                        fontWeight: isSelected ? 700 : 500,
-                        flexShrink: 0
-                      }}>
-                        ({count})
-                      </span>
-                    </div>
-                  )}
+                  </div>
+                )}
 
-                  {!isFixed && (
-                    <div style={styles.actionGroup}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingCategoryId(cat.id);
-                          setEditingCategoryName(cat.name);
-                        }}
-                        style={styles.actionBtnDark}
-                        title="이름 변경"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openDeleteModal(
-                            '카테고리 삭제',
-                            `'${cat.name}' 카테고리를 삭제하시겠습니까?\n카테고리 안의 모든 메모도 함께 삭제됩니다.`,
-                            () => handleDeleteCategory(cat.id)
-                          );
-                        }}
-                        style={styles.actionBtnDark}
-                        title="삭제"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                {allCategories.map((cat) => {
+                  const isSelected = cat.id === selectedCategoryId;
+                  const isEditing = cat.id === editingCategoryId;
+                  const isDeleting = cat.id === deletingCategoryId;
+                  const isFixed = cat.isFixed;
+                  const count = cat.id === 'inbox'
+                    ? items.filter((item) => !item.categoryId || item.categoryId === 'inbox').length
+                    : items.filter((item) => item.categoryId === cat.id).length;
 
-          {/* Mobile Footer for Pane 1 */}
-          {isMobile && renderMobileFooter(
-            <div style={{
-              ...styles.pane1Header,
-              borderBottom: 'none',
-              borderTop: '1px solid #D4E3F3'
-            }}>
-              <span style={styles.pane1Title}>카테고리</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  onClick={handleQuickAddNote}
-                  style={styles.quickAddBtn}
-                  title="빠른 메모 생성 (In-box에 자동 저장)"
-                >
-                  <Zap size={13} fill="#2563EB" color="#2563EB" />
-                  <span>빠른입력</span>
-                </button>
-                <button
-                  onClick={() => setIsAddingCategory(true)}
-                  style={styles.iconBtnDark}
-                  title="카테고리 추가"
-                >
-                  <Plus size={18} />
-                </button>
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => {
+                        if (!isEditing && !isDeleting) navigateToItems(cat.id);
+                      }}
+                      style={{
+                        ...styles.catRow,
+                        backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
+                        color: isSelected ? '#1E3A5F' : '#4A607A',
+                        fontWeight: isSelected ? 600 : 400
+                      }}
+                    >
+                      {isFixed ? (
+                        <Inbox size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+                      ) : (
+                        <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+                      )}
+
+                      {isEditing ? (
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingCategoryName}
+                          onChange={(e) => setEditingCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateCategoryName(cat.id);
+                            if (e.key === 'Escape') setEditingCategoryId(null);
+                          }}
+                          onBlur={() => handleUpdateCategoryName(cat.id)}
+                          style={styles.inputDarkInline}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cat.name}
+                          </span>
+                          <span style={{
+                            fontSize: '12px',
+                            color: isSelected ? '#2563EB' : '#7C95B1',
+                            fontWeight: isSelected ? 700 : 500,
+                            flexShrink: 0
+                          }}>
+                            ({count})
+                          </span>
+                        </div>
+                      )}
+
+                      {!isFixed && (
+                        <div style={styles.actionGroup}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCategoryId(cat.id);
+                              setEditingCategoryName(cat.name);
+                            }}
+                            style={styles.actionBtnDark}
+                            title="이름 변경"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDeleteModal(
+                                '카테고리 삭제',
+                                `'${cat.name}' 카테고리를 삭제하시겠습니까?\n카테고리 안의 모든 메모도 함께 삭제됩니다.`,
+                                () => handleDeleteCategory(cat.id)
+                              );
+                            }}
+                            style={styles.actionBtnDark}
+                            title="삭제"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+
+              {/* Mobile Footer for Pane 1 */}
+              {isMobile && renderMobileFooter(
+                <div style={{
+                  ...styles.pane1Header,
+                  borderBottom: 'none',
+                  borderTop: '1px solid #D4E3F3'
+                }}>
+                  <span style={styles.pane1Title}>카테고리</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={handleQuickAddNote}
+                      style={styles.quickAddBtn}
+                      title="빠른 메모 생성 (In-box에 자동 저장)"
+                    >
+                      <Zap size={13} fill="#2563EB" color="#2563EB" />
+                      <span>빠른입력</span>
+                    </button>
+                    <button
+                      onClick={() => setIsAddingCategory(true)}
+                      style={styles.iconBtnDark}
+                      title="카테고리 추가"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Calendar Sidebar Area */}
+              <div style={{ ...styles.paneContent, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', color: '#94A3B8', textAlign: 'center' }}>
+                {/* Empty container for calendar mode sidebar */}
+              </div>
+              {isMobile && renderMobileFooter(null)}
+            </>
           )}
         </div>
       )}
