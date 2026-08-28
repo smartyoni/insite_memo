@@ -35,9 +35,15 @@ import {
   Clock,
   Tag,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Settings,
+  Layout,
+  Phone,
+  Type,
+  ExternalLink
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
+import TemplateManagerModal from './TemplateManagerModal';
 
 export const DEFAULT_TAGS = [
   { id: 'def_1', name: '계약서작성', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
@@ -195,6 +201,10 @@ export default function NotebookExplorer() {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [draftSubBody, setDraftSubBody] = useState('');
+  const [draftTemplateId, setDraftTemplateId] = useState(null); // null = 기본 텍스트 박스
+  const [draftTemplateValues, setDraftTemplateValues] = useState({}); // { [fieldId]: val }
+  const [templates, setTemplates] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [navigatedFromCalendar, setNavigatedFromCalendar] = useState(false);
 
@@ -475,6 +485,21 @@ export default function NotebookExplorer() {
     return () => unsubscribe();
   }, []);
 
+  // 2.5. Subscribe to Templates in Firestore
+  useEffect(() => {
+    const q = query(collection(db, 'templates'), orderBy('updatedAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+      setTemplates(list);
+    }, (err) => {
+      console.error("Firestore templates snapshot error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // 3. Subscribe to Custom Badges (Tags) in Firestore
   useEffect(() => {
     const customTagsDocRef = doc(db, 'settings', 'custom_tags');
@@ -681,11 +706,15 @@ export default function NotebookExplorer() {
       setDraftBody(activeItem.body || '');
       setDraftSubBody(activeItem.subBody || '');
       setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftTemplateId(activeItem.templateId || null);
+      setDraftTemplateValues(activeItem.templateValues || {});
     } else {
       setDraftTitle('');
       setDraftBody('');
       setDraftSubBody('');
       setDraftCategoryId('inbox');
+      setDraftTemplateId(null);
+      setDraftTemplateValues({});
     }
     setIsEditMode(false);
   }, [selectedItemId]);
@@ -853,15 +882,37 @@ export default function NotebookExplorer() {
     }
   };
 
+  // Helper to construct combined body text from template fields
+  const buildTemplateCombinedBody = (tplId, tplVals) => {
+    if (!tplId) return draftBody;
+    const targetTpl = templates.find(t => t.id === tplId);
+    if (!targetTpl || !targetTpl.fields) return draftBody;
+
+    return targetTpl.fields.map((f) => {
+      const val = tplVals[f.id];
+      if (f.type === 'checklist') {
+        const listItems = Array.isArray(val) ? val : (f.defaultItems || []).map(t => ({ text: t, completed: false }));
+        const listText = listItems.map(it => `- [${it.completed ? 'v' : ' '}] ${it.text}`).join('\n');
+        return `[${f.label}]\n${listText}`;
+      } else {
+        return `[${f.label}]\n${val || ''}`;
+      }
+    }).join('\n\n');
+  };
+
   // ---------------- Detail View Handlers ----------------
   const handleSaveDetail = async () => {
     if (!selectedItemId) return;
     try {
+      const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : draftBody;
+
       await updateDoc(doc(db, 'items', selectedItemId), {
         title: draftTitle,
-        body: draftBody,
+        body: finalBody,
         subBody: draftSubBody,
         categoryId: draftCategoryId,
+        templateId: draftTemplateId || null,
+        templateValues: draftTemplateValues || {},
         updatedAt: serverTimestamp()
       });
       if (draftCategoryId !== selectedCategoryId) {
@@ -884,6 +935,8 @@ export default function NotebookExplorer() {
       setDraftBody(activeItem.body || '');
       setDraftSubBody(activeItem.subBody || '');
       setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftTemplateId(activeItem.templateId || null);
+      setDraftTemplateValues(activeItem.templateValues || {});
     }
     setIsEditMode(false);
   };
@@ -1412,45 +1465,105 @@ export default function NotebookExplorer() {
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
                         <div style={styles.editPaneMainCard}>
-                          {/* Top Control Bar: Category Selector + Cancel/Save Buttons */}
+                          {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'flex-end',
+                            justifyContent: 'space-between',
                             gap: '6px',
                             marginBottom: '10px',
                             paddingBottom: '8px',
-                            borderBottom: '1px solid #F1F5F9'
+                            borderBottom: '1px solid #F1F5F9',
+                            flexWrap: 'wrap'
                           }}>
-                            <div style={styles.headerCategorySelector}>
-                              <span style={styles.headerCategoryLabel}>이동:</span>
-                              <select
-                                value={draftCategoryId}
-                                onChange={(e) => setDraftCategoryId(e.target.value)}
-                                style={styles.headerCategorySelect}
+                            {/* Left Controls: Category & Template Selectors */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <div style={styles.headerCategorySelector}>
+                                <span style={styles.headerCategoryLabel}>이동:</span>
+                                <select
+                                  value={draftCategoryId}
+                                  onChange={(e) => setDraftCategoryId(e.target.value)}
+                                  style={styles.headerCategorySelect}
+                                >
+                                  {allCategories.map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                      {cat.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div style={styles.headerCategorySelector}>
+                                <span style={styles.headerCategoryLabel}>템플릿:</span>
+                                <select
+                                  value={draftTemplateId || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value || null;
+                                    setDraftTemplateId(val);
+                                    if (val) {
+                                      const targetTpl = templates.find(t => t.id === val);
+                                      if (targetTpl && targetTpl.fields) {
+                                        // Initialize values with default items
+                                        const initialVals = { ...draftTemplateValues };
+                                        targetTpl.fields.forEach(f => {
+                                          if (f.type === 'checklist' && !initialVals[f.id]) {
+                                            initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
+                                          }
+                                        });
+                                        setDraftTemplateValues(initialVals);
+                                      }
+                                    }
+                                  }}
+                                  style={{ ...styles.headerCategorySelect, minWidth: '130px', fontWeight: 600, color: draftTemplateId ? '#2563EB' : '#334155' }}
+                                >
+                                  <option value="">기본 텍스트 박스</option>
+                                  {templates.map((tpl) => (
+                                    <option key={tpl.id} value={tpl.id}>
+                                      📋 {tpl.title}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <button
+                                onClick={() => setShowTemplateModal(true)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: '#F8FAFC',
+                                  border: '1px solid #CBD5E1',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: '#475569',
+                                  cursor: 'pointer'
+                                }}
+                                title="내가 만든 템플릿 관리/생성"
                               >
-                                {allCategories.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </option>
-                                ))}
-                              </select>
+                                <Settings size={13} color="#2563EB" />
+                                <span>템플릿 설정</span>
+                              </button>
                             </div>
 
-                            <button
-                              onClick={handleCancelDetailEdit}
-                              style={styles.btnSecondary}
-                            >
-                              <RotateCcw size={13} />
-                              취소
-                            </button>
-                            <button
-                              onClick={handleSaveDetail}
-                              style={styles.btnPrimary}
-                            >
-                              <Save size={13} />
-                              저장
-                            </button>
+                            {/* Right Controls: Cancel & Save Buttons */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                onClick={handleCancelDetailEdit}
+                                style={styles.btnSecondary}
+                              >
+                                <RotateCcw size={13} />
+                                취소
+                              </button>
+                              <button
+                                onClick={handleSaveDetail}
+                                style={styles.btnPrimary}
+                              >
+                                <Save size={13} />
+                                저장
+                              </button>
+                            </div>
                           </div>
 
                           {/* Standalone Full-Width Title Input Box */}
@@ -1462,12 +1575,136 @@ export default function NotebookExplorer() {
                             style={{ ...styles.editTitleInput, width: '100%', marginBottom: '10px' }}
                           />
 
-                          <textarea
-                            value={draftBody}
-                            onChange={(e) => setDraftBody(e.target.value)}
-                            placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
-                            style={styles.editBodyTextarea}
-                          />
+                          {/* Dynamic Body Content: Default Textarea OR Selected Template Form */}
+                          {draftTemplateId === null ? (
+                            <textarea
+                              value={draftBody}
+                              onChange={(e) => setDraftBody(e.target.value)}
+                              placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
+                              style={styles.editBodyTextarea}
+                            />
+                          ) : (
+                            (() => {
+                              const activeTpl = templates.find(t => t.id === draftTemplateId);
+                              if (!activeTpl || !activeTpl.fields || activeTpl.fields.length === 0) {
+                                return (
+                                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+                                    선택한 템플릿 항목이 없습니다. 상단 [템플릿 설정]에서 구성 요소를 추가해 주세요.
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                                  <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span>📋 <strong>{activeTpl.title}</strong> 템플릿 양식 편집 중</span>
+                                    <button
+                                      onClick={() => setDraftTemplateId(null)}
+                                      style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
+                                    >
+                                      기본 텍스트박스로 변경
+                                    </button>
+                                  </div>
+
+                                  {activeTpl.fields.map((field) => {
+                                    const fieldVal = draftTemplateValues[field.id];
+
+                                    return (
+                                      <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                            {field.type === 'phone' && <Phone size={14} color="#10B981" />}
+                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                            {field.label}
+                                          </label>
+
+                                          {field.type === 'phone' && fieldVal && (
+                                            <a
+                                              href={`tel:${fieldVal.replace(/[^0-9]/g, '')}`}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10B981', textDecoration: 'none', fontWeight: 600 }}
+                                            >
+                                              <Phone size={12} />
+                                              전화 걸기
+                                            </a>
+                                          )}
+                                        </div>
+
+                                        {field.type === 'text' && (
+                                          <textarea
+                                            value={fieldVal || ''}
+                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                            placeholder={field.placeholder || '내용을 입력하세요'}
+                                            rows={3}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                                          />
+                                        )}
+
+                                        {field.type === 'phone' && (
+                                          <input
+                                            type="tel"
+                                            value={fieldVal || ''}
+                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                            placeholder={field.placeholder || '010-0000-0000'}
+                                            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
+                                          />
+                                        )}
+
+                                        {field.type === 'checklist' && (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                                            {((Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })))).map((chkItem, chkIdx, arr) => (
+                                              <div key={chkIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={chkItem.completed || false}
+                                                  onChange={(e) => {
+                                                    const updatedArr = [...arr];
+                                                    updatedArr[chkIdx] = { ...chkItem, completed: e.target.checked };
+                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                  }}
+                                                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                />
+                                                <input
+                                                  type="text"
+                                                  value={chkItem.text || ''}
+                                                  onChange={(e) => {
+                                                    const updatedArr = [...arr];
+                                                    updatedArr[chkIdx] = { ...chkItem, text: e.target.value };
+                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                  }}
+                                                  style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
+                                                />
+                                                <button
+                                                  onClick={() => {
+                                                    const updatedArr = arr.filter((_, i) => i !== chkIdx);
+                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                  }}
+                                                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                                >
+                                                  <Trash2 size={13} />
+                                                </button>
+                                              </div>
+                                            ))}
+                                            <button
+                                              onClick={() => {
+                                                const currentArr = (Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })));
+                                                const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
+                                                setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                              }}
+                                              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer', marginTop: '4px' }}
+                                            >
+                                              <Plus size={13} />
+                                              항목 추가
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()
+                          )}
                         </div>
                       )}
 
@@ -2436,6 +2673,13 @@ export default function NotebookExplorer() {
           </div>
         </div>
       )}
+
+      {/* Template Manager Modal */}
+      <TemplateManagerModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        templates={templates}
+      />
 
       {/* Exit Toast Notification for Mobile double back press */}
       {showExitToast && (
