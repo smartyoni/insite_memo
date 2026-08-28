@@ -2501,7 +2501,7 @@ export default function NotebookExplorer() {
                                         autoFocus
                                       />
 
-                                      {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
+                                      {/* 1-Line Integrated Control Bar: Date + All-Day */}
                                       <div style={styles.scheduleOptionBar}>
                                         {/* Date Picker */}
                                         <div style={styles.scheduleField}>
@@ -2549,52 +2549,24 @@ export default function NotebookExplorer() {
                                             </button>
                                           </>
                                         )}
-
-                                        {/* Badge Dropdown */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
-                                          <Tag size={13} color="#64748B" />
-                                          <select
-                                            value={editingCheckTag || ''}
-                                            onChange={(e) => setEditingCheckTag(e.target.value)}
-                                            style={styles.badgeDropdownSelect}
-                                          >
-                                            <option value="">배지 없음</option>
-                                            {allBadges.map((b) => (
-                                              <option key={b.id || b.name} value={b.name}>
-                                                {b.name}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
                                       </div>
 
-                                      {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                      {/* Action Buttons Row: [Cancel, Save] */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
                                         <button
                                           type="button"
-                                          onClick={() => setShowManageBadgesModal(true)}
-                                          style={styles.btnSmallManage}
-                                          title="배지 수정 및 삭제 관리"
+                                          onClick={() => setEditingCheckId(null)}
+                                          style={styles.btnSmallCancel}
                                         >
-                                          ⚙️ 관리
+                                          <X size={13} /> 취소
                                         </button>
-
-                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditingCheckId(null)}
-                                            style={styles.btnSmallCancel}
-                                          >
-                                            <X size={13} /> 취소
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                            style={styles.btnSmallSave}
-                                          >
-                                            <Check size={13} /> 저장
-                                          </button>
-                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                          style={styles.btnSmallSave}
+                                        >
+                                          <Check size={13} /> 저장
+                                        </button>
                                       </div>
                                     </div>
                                   ) : (
