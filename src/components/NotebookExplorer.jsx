@@ -2088,7 +2088,6 @@ export default function NotebookExplorer() {
                                 title="체크리스트 추가"
                               >
                                 <Plus size={15} />
-                                <span>추가</span>
                               </button>
                             </div>
                           </div>
@@ -2122,27 +2121,23 @@ export default function NotebookExplorer() {
                                           autoFocus
                                         />
 
-                                        {/* 1-Line Integrated Dataview Control Bar: DUE DATE + Priority + Cancel/Save */}
+                                        {/* Clean 1-Line Dataview Control Bar: Date + Priority + Cancel/Save */}
                                         <div style={{
                                           display: 'flex',
                                           alignItems: 'center',
-                                          justify: 'space-between',
-                                          gap: '8px',
+                                          justifyContent: 'space-between',
+                                          gap: '6px',
                                           backgroundColor: '#F8FAFC',
-                                          padding: '6px 10px',
+                                          padding: '4px 8px',
                                           borderRadius: '8px',
                                           border: '1px solid #CBD5E1',
-                                          flexWrap: 'wrap',
                                           marginTop: '4px'
                                         }}>
-                                          {/* Left Controls: DUE DATE & Priority */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                                            {/* DUE DATE Field */}
+                                          {/* Left Controls: Date Picker & Priority Dropdown */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+                                            {/* Date Picker */}
                                             <div style={styles.scheduleField}>
-                                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                                <CalendarIcon size={12} color="#64748B" />
-                                                DUE DATE
-                                              </span>
+                                              <CalendarIcon size={13} color="#64748B" />
                                               <input
                                                 type="date"
                                                 value={editingCheckDueDate}
@@ -2191,7 +2186,6 @@ export default function NotebookExplorer() {
 
                                             {/* Priority Dropdown */}
                                             <div style={styles.scheduleField}>
-                                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>우선순위</span>
                                               <select
                                                 value={editingCheckPriority || ''}
                                                 onChange={(e) => setEditingCheckPriority(e.target.value)}
@@ -2199,22 +2193,22 @@ export default function NotebookExplorer() {
                                                   border: 'none',
                                                   fontSize: '12px',
                                                   fontWeight: 700,
-                                                  color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#475569',
+                                                  color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#64748B',
                                                   backgroundColor: 'transparent',
                                                   outline: 'none',
                                                   cursor: 'pointer'
                                                 }}
                                               >
-                                                <option value="">선택 안함</option>
-                                                <option value="HIGH">🚨 높음 (High)</option>
-                                                <option value="MEDIUM">⚡ 보통 (Medium)</option>
-                                                <option value="LOW">💤 낮음 (Low)</option>
+                                                <option value="">우선순위 없음</option>
+                                                <option value="HIGH">🚨 높음</option>
+                                                <option value="MEDIUM">⚡ 보통</option>
+                                                <option value="LOW">💤 낮음</option>
                                               </select>
                                             </div>
                                           </div>
 
-                                          {/* Right Controls: Cancel & Save Buttons on SAME line */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', flexShrink: 0 }}>
+                                          {/* Right Controls: Cancel & Save Buttons */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: 'auto' }}>
                                             <button
                                               type="button"
                                               onClick={() => setEditingCheckId(null)}
@@ -2590,12 +2584,9 @@ export default function NotebookExplorer() {
                                       }}>
                                         {/* Left Controls: DUE DATE & Priority */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                                          {/* DUE DATE Field */}
+                                          {/* Date Picker */}
                                           <div style={styles.scheduleField}>
-                                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                              <CalendarIcon size={12} color="#64748B" />
-                                              DUE DATE
-                                            </span>
+                                            <CalendarIcon size={13} color="#64748B" />
                                             <input
                                               type="date"
                                               value={editingCheckDueDate}
@@ -2644,7 +2635,6 @@ export default function NotebookExplorer() {
 
                                           {/* Priority Dropdown */}
                                           <div style={styles.scheduleField}>
-                                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>우선순위</span>
                                             <select
                                               value={editingCheckPriority || ''}
                                               onChange={(e) => setEditingCheckPriority(e.target.value)}
@@ -2652,16 +2642,16 @@ export default function NotebookExplorer() {
                                                 border: 'none',
                                                 fontSize: '12px',
                                                 fontWeight: 700,
-                                                color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#475569',
+                                                color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#64748B',
                                                 backgroundColor: 'transparent',
                                                 outline: 'none',
                                                 cursor: 'pointer'
                                               }}
                                             >
-                                              <option value="">선택 안함</option>
-                                              <option value="HIGH">🚨 높음 (High)</option>
-                                              <option value="MEDIUM">⚡ 보통 (Medium)</option>
-                                              <option value="LOW">💤 낮음 (Low)</option>
+                                              <option value="">우선순위 없음</option>
+                                              <option value="HIGH">🚨 높음</option>
+                                              <option value="MEDIUM">⚡ 보통</option>
+                                              <option value="LOW">💤 낮음</option>
                                             </select>
                                           </div>
                                         </div>
