@@ -113,7 +113,7 @@ export function getTagStyle(tagName, customBadgesList = null) {
   const index = Math.abs(hash) % TAG_COLOR_PALETTE.length;
   return TAG_COLOR_PALETTE[index];
 }
-import CalendarView from './CalendarView';
+// CalendarView import removed
 
 // Fixed In-box category definitions
 const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'explorer' };
@@ -225,7 +225,6 @@ export default function NotebookExplorer() {
   const [templates, setTemplates] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
-  const [navigatedFromCalendar, setNavigatedFromCalendar] = useState(false);
 
   // Template Tab Dedicated Canvas States
   const [selectedTemplateIdInTab, setSelectedTemplateIdInTab] = useState(null); // templateId or 'NEW'
@@ -246,82 +245,6 @@ export default function NotebookExplorer() {
   const [editingCheckDueTime, setEditingCheckDueTime] = useState('09:00');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
-
-  // Persistent Custom Badges & Management State
-  const [customBadges, setCustomBadges] = useState(getStoredCustomTags);
-  const [showAddBadgeModal, setShowAddBadgeModal] = useState(false);
-  const [showManageBadgesModal, setShowManageBadgesModal] = useState(false);
-
-  const [newBadgeName, setNewBadgeName] = useState('');
-  const [newBadgeColorIdx, setNewBadgeColorIdx] = useState(0);
-
-  const [editingBadgeId, setEditingBadgeId] = useState(null);
-  const [editingBadgeName, setEditingBadgeName] = useState('');
-  const [editingBadgeColorIdx, setEditingBadgeColorIdx] = useState(0);
-
-  const allBadges = [...DEFAULT_TAGS, ...customBadges];
-
-  const handleAddCustomBadge = async () => {
-    const trimmed = newBadgeName.trim();
-    if (!trimmed) return;
-    const exists = allBadges.some(t => t.name === trimmed);
-    if (exists) {
-      setEditingCheckTag(trimmed);
-      setShowAddBadgeModal(false);
-      setNewBadgeName('');
-      return;
-    }
-
-    const colorStyle = TAG_COLOR_PALETTE[newBadgeColorIdx % TAG_COLOR_PALETTE.length];
-    const newBadge = {
-      id: 'c_' + Date.now().toString(),
-      name: trimmed,
-      bg: colorStyle.bg,
-      border: colorStyle.border,
-      color: colorStyle.color
-    };
-    const updated = [...customBadges, newBadge];
-    setCustomBadges(updated);
-    saveStoredCustomTags(updated);
-    try {
-      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
-    } catch (err) {
-      console.error('Error saving custom badge to Firestore:', err);
-    }
-    setEditingCheckTag(trimmed);
-    setNewBadgeName('');
-    setShowAddBadgeModal(false);
-  };
-
-  const handleUpdateCustomBadge = async (badgeId) => {
-    const trimmed = editingBadgeName.trim();
-    if (!trimmed) return;
-    const colorStyle = TAG_COLOR_PALETTE[editingBadgeColorIdx % TAG_COLOR_PALETTE.length];
-    const updated = customBadges.map(b =>
-      b.id === badgeId
-        ? { ...b, name: trimmed, bg: colorStyle.bg, border: colorStyle.border, color: colorStyle.color }
-        : b
-    );
-    setCustomBadges(updated);
-    saveStoredCustomTags(updated);
-    try {
-      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
-    } catch (err) {
-      console.error('Error updating custom badge in Firestore:', err);
-    }
-    setEditingBadgeId(null);
-  };
-
-  const handleDeleteCustomBadge = async (badgeId) => {
-    const updated = customBadges.filter(b => b.id !== badgeId);
-    setCustomBadges(updated);
-    saveStoredCustomTags(updated);
-    try {
-      await setDoc(doc(db, 'settings', 'custom_tags'), { tags: updated });
-    } catch (err) {
-      console.error('Error deleting custom badge in Firestore:', err);
-    }
-  };
 
 
 
@@ -524,73 +447,6 @@ export default function NotebookExplorer() {
     });
     return () => unsubscribe();
   }, []);
-
-  // 3. Subscribe to Custom Badges (Tags) in Firestore
-  useEffect(() => {
-    const customTagsDocRef = doc(db, 'settings', 'custom_tags');
-    const unsubscribe = onSnapshot(customTagsDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (Array.isArray(data.tags)) {
-          setCustomBadges(data.tags);
-          saveStoredCustomTags(data.tags);
-        }
-      } else {
-        const localTags = getStoredCustomTags();
-        if (localTags && localTags.length > 0) {
-          setDoc(customTagsDocRef, { tags: localTags }).catch(console.error);
-        }
-      }
-    }, (err) => {
-      console.error("Firestore custom_tags snapshot error:", err);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // 4. Auto sync items tags into customBadges if not already present
-  useEffect(() => {
-    if (!items || items.length === 0) return;
-
-    let hasNewTag = false;
-    const currentCustomTags = [...customBadges];
-    const knownTagNames = new Set([...DEFAULT_TAGS.map(t => t.name), ...currentCustomTags.map(t => t.name)]);
-
-    items.forEach((item) => {
-      const checkAndAddTag = (tagName) => {
-        if (tagName && typeof tagName === 'string' && tagName.trim().length > 0) {
-          const trimmed = tagName.trim();
-          if (!knownTagNames.has(trimmed)) {
-            knownTagNames.add(trimmed);
-            let hash = 0;
-            for (let i = 0; i < trimmed.length; i++) {
-              hash = trimmed.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const colorIdx = Math.abs(hash) % TAG_COLOR_PALETTE.length;
-            const colorStyle = TAG_COLOR_PALETTE[colorIdx];
-            currentCustomTags.push({
-              id: 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              name: trimmed,
-              bg: colorStyle.bg,
-              border: colorStyle.border,
-              color: colorStyle.color
-            });
-            hasNewTag = true;
-          }
-        }
-      };
-
-      checkAndAddTag(item.tag);
-      if (item.checklists && Array.isArray(item.checklists)) {
-        item.checklists.forEach(c => checkAndAddTag(c.tag));
-      }
-    });
-
-    if (hasNewTag) {
-      setCustomBadges(currentCustomTags);
-      saveStoredCustomTags(currentCustomTags);
-      setDoc(doc(db, 'settings', 'custom_tags'), { tags: currentCustomTags }).catch(console.error);
-    }
-  }, [items, customBadges]);
 
   // Filter & Sort items by selected category (Default: ascending order by title / 가나다순)
   const filteredItems = items
@@ -1087,11 +943,6 @@ export default function NotebookExplorer() {
 
   const handleTabSwitch = (targetTab) => {
     setActiveMainTab(targetTab);
-    setNavigatedFromCalendar(false);
-    if (targetTab === 'calendar') {
-      if (isMobile) setMobileView('detail');
-      return;
-    }
     const targetScope = getScopeForTab(targetTab);
     const targetInboxId = getInboxIdForTab(targetTab);
     const isCurrentCatValid = categories.some(
@@ -1162,18 +1013,6 @@ export default function NotebookExplorer() {
           }}
         >
           <span>앱개발</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('calendar')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'calendar' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'calendar' ? 700 : 500
-          }}
-        >
-          <span>캘린더</span>
         </button>
       </div>
 
@@ -2277,7 +2116,7 @@ export default function NotebookExplorer() {
                                           autoFocus
                                         />
 
-                                        {/* 1-Line Integrated Control Bar: Date + All-Day + Badge Dropdown */}
+                                        {/* 1-Line Integrated Control Bar: Date + All-Day */}
                                         <div style={styles.scheduleOptionBar}>
                                           {/* Date Picker */}
                                           <div style={styles.scheduleField}>
@@ -2325,52 +2164,24 @@ export default function NotebookExplorer() {
                                               </button>
                                             </>
                                           )}
-
-                                          {/* Badge Dropdown */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: editingCheckDueDate ? 0 : 'auto' }}>
-                                            <Tag size={13} color="#64748B" />
-                                            <select
-                                              value={editingCheckTag || ''}
-                                              onChange={(e) => setEditingCheckTag(e.target.value)}
-                                              style={styles.badgeDropdownSelect}
-                                            >
-                                              <option value="">배지 없음</option>
-                                              {allBadges.map((b) => (
-                                                <option key={b.id || b.name} value={b.name}>
-                                                  {b.name}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </div>
                                         </div>
 
-                                        {/* Action Buttons Row: Left [Manage], Right [Cancel, Save] */}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                                        {/* Action Buttons Row: [Cancel, Save] */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
                                           <button
                                             type="button"
-                                            onClick={() => setShowManageBadgesModal(true)}
-                                            style={styles.btnSmallManage}
-                                            title="배지 수정 및 삭제 관리"
+                                            onClick={() => setEditingCheckId(null)}
+                                            style={styles.btnSmallCancel}
                                           >
-                                            ⚙️ 관리
+                                            <X size={13} /> 취소
                                           </button>
-
-                                          <div style={{ display: 'flex', gap: '6px' }}>
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditingCheckId(null)}
-                                              style={styles.btnSmallCancel}
-                                            >
-                                              <X size={13} /> 취소
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                              style={styles.btnSmallSave}
-                                            >
-                                              <Check size={13} /> 저장
-                                            </button>
-                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                            style={styles.btnSmallSave}
+                                          >
+                                            <Check size={13} /> 저장
+                                          </button>
                                         </div>
                                       </div>
                                     ) : (
@@ -2496,43 +2307,15 @@ export default function NotebookExplorer() {
                           borderBottom: '1px solid #F1F5F9'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                            {navigatedFromCalendar ? (
+                            {isMobile && (
                               <button
-                                onClick={() => {
-                                  setActiveMainTab('calendar');
-                                  setNavigatedFromCalendar(false);
-                                }}
-                                style={{
-                                  backgroundColor: '#2563EB',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  padding: '5px 10px',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
-                                  flexShrink: 0
-                                }}
-                                title="캘린더 화면으로 돌아가기"
+                                onClick={navigateBack}
+                                style={styles.mobileBackBtn}
+                                title="목록으로 이동"
                               >
-                                <ArrowLeft size={14} />
-                                <span>캘린더</span>
+                                <ArrowLeft size={16} />
+                                <span>목록</span>
                               </button>
-                            ) : (
-                              isMobile && (
-                                <button
-                                  onClick={navigateBack}
-                                  style={styles.mobileBackBtn}
-                                  title="목록으로 이동"
-                                >
-                                  <ArrowLeft size={16} />
-                                  <span>목록</span>
-                                </button>
-                              )
                             )}
                             <h1 style={{ ...styles.readTitle, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {activeItem.title}
@@ -2978,267 +2761,6 @@ export default function NotebookExplorer() {
         </div>
       )}
         </React.Fragment>
-      )}
-
-      {/* Add Custom Badge Modal */}
-      {showAddBadgeModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowAddBadgeModal(false)}>
-          <div style={{ ...styles.modalContent, maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>➕ 새 배지 만들기</h3>
-              <button onClick={() => setShowAddBadgeModal(false)} style={styles.modalCloseBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '10px 0' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>
-                  배지 이름
-                </label>
-                <input
-                  type="text"
-                  placeholder="예: 중도금, 현장방문, 서류검토"
-                  value={newBadgeName}
-                  onChange={(e) => setNewBadgeName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    fontSize: '13px',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    outline: 'none'
-                  }}
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                  배지 색상 선택
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {TAG_COLOR_PALETTE.map((pal, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setNewBadgeColorIdx(idx)}
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        borderRadius: '4px',
-                        border: newBadgeColorIdx === idx ? `2px solid ${pal.color}` : `1px solid ${pal.border}`,
-                        backgroundColor: pal.bg,
-                        color: pal.color,
-                        cursor: 'pointer',
-                        boxShadow: newBadgeColorIdx === idx ? '0 0 0 2px rgba(37, 99, 235, 0.2)' : 'none'
-                      }}
-                    >
-                      {pal.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preview */}
-              {newBadgeName.trim() && (() => {
-                const pal = TAG_COLOR_PALETTE[newBadgeColorIdx];
-                return (
-                  <div style={{ marginTop: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#64748B', marginRight: '6px' }}>미리보기:</span>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: pal.bg,
-                        color: pal.color,
-                        border: `1px solid ${pal.border}`
-                      }}
-                    >
-                      {newBadgeName.trim()}
-                    </span>
-                  </div>
-                );
-              })()}
-
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={handleAddCustomBadge}
-                  style={styles.btnSmallSave}
-                >
-                  <Check size={14} /> 배지 생성
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddBadgeModal(false)}
-                  style={styles.btnSmallCancel}
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manage Badges Modal */}
-      {showManageBadgesModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowManageBadgesModal(false)}>
-          <div style={{ ...styles.modalContent, maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>⚙️ 배지 수정 및 삭제</h3>
-              <button onClick={() => setShowManageBadgesModal(false)} style={styles.modalCloseBtn}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto', padding: '10px 0' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>기본 배지 (수정 불가)</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                {DEFAULT_TAGS.map((t) => (
-                  <span
-                    key={t.id}
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      backgroundColor: t.bg,
-                      color: t.color,
-                      border: `1px solid ${t.border}`
-                    }}
-                  >
-                    {t.name}
-                  </span>
-                ))}
-              </div>
-
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B', marginTop: '6px' }}>사용자 정의 배지</div>
-              {customBadges.length === 0 ? (
-                <div style={{ fontSize: '12px', color: '#94A3B8', padding: '10px 0' }}>
-                  직접 만든 배지가 없습니다. [+ 새 배지 만들기]로 추가해보세요!
-                </div>
-              ) : (
-                customBadges.map((b) => {
-                  const isEditingThis = editingBadgeId === b.id;
-                  return (
-                    <div
-                      key={b.id}
-                      style={{
-                        display: 'flex',
-                        flexDirection: isEditingThis ? 'column' : 'row',
-                        alignItems: isEditingThis ? 'stretch' : 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: '#F8FAFC',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: '6px',
-                        padding: '8px 10px',
-                        gap: '8px'
-                      }}
-                    >
-                      {isEditingThis ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <input
-                            type="text"
-                            value={editingBadgeName}
-                            onChange={(e) => setEditingBadgeName(e.target.value)}
-                            style={{
-                              padding: '4px 8px',
-                              fontSize: '12px',
-                              border: '1px solid #CBD5E1',
-                              borderRadius: '4px'
-                            }}
-                          />
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            {TAG_COLOR_PALETTE.map((pal, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setEditingBadgeColorIdx(idx)}
-                                style={{
-                                  padding: '2px 6px',
-                                  fontSize: '10px',
-                                  fontWeight: 700,
-                                  borderRadius: '3px',
-                                  border: editingBadgeColorIdx === idx ? `2px solid ${pal.color}` : `1px solid ${pal.border}`,
-                                  backgroundColor: pal.bg,
-                                  color: pal.color,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {pal.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => handleUpdateCustomBadge(b.id)}
-                              style={styles.btnSmallSave}
-                            >
-                              저장
-                            </button>
-                            <button
-                              onClick={() => setEditingBadgeId(null)}
-                              style={styles.btnSmallCancel}
-                            >
-                              취소
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              backgroundColor: b.bg,
-                              color: b.color,
-                              border: `1px solid ${b.border}`
-                            }}
-                          >
-                            {b.name}
-                          </span>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() => {
-                                setEditingBadgeId(b.id);
-                                setEditingBadgeName(b.name);
-                                const foundIdx = TAG_COLOR_PALETTE.findIndex(p => p.color === b.color);
-                                setEditingBadgeColorIdx(foundIdx >= 0 ? foundIdx : 0);
-                              }}
-                              style={styles.actionBtnLight}
-                              title="수정"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                openDeleteModal(
-                                  '배지 삭제',
-                                  `'${b.name}' 배지를 삭제하시겠습니까?`,
-                                  () => handleDeleteCustomBadge(b.id)
-                                );
-                              }}
-                              style={styles.actionBtnLight}
-                              title="삭제"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Global Custom Delete Confirmation Modal */}
