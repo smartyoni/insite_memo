@@ -3541,14 +3541,16 @@ const styles = {
   },
   checklistEditTextarea: {
     width: '100%',
-    fontSize: '12px',
-    padding: '6px 8px',
-    border: '1px solid #2563EB',
-    borderRadius: '4px',
+    fontSize: '13px',
+    padding: '2px 4px',
+    border: 'none',
     outline: 'none',
+    boxShadow: 'none',
+    backgroundColor: 'transparent',
     fontFamily: 'inherit',
-    lineHeight: 1.4,
-    resize: 'vertical'
+    lineHeight: 1.5,
+    resize: 'vertical',
+    boxSizing: 'border-box'
   },
   btnSmallSave: {
     backgroundColor: '#2563EB',
