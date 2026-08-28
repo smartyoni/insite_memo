@@ -1552,7 +1552,6 @@ export default function NotebookExplorer() {
                           >
                             <div style={styles.itemHeader}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                <FileText size={16} color={isSelected ? '#2D5B48' : '#7C95B1'} style={{ flexShrink: 0 }} />
                                 {isEditing ? (
                                   <input
                                     autoFocus
@@ -1579,17 +1578,6 @@ export default function NotebookExplorer() {
                               </div>
 
                               <div style={styles.actionGroup}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingItemId(item.id);
-                                    setEditingItemTitle(item.title || '');
-                                  }}
-                                  style={styles.actionBtnLight}
-                                  title="제목 수정"
-                                >
-                                  <Edit2 size={13} />
-                                </button>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
