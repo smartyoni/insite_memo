@@ -975,11 +975,23 @@ export default function NotebookExplorer() {
 
     setIsSavingTpl(true);
     try {
-      const docId = selectedTemplateIdInTab === 'NEW' ? `tpl_${Date.now()}` : selectedTemplateIdInTab;
+      // Ensure docId is never null or empty
+      const docId = (selectedTemplateIdInTab && selectedTemplateIdInTab !== 'NEW')
+        ? selectedTemplateIdInTab
+        : `tpl_${Date.now()}`;
+
+      const cleanFields = tplDraftFields.map((f) => ({
+        id: f.id || `field_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: f.type || 'text',
+        label: f.label || '항목',
+        placeholder: f.placeholder || '',
+        defaultItems: Array.isArray(f.defaultItems) ? f.defaultItems : []
+      }));
+
       const tplData = {
         id: docId,
         title: tplDraftTitle.trim(),
-        fields: tplDraftFields,
+        fields: cleanFields,
         updatedAt: new Date().toISOString()
       };
 
