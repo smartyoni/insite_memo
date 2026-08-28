@@ -839,7 +839,7 @@ export default function NotebookExplorer() {
         }}
       >
         <FileText size={14} />
-        <span>메모 탐색기</span>
+        <span>노트</span>
       </button>
       <button
         onClick={() => {
