@@ -90,9 +90,34 @@ export function getTagStyle(tagName, customBadgesList = null) {
 }
 import CalendarView from './CalendarView';
 
-// Fixed In-box category definition
+// Fixed In-box category definitions
 const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'explorer' };
 const CLIPBOARD_INBOX_CATEGORY = { id: 'clipboard_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clipboard' };
+const BALANCE_INBOX_CATEGORY = { id: 'balance_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'balance' };
+const CLIP_INBOX_CATEGORY = { id: 'clip_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clip' };
+
+const FIXED_INBOX_IDS = ['inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox'];
+
+const getScopeForTab = (tab) => {
+  if (tab === 'clipboard') return 'clipboard';
+  if (tab === 'balance') return 'balance';
+  if (tab === 'clip') return 'clip';
+  return 'explorer';
+};
+
+const getInboxIdForTab = (tab) => {
+  if (tab === 'clipboard') return 'clipboard_inbox';
+  if (tab === 'balance') return 'balance_inbox';
+  if (tab === 'clip') return 'clip_inbox';
+  return 'inbox';
+};
+
+const getFixedCategoryForTab = (tab) => {
+  if (tab === 'clipboard') return CLIPBOARD_INBOX_CATEGORY;
+  if (tab === 'balance') return BALANCE_INBOX_CATEGORY;
+  if (tab === 'clip') return CLIP_INBOX_CATEGORY;
+  return INBOX_CATEGORY;
+};
 
 // Helper to safely extract milliseconds timestamp from item updated/created time
 function getItemTimestamp(item) {
@@ -108,7 +133,7 @@ function getItemTimestamp(item) {
 }
 
 export default function NotebookExplorer() {
-  // Main View Mode Tab state ('explorer' | 'clipboard' | 'calendar')
+  // Main View Mode Tab state ('explorer' | 'clipboard' | 'balance' | 'clip' | 'calendar')
   const [activeMainTab, setActiveMainTab] = useState('explorer');
 
   // Data states
@@ -121,13 +146,14 @@ export default function NotebookExplorer() {
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
 
   // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
-  const currentFixedCategory = activeMainTab === 'clipboard' ? CLIPBOARD_INBOX_CATEGORY : INBOX_CATEGORY;
+  const currentFixedCategory = getFixedCategoryForTab(activeMainTab);
+  const currentScope = getScopeForTab(activeMainTab);
   const filteredCategories = categories.filter((c) => {
-    if (c.id === 'inbox' || c.id === 'clipboard_inbox') return false;
-    if (activeMainTab === 'clipboard') {
-      return c.scope === 'clipboard';
+    if (FIXED_INBOX_IDS.includes(c.id)) return false;
+    if (currentScope === 'explorer') {
+      return !c.scope || c.scope === 'explorer';
     }
-    return !c.scope || c.scope === 'explorer';
+    return c.scope === currentScope;
   });
 
   const allCategories = [
@@ -665,7 +691,7 @@ export default function NotebookExplorer() {
       return;
     }
     try {
-      const currentScope = activeMainTab === 'clipboard' ? 'clipboard' : 'explorer';
+      const currentScope = getScopeForTab(activeMainTab);
       const newRef = doc(collection(db, 'categories'));
       await setDoc(newRef, {
         name: newCategoryName.trim(),
@@ -682,7 +708,7 @@ export default function NotebookExplorer() {
   };
 
   const handleUpdateCategoryName = async (catId) => {
-    if (catId === 'inbox' || catId === 'clipboard_inbox') return;
+    if (FIXED_INBOX_IDS.includes(catId)) return;
     if (!editingCategoryName.trim()) {
       setEditingCategoryId(null);
       return;
@@ -698,7 +724,7 @@ export default function NotebookExplorer() {
   };
 
   const handleDeleteCategory = async (catId) => {
-    if (catId === 'inbox' || catId === 'clipboard_inbox') return;
+    if (FIXED_INBOX_IDS.includes(catId)) return;
     try {
       const batch = writeBatch(db);
       batch.delete(doc(db, 'categories', catId));
@@ -710,7 +736,7 @@ export default function NotebookExplorer() {
 
       setDeletingCategoryId(null);
       if (selectedCategoryId === catId) {
-        setSelectedCategoryId(activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox');
+        setSelectedCategoryId(getInboxIdForTab(activeMainTab));
       }
     } catch (err) {
       console.error('Error deleting category and child items:', err);
@@ -719,7 +745,7 @@ export default function NotebookExplorer() {
 
   // ---------------- Quick Add Note (Fast Entry to In-box) ----------------
   const handleQuickAddNote = async () => {
-    const targetInboxId = activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox';
+    const targetInboxId = getInboxIdForTab(activeMainTab);
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -744,9 +770,17 @@ export default function NotebookExplorer() {
 
   // ---------------- Item Handlers ----------------
   const handleAddItem = async () => {
+    const activeScope = getScopeForTab(activeMainTab);
+    const activeInboxId = getInboxIdForTab(activeMainTab);
     let targetCatId = selectedCategoryId;
-    if (!targetCatId || (activeMainTab === 'clipboard' && targetCatId === 'inbox') || (activeMainTab === 'explorer' && targetCatId === 'clipboard_inbox')) {
-      targetCatId = activeMainTab === 'clipboard' ? 'clipboard_inbox' : 'inbox';
+    
+    // Validate targetCatId belongs to active scope
+    const isValidTarget = targetCatId && (
+      targetCatId === activeInboxId ||
+      categories.some(c => c.id === targetCatId && (activeScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === activeScope))
+    );
+    if (!isValidTarget) {
+      targetCatId = activeInboxId;
     }
     try {
       const newRef = doc(collection(db, 'items'));
@@ -833,6 +867,25 @@ export default function NotebookExplorer() {
     setIsEditMode(false);
   };
 
+  const handleTabSwitch = (targetTab) => {
+    setActiveMainTab(targetTab);
+    setNavigatedFromCalendar(false);
+    if (targetTab === 'calendar') {
+      if (isMobile) setMobileView('detail');
+      return;
+    }
+    const targetScope = getScopeForTab(targetTab);
+    const targetInboxId = getInboxIdForTab(targetTab);
+    const isCurrentCatValid = categories.some(
+      c => c.id === selectedCategoryId && (targetScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === targetScope)
+    );
+    if (!isCurrentCatValid && selectedCategoryId !== targetInboxId) {
+      setSelectedCategoryId(targetInboxId);
+      setSelectedItemId(null);
+    }
+    if (isMobile) setMobileView('categories');
+  };
+
   const renderMainModeBar = () => (
     <div style={isMobile ? {
       ...styles.mainModeBar,
@@ -842,15 +895,7 @@ export default function NotebookExplorer() {
       padding: '6px 8px'
     } : styles.mainModeBar}>
       <button
-        onClick={() => {
-          setActiveMainTab('explorer');
-          setNavigatedFromCalendar(false);
-          if (selectedCategoryId === 'clipboard_inbox' || categories.find(c => c.id === selectedCategoryId && c.scope === 'clipboard')) {
-            setSelectedCategoryId('inbox');
-            setSelectedItemId(null);
-          }
-          if (isMobile) setMobileView('categories');
-        }}
+        onClick={() => handleTabSwitch('explorer')}
         style={{
           ...styles.mainModeTabBtn,
           backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
@@ -861,15 +906,7 @@ export default function NotebookExplorer() {
         <span>노트</span>
       </button>
       <button
-        onClick={() => {
-          setActiveMainTab('clipboard');
-          setNavigatedFromCalendar(false);
-          if (selectedCategoryId === 'inbox' || categories.find(c => c.id === selectedCategoryId && (!c.scope || c.scope === 'explorer'))) {
-            setSelectedCategoryId('clipboard_inbox');
-            setSelectedItemId(null);
-          }
-          if (isMobile) setMobileView('categories');
-        }}
+        onClick={() => handleTabSwitch('clipboard')}
         style={{
           ...styles.mainModeTabBtn,
           backgroundColor: activeMainTab === 'clipboard' ? '#2563EB' : 'transparent',
@@ -880,11 +917,29 @@ export default function NotebookExplorer() {
         <span>계약</span>
       </button>
       <button
-        onClick={() => {
-          setActiveMainTab('calendar');
-          setNavigatedFromCalendar(false);
-          if (isMobile) setMobileView('detail');
+        onClick={() => handleTabSwitch('balance')}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'balance' ? 700 : 500
         }}
+      >
+        <span>잔금</span>
+      </button>
+      <button
+        onClick={() => handleTabSwitch('clip')}
+        style={{
+          ...styles.mainModeTabBtn,
+          backgroundColor: activeMainTab === 'clip' ? '#2563EB' : 'transparent',
+          color: activeMainTab === 'clip' ? '#FFFFFF' : '#4A607A',
+          fontWeight: activeMainTab === 'clip' ? 700 : 500
+        }}
+      >
+        <span>클립</span>
+      </button>
+      <button
+        onClick={() => handleTabSwitch('calendar')}
         style={{
           ...styles.mainModeTabBtn,
           backgroundColor: activeMainTab === 'calendar' ? '#2563EB' : 'transparent',
@@ -966,10 +1021,10 @@ export default function NotebookExplorer() {
                   const isEditing = cat.id === editingCategoryId;
                   const isDeleting = cat.id === deletingCategoryId;
                   const isFixed = cat.isFixed;
-                  const count = (cat.id === 'inbox' || cat.id === 'clipboard_inbox')
+                  const count = FIXED_INBOX_IDS.includes(cat.id)
                     ? items.filter((item) => {
                         if (cat.id === 'inbox') return !item.categoryId || item.categoryId === 'inbox';
-                        return item.categoryId === 'clipboard_inbox';
+                        return item.categoryId === cat.id;
                       }).length
                     : items.filter((item) => item.categoryId === cat.id).length;
 
