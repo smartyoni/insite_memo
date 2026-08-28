@@ -1682,18 +1682,15 @@ export default function NotebookExplorer() {
                     ) : (
                       tplDraftFields.map((field, idx) => (
                         <div key={field.id} style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '4px 10px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
-                              {idx + 1}. {field.type === 'text' ? '📝 텍스트 박스' : field.type === 'phone' ? '📞 전화번호 박스' : '☑️ 체크리스트 박스'}
-                            </span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '-4px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1 }}>
+                              <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1 }} title="위로 이동">
                                 <ArrowUp size={15} />
                               </button>
-                              <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1 }}>
+                              <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1 }} title="아래로 이동">
                                 <ArrowDown size={15} />
                               </button>
-                              <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={styles.iconBtn}>
+                              <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={styles.iconBtn} title="요소 삭제">
                                 <Trash2 size={15} color="#EF4444" />
                               </button>
                             </div>
