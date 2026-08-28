@@ -1281,12 +1281,9 @@ export default function NotebookExplorer() {
                           gap: '8px'
                         }}
                       >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#1E3A5F' : '#ECEBE7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#1E3A5F' : '#2B5278', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             📋 {tpl.title || '제목 없는 템플릿'}
-                          </div>
-                          <div style={{ fontSize: '11px', color: isSelected ? '#2563EB' : '#7C95B1' }}>
-                            요소 {tpl.fields?.length || 0}개 ({tpl.fields?.map(f => f.label).join(', ')})
                           </div>
                         </div>
                         <button
