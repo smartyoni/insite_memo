@@ -39,6 +39,7 @@ import {
   Settings,
   Layout,
   Phone,
+  MessageSquare,
   Type,
   ExternalLink
 } from 'lucide-react';
@@ -1981,11 +1982,11 @@ export default function NotebookExplorer() {
                                           />
                                           {fieldVal && (
                                             <a
-                                              href={`tel:${fieldVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
+                                              href={`sms:${fieldVal.replace(/[^0-9]/g, '')}`}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
                                             >
-                                              <Phone size={12} />
-                                              전화 걸기
+                                              <MessageSquare size={12} />
+                                              SMS 전송
                                             </a>
                                           )}
                                         </div>
@@ -2445,10 +2446,10 @@ export default function NotebookExplorer() {
                                           </div>
                                           {currentVal && (
                                             <a
-                                              href={`tel:${currentVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ color: '#059669', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                              href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
+                                              style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
                                             >
-                                              <Phone size={12} /> 전화 걸기
+                                              <MessageSquare size={12} /> SMS 전송
                                             </a>
                                           )}
                                         </div>
