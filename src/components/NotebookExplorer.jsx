@@ -379,7 +379,6 @@ export default function NotebookExplorer() {
   // Navigation Helpers
   const navigateToItems = (catId) => {
     setSelectedCategoryId(catId);
-    setActiveMainTab('explorer');
     if (isMobile) {
       setMobileView('items');
       window.history.pushState({ view: 'items' }, '');
