@@ -45,6 +45,24 @@ import {
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
+export const autoFormatPhoneNumber = (val) => {
+  if (!val) return '';
+  const raw = val.replace(/[^0-9]/g, '');
+  if (!raw) return '';
+
+  if (raw.startsWith('02')) {
+    if (raw.length <= 2) return raw;
+    if (raw.length <= 5) return `${raw.slice(0, 2)}-${raw.slice(2)}`;
+    if (raw.length <= 9) return `${raw.slice(0, 2)}-${raw.slice(2, 5)}-${raw.slice(5)}`;
+    return `${raw.slice(0, 2)}-${raw.slice(2, 6)}-${raw.slice(6, 10)}`;
+  }
+
+  if (raw.length <= 3) return raw;
+  if (raw.length <= 7) return `${raw.slice(0, 3)}-${raw.slice(3)}`;
+  if (raw.length <= 10) return `${raw.slice(0, 3)}-${raw.slice(3, 6)}-${raw.slice(6)}`;
+  return `${raw.slice(0, 3)}-${raw.slice(3, 7)}-${raw.slice(7, 11)}`;
+};
+
 export const DEFAULT_TAGS = [
   { id: 'def_1', name: '계약서작성', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
   { id: 'def_2', name: '잔금', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
@@ -1730,7 +1748,8 @@ export default function NotebookExplorer() {
                                   value={field.placeholder || ''}
                                   onChange={(e) => {
                                     const updated = [...tplDraftFields];
-                                    updated[idx].placeholder = e.target.value;
+                                    const val = field.type === 'phone' ? autoFormatPhoneNumber(e.target.value) : e.target.value;
+                                    updated[idx].placeholder = val;
                                     setTplDraftFields(updated);
                                   }}
                                   placeholder="예: 소재지/임대료/계약기간 (/ 는 줄바꿈)"
@@ -1976,7 +1995,7 @@ export default function NotebookExplorer() {
                                           <input
                                             type="tel"
                                             value={fieldVal || ''}
-                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: autoFormatPhoneNumber(e.target.value) })}
                                             placeholder={field.placeholder || '010-0000-0000'}
                                             style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
                                           />
