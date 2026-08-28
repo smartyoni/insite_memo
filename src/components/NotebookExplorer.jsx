@@ -1216,7 +1216,95 @@ export default function NotebookExplorer() {
           {/* Main Mode Tab Switcher & Header for Desktop */}
           {!isMobile && renderMainModeBar()}
 
-          {activeMainTab !== 'calendar' ? (
+          {activeMainTab === 'template' ? (
+            <>
+              {!isMobile && (
+                <div style={{ ...styles.pane1Header, justifyContent: 'space-between' }}>
+                  <span style={{ ...styles.pane1Title, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Layout size={16} color="#2563EB" />
+                    템플릿 목록 ({templates.length})
+                  </span>
+                  <button
+                    onClick={handleCreateNewTemplateInTab}
+                    style={styles.iconBtnDark}
+                    title="새 템플릿 만들기"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              )}
+
+              <div style={{ ...styles.paneContent, padding: '10px' }}>
+                {templates.length === 0 ? (
+                  <div style={{ padding: '24px 12px', textAlign: 'center', color: '#7C95B1', fontSize: '13px' }}>
+                    등록된 템플릿이 없습니다.<br />위 <strong>[+]</strong> 버튼을 눌러 새 템플릿을 만들어보세요.
+                  </div>
+                ) : (
+                  templates.map((tpl) => {
+                    const isSelected = selectedTemplateIdInTab === tpl.id;
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => {
+                          handleSelectTemplateInTab(tpl);
+                          if (isMobile) setMobileView('detail');
+                        }}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '10px',
+                          border: `1px solid ${isSelected ? '#3B82F6' : 'transparent'}`,
+                          backgroundColor: isSelected ? '#D8E6F5' : 'rgba(255, 255, 255, 0.05)',
+                          marginBottom: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#1E3A5F' : '#ECEBE7', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            📋 {tpl.title || '제목 없는 템플릿'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: isSelected ? '#2563EB' : '#7C95B1' }}>
+                            요소 {tpl.fields?.length || 0}개 ({tpl.fields?.map(f => f.label).join(', ')})
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTemplateInTab(tpl.id);
+                          }}
+                          style={styles.actionBtnDark}
+                          title="템플릿 삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {isMobile && renderMobileFooter(
+                <div style={{
+                  ...styles.pane1Header,
+                  borderBottom: 'none',
+                  borderTop: '1px solid #D4E3F3',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={styles.pane1Title}>템플릿 목록 ({templates.length})</span>
+                  <button
+                    onClick={handleCreateNewTemplateInTab}
+                    style={styles.iconBtnDark}
+                    title="새 템플릿 만들기"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : activeMainTab !== 'calendar' ? (
             <>
               {!isMobile && (
                 <div style={styles.pane1Header}>
@@ -1427,113 +1515,57 @@ export default function NotebookExplorer() {
         </div>
       ) : (
         <React.Fragment>
-          {/* Pane 2: Note Item List OR Template List (Light, 280px or 100% on Mobile) */}
-          {(!isMobile || mobileView === 'items') && (
+          {/* Pane 2: Note Item List (Light, 280px or 100% on Mobile) - Only shown when NOT in template mode */}
+          {activeMainTab !== 'template' && (!isMobile || mobileView === 'items') && (
             <div style={{
               ...styles.pane2,
               width: isMobile ? '100%' : '280px',
               minWidth: isMobile ? '100%' : '280px'
             }}>
-              {activeMainTab === 'template' ? (
-                /* Template List View for Pane 2 */
-                <>
-                  <div style={{ ...styles.pane2Header, justifyContent: 'space-between' }}>
-                    <span style={{ ...styles.pane2Title, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Layout size={16} color="#2563EB" />
-                      템플릿 목록 ({templates.length})
-                    </span>
-                    <button
-                      onClick={handleCreateNewTemplateInTab}
-                      style={styles.iconBtnLight}
-                      title="새 템플릿 만들기"
-                    >
-                      <Plus size={18} color="#2563EB" />
-                    </button>
-                  </div>
-                  <div style={{ ...styles.paneContent, padding: '10px' }}>
-                    {templates.length === 0 ? (
-                      <div style={{ padding: '24px 12px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
-                        등록된 템플릿이 없습니다.<br />위 <strong>[+]</strong> 버튼을 눌러 새 템플릿을 만들어보세요.
-                      </div>
-                    ) : (
-                      templates.map((tpl) => {
-                        const isSelected = selectedTemplateIdInTab === tpl.id;
-                        return (
-                          <div
-                            key={tpl.id}
-                            onClick={() => {
-                              handleSelectTemplateInTab(tpl);
-                              if (isMobile) setMobileView('detail');
-                            }}
-                            style={{
-                              padding: '12px',
-                              borderRadius: '10px',
-                              border: `1px solid ${isSelected ? '#3B82F6' : '#E2E8F0'}`,
-                              backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                              marginBottom: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '4px'
-                            }}
-                          >
-                            <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#1E40AF' : '#1E293B' }}>
-                              📋 {tpl.title}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>
-                              요소 {tpl.fields?.length || 0}개 ({tpl.fields?.map(f => f.label).join(', ')})
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </>
-              ) : (
-                /* Standard Note Items List for Pane 2 */
-                <>
-                  {!isMobile && (
-                    <div style={styles.pane2Header}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={styles.pane2Title}>
-                          {activeCategory ? activeCategory.name : '목록'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <button
-                          onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                          style={{
-                            ...styles.iconBtnLight,
-                            padding: '4px 6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            fontSize: '11px',
-                            color: '#4B5563'
-                          }}
-                          title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
-                        >
-                          {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                          <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-                        </button>
-                        <button
-                          onClick={handleAddItem}
-                          style={styles.iconBtnLight}
-                          title="메모 추가"
-                        >
-                          <Plus size={18} />
-                        </button>
-                      </div>
+              {/* Standard Note Items List for Pane 2 */}
+              <>
+                {!isMobile && (
+                  <div style={styles.pane2Header}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={styles.pane2Title}>
+                        {activeCategory ? activeCategory.name : '목록'}
+                      </span>
                     </div>
-                  )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                        style={{
+                          ...styles.iconBtnLight,
+                          padding: '4px 6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          fontSize: '11px',
+                          color: '#4B5563'
+                        }}
+                        title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
+                      >
+                        {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                        <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
+                      </button>
+                      <button
+                        onClick={handleAddItem}
+                        style={styles.iconBtnLight}
+                        title="메모 추가"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                  <div style={styles.paneContent}>
-                    {filteredItems.length === 0 ? (
-                      <div style={styles.emptyStateText}>
-                        등록된 메모가 없습니다.
-                      </div>
-                    ) : (
-                      filteredItems.map((item) => {
+                <div style={styles.paneContent}>
+                  {filteredItems.length === 0 ? (
+                    <div style={styles.emptyStateText}>
+                      등록된 메모가 없습니다.
+                    </div>
+                  ) : (
+                    filteredItems.map((item) => {
                         const isSelected = item.id === selectedItemId;
                         const isEditing = item.id === editingItemId;
                         const isDeleting = item.id === deletingItemId;
@@ -1602,9 +1634,8 @@ export default function NotebookExplorer() {
                     )}
                   </div>
                 </>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
           {/* Pane 3: Detail Workspace OR Template Canvas (Flex 1 or 100% on Mobile) */}
           {(!isMobile || mobileView === 'detail') && (
