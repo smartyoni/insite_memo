@@ -368,10 +368,22 @@ export default function NotebookExplorer() {
     touchStartYRef.current = null;
   };
 
+  // Automatically ensure history guard entry exists whenever mobileView becomes 'categories'
+  useEffect(() => {
+    if (!isMobile) return;
+    if (mobileView === 'categories') {
+      if (window.history.state?.view !== 'categories') {
+        window.history.pushState({ view: 'categories' }, '');
+      }
+    }
+  }, [isMobile, mobileView, activeMainTab]);
+
   // Hardware/Browser Back button handling (popstate)
   useEffect(() => {
-    // Push dummy guard state so the browser back button can be intercepted at top level
-    window.history.pushState({ view: 'categories', isGuard: true }, '');
+    // Initial mount guard state
+    if (window.history.state?.view !== 'categories') {
+      window.history.pushState({ view: 'categories' }, '');
+    }
 
     const handlePopState = (e) => {
       const stateView = e.state?.view;
@@ -381,10 +393,12 @@ export default function NotebookExplorer() {
       } else if (stateView === 'items') {
         setMobileView('items');
       } else {
+        // Popped back while at top-level categories or invalid state
         setMobileView('categories');
 
         const now = Date.now();
         if (now - lastBackPressRef.current < 2000) {
+          // Double back press within 2 seconds: Allow actual app exit
           try {
             window.close();
           } catch (err) {
@@ -393,8 +407,8 @@ export default function NotebookExplorer() {
           window.history.back();
         } else {
           lastBackPressRef.current = now;
-          // Re-push guard state to capture the next back press
-          window.history.pushState({ view: 'categories', isGuard: true }, '');
+          // Re-push categories guard state to block immediate page exit
+          window.history.pushState({ view: 'categories' }, '');
 
           setShowExitToast(true);
           if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
@@ -890,7 +904,12 @@ export default function NotebookExplorer() {
       setSelectedCategoryId(targetInboxId);
       setSelectedItemId(null);
     }
-    if (isMobile) setMobileView('categories');
+    if (isMobile) {
+      setMobileView('categories');
+      if (window.history.state?.view !== 'categories') {
+        window.history.pushState({ view: 'categories' }, '');
+      }
+    }
   };
 
   const renderMainModeBar = () => (
