@@ -1682,22 +1682,9 @@ export default function NotebookExplorer() {
                     ) : (
                       tplDraftFields.map((field, idx) => (
                         <div key={field.id} style={{ backgroundColor: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '-4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1 }} title="위로 이동">
-                                <ArrowUp size={15} />
-                              </button>
-                              <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1 }} title="아래로 이동">
-                                <ArrowDown size={15} />
-                              </button>
-                              <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={styles.iconBtn} title="요소 삭제">
-                                <Trash2 size={15} color="#EF4444" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <div style={{ flex: 1, minWidth: '220px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+                            {/* Label Input */}
+                            <div style={{ flex: 1, minWidth: '180px' }}>
                               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>항목명 (Label)</label>
                               <input
                                 type="text"
@@ -1711,8 +1698,10 @@ export default function NotebookExplorer() {
                                 style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
                               />
                             </div>
+
+                            {/* Placeholder Input (non-checklist) */}
                             {field.type !== 'checklist' && (
-                              <div style={{ flex: 1, minWidth: '220px' }}>
+                              <div style={{ flex: 1, minWidth: '180px' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>안내 문구 (Placeholder)</label>
                                 <input
                                   type="text"
@@ -1727,6 +1716,19 @@ export default function NotebookExplorer() {
                                 />
                               </div>
                             )}
+
+                            {/* Controls (Move Up/Down & Delete) in same line */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingBottom: '4px', marginLeft: 'auto' }}>
+                              <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1, padding: '6px' }} title="위로 이동">
+                                <ArrowUp size={16} />
+                              </button>
+                              <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1, padding: '6px' }} title="아래로 이동">
+                                <ArrowDown size={16} />
+                              </button>
+                              <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={{ ...styles.iconBtn, padding: '6px' }} title="요소 삭제">
+                                <Trash2 size={16} color="#EF4444" />
+                              </button>
+                            </div>
                           </div>
 
                           {field.type === 'checklist' && (
