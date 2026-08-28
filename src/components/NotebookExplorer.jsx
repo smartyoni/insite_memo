@@ -951,6 +951,9 @@ export default function NotebookExplorer() {
     } else if (type === 'phone') {
       defaultLabel = '전화번호';
       defaultPlaceholder = '010-0000-0000';
+    } else if (type === 'datetime') {
+      defaultLabel = '날짜 및 시간';
+      defaultPlaceholder = '';
     } else if (type === 'checklist') {
       defaultLabel = '체크리스트';
       extraProps = { defaultItems: ['항목 1', '항목 2'] };
@@ -1700,6 +1703,9 @@ export default function NotebookExplorer() {
                     <button onClick={() => handleAddTplFieldInCanvas('phone')} style={styles.toolBtn}>
                       <Phone size={14} color="#10B981" /> 📞 전화번호 박스
                     </button>
+                    <button onClick={() => handleAddTplFieldInCanvas('datetime')} style={styles.toolBtn}>
+                      <CalendarIcon size={14} color="#8B5CF6" /> 📅 날짜/시간 박스
+                    </button>
                     <button onClick={() => handleAddTplFieldInCanvas('checklist')} style={styles.toolBtn}>
                       <CheckSquare size={14} color="#F59E0B" /> ☑️ 체크리스트 박스
                     </button>
@@ -1713,7 +1719,7 @@ export default function NotebookExplorer() {
                           배치된 템플릿 요소가 없습니다.
                         </p>
                         <p style={{ fontSize: '13px', color: '#64748B', marginTop: '8px' }}>
-                          상단의 <strong>[요소 추가]</strong> 버튼을 클릭하여 텍스트 입력창, 전화번호 박스, 체크리스트를 넓은 화면에서 시원하게 디자인해보세요!
+                          상단의 <strong>[요소 추가]</strong> 버튼을 클릭하여 텍스트 입력창, 전화번호 박스, 날짜/시간 박스, 체크리스트를 넓은 화면에서 시원하게 디자인해보세요!
                         </p>
                       </div>
                     ) : (
@@ -1722,7 +1728,12 @@ export default function NotebookExplorer() {
                           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
                             {/* Label Input */}
                             <div style={{ flex: 1, minWidth: '180px' }}>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>항목명 (Label)</label>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                                항목명 (Label)
+                                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
+                                  ({field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'})
+                                </span>
+                              </label>
                               <input
                                 type="text"
                                 value={field.label}
@@ -2005,6 +2016,23 @@ export default function NotebookExplorer() {
                                               SMS 전송
                                             </a>
                                           )}
+                                        </div>
+                                       );
+                                     }
+
+                                     if (field.type === 'datetime') {
+                                      return (
+                                        <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                            <CalendarIcon size={14} color="#8B5CF6" />
+                                            {field.label}
+                                          </label>
+                                          <input
+                                            type="datetime-local"
+                                            value={fieldVal || ''}
+                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                            style={{ flex: 1, minWidth: '160px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box', color: '#0F172A', fontFamily: 'inherit' }}
+                                          />
                                         </div>
                                       );
                                     }
@@ -2468,6 +2496,23 @@ export default function NotebookExplorer() {
                                               <MessageSquare size={12} /> SMS 전송
                                             </a>
                                           )}
+                                        </div>
+                                      );
+                                    }
+
+                                    if (field.type === 'datetime') {
+                                      const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
+                                      return (
+                                        <div key={field.id} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                              <CalendarIcon size={14} color="#8B5CF6" />
+                                              {field.label}
+                                            </span>
+                                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              {formattedDt || '(날짜/시간 미선택)'}
+                                            </span>
+                                          </div>
                                         </div>
                                       );
                                     }
