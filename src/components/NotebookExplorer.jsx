@@ -858,7 +858,6 @@ export default function NotebookExplorer() {
           fontWeight: activeMainTab === 'explorer' ? 700 : 500
         }}
       >
-        <FileText size={14} />
         <span>노트</span>
       </button>
       <button
@@ -878,8 +877,7 @@ export default function NotebookExplorer() {
           fontWeight: activeMainTab === 'clipboard' ? 700 : 500
         }}
       >
-        <Clipboard size={14} />
-        <span>클립보드</span>
+        <span>계약</span>
       </button>
       <button
         onClick={() => {
@@ -894,7 +892,6 @@ export default function NotebookExplorer() {
           fontWeight: activeMainTab === 'calendar' ? 700 : 500
         }}
       >
-        <CalendarIcon size={14} />
         <span>캘린더</span>
       </button>
     </div>
