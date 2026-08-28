@@ -2418,7 +2418,7 @@ export default function NotebookExplorer() {
       {/* Exit Toast Notification for Mobile double back press */}
       {showExitToast && (
         <div style={styles.exitToast}>
-          한번 더 누르면 앱이 종료됩니다.
+          앱을 종료하시겠습니까? 뒤로 가기를 한 번 더 누르면 종료됩니다.
         </div>
       )}
     </div>
@@ -3355,17 +3355,21 @@ const styles = {
 
   exitToast: {
     position: 'fixed',
-    bottom: '40px',
+    bottom: '70px',
     left: '50%',
     transform: 'translateX(-50%)',
-    backgroundColor: 'rgba(30, 41, 59, 0.92)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     color: '#FFFFFF',
-    padding: '10px 20px',
-    borderRadius: '20px',
+    padding: '12px 22px',
+    borderRadius: '24px',
     fontSize: '13px',
-    fontWeight: 500,
-    boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-    zIndex: 9999,
-    pointerEvents: 'none'
+    fontWeight: 600,
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+    zIndex: 99999,
+    pointerEvents: 'none',
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    backdropFilter: 'blur(4px)'
   }
 };
