@@ -1804,7 +1804,7 @@ export default function NotebookExplorer() {
                                           updated[idx].defaultItems[subIdx] = e.target.value;
                                           setTplDraftFields(updated);
                                         }}
-                                        style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                                        style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
                                       />
                                       <button
                                         onClick={() => {
@@ -1900,7 +1900,7 @@ export default function NotebookExplorer() {
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                                     {(field.defaultItems && field.defaultItems.length > 0) ? (
                                       field.defaultItems.map((sub, sIdx) => (
-                                        <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#334155' }}>
+                                        <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#334155' }}>
                                           <Square size={14} color={borderColor} />
                                           <span>{sub}</span>
                                         </div>
@@ -2178,7 +2178,7 @@ export default function NotebookExplorer() {
                                                     updatedArr[chkIdx] = { ...chkItem, text: e.target.value };
                                                     setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
                                                   }}
-                                                  style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
+                                                  style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
                                                 />
                                                 <button
                                                   onClick={() => {
@@ -2634,7 +2634,7 @@ export default function NotebookExplorer() {
                                                 <span style={{ color: chk.completed ? '#10B981' : '#CBD5E1', fontWeight: 700, fontSize: '14px' }}>
                                                   {chk.completed ? '☑' : '☐'}
                                                 </span>
-                                                <span style={{ fontSize: '13px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
+                                                <span style={{ fontSize: '12px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
                                                   {chk.text}
                                                 </span>
                                               </div>
@@ -3512,7 +3512,7 @@ const styles = {
     marginBottom: 0
   },
   itemTitle: {
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 600,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -3543,7 +3543,7 @@ const styles = {
     borderRadius: '3px'
   },
   itemPreview: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#7E8592',
     lineHeight: 1.4,
     display: '-webkit-box',
@@ -3870,7 +3870,7 @@ const styles = {
   },
   checklistTextarea: {
     flex: 1,
-    fontSize: '13px',
+    fontSize: '12px',
     padding: '6px 10px',
     border: '1px solid #CBD5E1',
     borderRadius: '6px',
@@ -3886,7 +3886,7 @@ const styles = {
     border: 'none',
     borderRadius: '6px',
     padding: '0 12px',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 600,
     cursor: 'pointer',
     display: 'flex',
@@ -3933,7 +3933,7 @@ const styles = {
     flexShrink: 0
   },
   checkitemText: {
-    fontSize: '13.5px',
+    fontSize: '12.5px',
     lineHeight: 1.5,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
@@ -3941,7 +3941,7 @@ const styles = {
   },
   checklistEditTextarea: {
     width: '100%',
-    fontSize: '13px',
+    fontSize: '12px',
     padding: '6px 8px',
     border: '1px solid #2563EB',
     borderRadius: '4px',
