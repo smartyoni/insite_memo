@@ -1516,12 +1516,12 @@ export default function NotebookExplorer() {
         </div>
       ) : (
         <React.Fragment>
-          {/* Pane 2: Note Item List (Light, 280px or 100% on Mobile) - Only shown when NOT in template mode */}
+          {/* Pane 2: Note Item List (Light, 308px or 100% on Mobile) - Only shown when NOT in template mode */}
           {activeMainTab !== 'template' && (!isMobile || mobileView === 'items') && (
             <div style={{
               ...styles.pane2,
-              width: isMobile ? '100%' : '280px',
-              minWidth: isMobile ? '100%' : '280px'
+              width: isMobile ? '100%' : '308px',
+              minWidth: isMobile ? '100%' : '308px'
             }}>
               {/* Standard Note Items List for Pane 2 */}
               <>
@@ -3284,7 +3284,7 @@ const styles = {
     alignItems: 'center'
   },
 
-  // Pane 2: Notes List (Light, 280px)
+  // Pane 2: Notes List (Light, 308px)
   pane2: {
     height: '100%',
     backgroundColor: '#FFFFFF',
