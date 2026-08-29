@@ -1846,7 +1846,7 @@ export default function NotebookExplorer() {
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
-                        <div style={styles.editPaneMainCard}>
+                        <div style={styles.editPaneMainCard} className="print-area">
                           {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
@@ -2477,7 +2477,7 @@ export default function NotebookExplorer() {
                   <div style={styles.splitReadContainer}>
                     {/* Left Card: Primary Note Content */}
                     {(!isMobile || mobileSubTab === 'main') && (
-                      <div style={styles.leftPaneCard}>
+                      <div style={styles.leftPaneCard} className="print-area">
                         {/* Title Header Line with Right-aligned Edit Button */}
                         <div style={{
                           display: 'flex',
@@ -2504,7 +2504,16 @@ export default function NotebookExplorer() {
                             </h1>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
+                            <button
+                              onClick={() => window.print()}
+                              style={styles.btnSecondary}
+                              className="no-print"
+                              title="상세내용 인쇄"
+                            >
+                              <Printer size={13} color="#334155" />
+                              <span>인쇄</span>
+                            </button>
                             {showSavedToast && (
                               <span style={styles.toastBadge}>
                                 ✓ 저장됨
