@@ -2118,22 +2118,6 @@ export default function NotebookExplorer() {
                                     >
                                       그룹 해제
                                     </button>
-                                    <button
-                                      disabled={blockIdx === 0}
-                                      onClick={() => handleMoveBlockInCanvas(blockIdx, -1)}
-                                      style={{ ...styles.iconBtn, opacity: blockIdx === 0 ? 0.3 : 1, padding: '4px 6px' }}
-                                      title="그룹 전체 위로 이동"
-                                    >
-                                      <ArrowUp size={14} />
-                                    </button>
-                                    <button
-                                      disabled={blockIdx === getCanvasBlocks(tplDraftFields).length - 1}
-                                      onClick={() => handleMoveBlockInCanvas(blockIdx, 1)}
-                                      style={{ ...styles.iconBtn, opacity: blockIdx === getCanvasBlocks(tplDraftFields).length - 1 ? 0.3 : 1, padding: '4px 6px' }}
-                                      title="그룹 전체 아래로 이동"
-                                    >
-                                      <ArrowDown size={14} />
-                                    </button>
                                   </div>
                                 </div>
 
@@ -2229,22 +2213,6 @@ export default function NotebookExplorer() {
                                           )}
 
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingBottom: '2px', marginLeft: 'auto' }}>
-                                            <button
-                                              disabled={indexInGroup === 0}
-                                              onClick={() => handleMoveFieldWithinGroup(block.groupTitle, indexInGroup, -1)}
-                                              style={{ ...styles.iconBtn, opacity: indexInGroup === 0 ? 0.3 : 1, padding: '5px' }}
-                                              title="그룹 내 위로 이동"
-                                            >
-                                              <ArrowUp size={14} />
-                                            </button>
-                                            <button
-                                              disabled={indexInGroup === block.fields.length - 1}
-                                              onClick={() => handleMoveFieldWithinGroup(block.groupTitle, indexInGroup, 1)}
-                                              style={{ ...styles.iconBtn, opacity: indexInGroup === block.fields.length - 1 ? 0.3 : 1, padding: '5px' }}
-                                              title="그룹 내 아래로 이동"
-                                            >
-                                              <ArrowDown size={14} />
-                                            </button>
                                             <button onClick={() => handleRemoveTplFieldInCanvas(originalIdx)} style={{ ...styles.iconBtn, padding: '5px' }} title="요소 삭제">
                                               <Trash2 size={14} color="#EF4444" />
                                             </button>
@@ -2390,12 +2358,6 @@ export default function NotebookExplorer() {
                                 )}
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingBottom: '2px', marginLeft: 'auto' }}>
-                                  <button disabled={blockIdx === 0} onClick={() => handleMoveBlockInCanvas(blockIdx, -1)} style={{ ...styles.iconBtn, opacity: blockIdx === 0 ? 0.3 : 1, padding: '5px' }} title="위로 이동">
-                                    <ArrowUp size={15} />
-                                  </button>
-                                  <button disabled={blockIdx === getCanvasBlocks(tplDraftFields).length - 1} onClick={() => handleMoveBlockInCanvas(blockIdx, 1)} style={{ ...styles.iconBtn, opacity: blockIdx === getCanvasBlocks(tplDraftFields).length - 1 ? 0.3 : 1, padding: '5px' }} title="아래로 이동">
-                                    <ArrowDown size={15} />
-                                  </button>
                                   <button onClick={() => handleRemoveTplFieldInCanvas(originalIdx)} style={{ ...styles.iconBtn, padding: '5px' }} title="요소 삭제">
                                     <Trash2 size={15} color="#EF4444" />
                                   </button>
@@ -2518,12 +2480,6 @@ export default function NotebookExplorer() {
                                 style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #C4B5FD', fontSize: '13px', backgroundColor: '#FFFFFF' }}
                               />
                               <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                <button disabled={idx === 0} onClick={() => handleMoveTplChecklistInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1, padding: '5px' }} title="위로 이동">
-                                  <ArrowUp size={15} />
-                                </button>
-                                <button disabled={idx === tplDraftChecklists.length - 1} onClick={() => handleMoveTplChecklistInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftChecklists.length - 1 ? 0.3 : 1, padding: '5px' }} title="아래로 이동">
-                                  <ArrowDown size={15} />
-                                </button>
                                 <button onClick={() => handleRemoveTplChecklistInCanvas(idx)} style={{ ...styles.iconBtn, padding: '5px' }} title="삭제">
                                   <Trash2 size={15} color="#EF4444" />
                                 </button>
