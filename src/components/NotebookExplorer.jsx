@@ -482,7 +482,7 @@ export default function NotebookExplorer() {
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
 
   // Compute active item checklists (with legacy subBody fallback)
-  const currentChecklists = activeItem?.checklists
+  const rawChecklists = activeItem?.checklists
     ? activeItem.checklists
     : activeItem?.subBody
       ? activeItem.subBody.split('\n').filter((l) => l.trim().length > 0).map((line, idx) => ({
@@ -491,6 +491,13 @@ export default function NotebookExplorer() {
           completed: false
         }))
       : [];
+
+  const currentChecklists = [...rawChecklists].sort((a, b) => {
+    const aDone = Boolean(a.completed);
+    const bDone = Boolean(b.completed);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return 0;
+  });
 
   const completedCount = currentChecklists.filter((c) => c.completed).length;
   const totalCount = currentChecklists.length;
