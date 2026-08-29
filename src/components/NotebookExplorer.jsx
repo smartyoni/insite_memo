@@ -42,7 +42,8 @@ import {
   MessageSquare,
   Type,
   ExternalLink,
-  Eye
+  Eye,
+  Printer
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -2124,9 +2125,52 @@ export default function NotebookExplorer() {
                       )}
 
                       {(!isMobile || mobileSubTab === 'sub') && (
-                        <div style={styles.rightPaneCard}>
+                                                <div style={styles.rightPaneCard} className="print-area">
+                          {/* Checklist Header Bar & Print Button */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingBottom: '10px',
+                            marginBottom: '12px',
+                            borderBottom: '1px solid #E2E8F0'
+                          }} className="no-print">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                              <ListChecks size={18} color="#2563EB" />
+                              <span>체크리스트</span>
+                              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                                ({completedCount}/{totalCount})
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => window.print()}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#334155',
+                                backgroundColor: '#F1F5F9',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                              title="체크리스트 인쇄"
+                            >
+                              <Printer size={14} color="#334155" />
+                              <span>인쇄</span>
+                            </button>
+                          </div>
+
+                          {/* Print-Only Title Header */}
+                          <div className="print-only-title" style={{ display: 'none', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #333' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#000', margin: 0 }}>{activeItem?.title || '체크리스트'}</h2>
+                            <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>체크리스트 목록 (완료 {completedCount} / 전체 {totalCount})</div>
+                          </div>
                           {/* Input Form for new multiline checklist item */}
-                          <div style={styles.checklistInputContainer}>
+                          <div style={styles.checklistInputContainer} className="no-print">
                             <div style={styles.checklistInputGroup}>
                               <textarea
                                 rows={2}
@@ -2327,7 +2371,7 @@ export default function NotebookExplorer() {
                                         </div>
 
                                         {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
-                                        <div style={styles.checkitemStatusBar}>
+                                        <div style={styles.checkitemStatusBar} className="no-print">
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                                             {checkItem.dueDate && (
                                               <div style={styles.itemScheduleBadge}>
@@ -2577,9 +2621,52 @@ export default function NotebookExplorer() {
 
                     {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
-                      <div style={styles.rightPaneCard}>
+                                              <div style={styles.rightPaneCard} className="print-area">
+                          {/* Checklist Header Bar & Print Button */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingBottom: '10px',
+                            marginBottom: '12px',
+                            borderBottom: '1px solid #E2E8F0'
+                          }} className="no-print">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                              <ListChecks size={18} color="#2563EB" />
+                              <span>체크리스트</span>
+                              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                                ({completedCount}/{totalCount})
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => window.print()}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#334155',
+                                backgroundColor: '#F1F5F9',
+                                border: '1px solid #CBD5E1',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
+                              title="체크리스트 인쇄"
+                            >
+                              <Printer size={14} color="#334155" />
+                              <span>인쇄</span>
+                            </button>
+                          </div>
+
+                          {/* Print-Only Title Header */}
+                          <div className="print-only-title" style={{ display: 'none', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #333' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#000', margin: 0 }}>{activeItem?.title || '체크리스트'}</h2>
+                            <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>체크리스트 목록 (완료 {completedCount} / 전체 {totalCount})</div>
+                          </div>
                         {/* Input Form for new multiline checklist item */}
-                        <div style={styles.checklistInputContainer}>
+                        <div style={styles.checklistInputContainer} className="no-print">
                           <div style={styles.checklistInputGroup}>
                             <textarea
                               rows={2}
@@ -2782,7 +2869,7 @@ export default function NotebookExplorer() {
                                       </div>
 
                                       {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
-                                      <div style={styles.checkitemStatusBar}>
+                                      <div style={styles.checkitemStatusBar} className="no-print">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                                           {checkItem.tag && (() => {
                                             const tagStyle = getTagStyle(checkItem.tag);
