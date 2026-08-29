@@ -632,6 +632,62 @@ export default function NotebookExplorer() {
   const totalCount = currentChecklists.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+  // Inline Template Checklist Handlers
+  const getSortedChecklistItems = (rawVal, defaultItems) => {
+    const list = Array.isArray(rawVal)
+      ? rawVal
+      : (defaultItems || []).map((t) => (typeof t === 'object' ? t : { text: t, completed: false }));
+
+    const indexed = list.map((item, idx) => ({
+      ...(typeof item === 'object' ? item : { text: item, completed: false }),
+      originalIndex: idx
+    }));
+
+    return indexed.sort((a, b) => {
+      const aDone = Boolean(a.completed);
+      const bDone = Boolean(b.completed);
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      return a.originalIndex - b.originalIndex;
+    });
+  };
+
+  const handleToggleInlineChecklistInReadMode = async (fieldId, originalIdx, newCompleted) => {
+    if (!activeItem) return;
+    const currentVal = activeItem.templateValues?.[fieldId];
+    const activeTpl = templates.find((t) => t.id === activeItem.templateId);
+    const field = activeTpl?.fields?.find((f) => f.id === fieldId);
+
+    const rawList = Array.isArray(currentVal)
+      ? currentVal
+      : (field?.defaultItems || []).map((t) => (typeof t === 'object' ? t : { text: t, completed: false }));
+
+    const updatedList = rawList.map((item, idx) => {
+      const obj = typeof item === 'object' ? item : { text: item, completed: false };
+      if (idx === originalIdx) {
+        return { ...obj, completed: newCompleted };
+      }
+      return obj;
+    });
+
+    const updatedTemplateValues = {
+      ...(activeItem.templateValues || {}),
+      [fieldId]: updatedList
+    };
+
+    if (onUpdateNote) {
+      onUpdateNote({ ...activeItem, templateValues: updatedTemplateValues });
+    }
+
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        templateValues: updatedTemplateValues,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error updating inline checklist in read mode:', err);
+    }
+  };
+
   // Checklist Handlers
   const handleToggleChecklist = async (checkId) => {
     if (!activeItem) return;
@@ -2757,32 +2813,45 @@ export default function NotebookExplorer() {
 
                                           {field.type === 'checklist' && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                                              {((Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })))).map((chkItem, chkIdx, arr) => (
-                                                <div key={chkIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              {getSortedChecklistItems(fieldVal, field.defaultItems).map((chkItem) => (
+                                                <div key={chkItem.originalIndex} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                                                   <input
                                                     type="checkbox"
-                                                    checked={chkItem.completed || false}
+                                                    checked={Boolean(chkItem.completed)}
                                                     onChange={(e) => {
-                                                      const updatedArr = [...arr];
-                                                      updatedArr[chkIdx] = { ...chkItem, completed: e.target.checked };
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                      const currentArr = Array.isArray(fieldVal)
+                                                        ? [...fieldVal]
+                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                      currentArr[chkItem.originalIndex] = {
+                                                        ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
+                                                        completed: e.target.checked
+                                                      };
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
-                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
                                                   />
                                                   <input
                                                     type="text"
                                                     value={chkItem.text || ''}
                                                     onChange={(e) => {
-                                                      const updatedArr = [...arr];
-                                                      updatedArr[chkIdx] = { ...chkItem, text: e.target.value };
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                      const currentArr = Array.isArray(fieldVal)
+                                                        ? [...fieldVal]
+                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                      currentArr[chkItem.originalIndex] = {
+                                                        ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
+                                                        text: e.target.value
+                                                      };
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
-                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
+                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF' }}
                                                   />
                                                   <button
                                                     onClick={() => {
-                                                      const updatedArr = arr.filter((_, i) => i !== chkIdx);
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                      const currentArr = Array.isArray(fieldVal)
+                                                        ? [...fieldVal]
+                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                      currentArr.splice(chkItem.originalIndex, 1);
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
                                                     style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
                                                   >
@@ -2792,7 +2861,9 @@ export default function NotebookExplorer() {
                                               ))}
                                               <button
                                                 onClick={() => {
-                                                  const currentArr = (Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })));
+                                                  const currentArr = Array.isArray(fieldVal)
+                                                    ? [...fieldVal]
+                                                    : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
                                                   const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
                                                   setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
                                                 }}
@@ -3309,14 +3380,47 @@ export default function NotebookExplorer() {
 
                                           {field.type === 'checklist' && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                                              {(Array.isArray(currentVal) ? currentVal : (field.defaultItems || []).map(t => ({ text: t, completed: false }))).map((chk, cIdx) => (
-                                                <div key={cIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                  <span style={{ color: chk.completed ? '#10B981' : '#CBD5E1', fontWeight: 700, fontSize: '14px' }}>
-                                                    {chk.completed ? '☑' : '☐'}
-                                                  </span>
-                                                  <span style={{ fontSize: '12px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
+                                              {getSortedChecklistItems(currentVal, field.defaultItems).map((chk) => (
+                                                <div
+                                                  key={chk.originalIndex}
+                                                  onClick={() => handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, !chk.completed)}
+                                                  style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    backgroundColor: chk.completed ? '#F8FAFC' : '#FFFFFF',
+                                                    border: `1px solid ${chk.completed ? '#E2E8F0' : '#E2E8F0'}`,
+                                                    transition: 'all 0.15s ease'
+                                                  }}
+                                                >
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={Boolean(chk.completed)}
+                                                    onChange={(e) => {
+                                                      e.stopPropagation();
+                                                      handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, e.target.checked);
+                                                    }}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
+                                                  />
+                                                  <span
+                                                    style={{
+                                                      fontSize: '13px',
+                                                      textDecoration: chk.completed ? 'line-through' : 'none',
+                                                      color: chk.completed ? '#94A3B8' : '#1E293B',
+                                                      fontWeight: chk.completed ? 400 : 500,
+                                                      flex: 1
+                                                    }}
+                                                  >
                                                     {chk.text}
                                                   </span>
+                                                  {chk.completed && (
+                                                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, backgroundColor: '#D1FAE5', padding: '1px 6px', borderRadius: '4px' }}>
+                                                      ✓ 완료
+                                                    </span>
+                                                  )}
                                                 </div>
                                               ))}
                                             </div>
