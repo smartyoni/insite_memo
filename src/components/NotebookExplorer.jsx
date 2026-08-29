@@ -224,6 +224,7 @@ export default function NotebookExplorer() {
   const [selectedPrintChecklistIds, setSelectedPrintChecklistIds] = useState({});
 
   const handleOpenChecklistPrint = () => {
+    setPrintTarget('checklist');
     if (currentChecklists.length > 0) {
       const initialMap = {};
       currentChecklists.forEach(item => {
@@ -246,6 +247,7 @@ export default function NotebookExplorer() {
   };
 
   const handleOpenDetailPrint = () => {
+    setPrintTarget('detail');
     const tpl = activeItem?.templateId ? templates.find(t => t.id === activeItem.templateId) : null;
     if (tpl && tpl.fields && tpl.fields.length > 0) {
       const initialMap = {};
@@ -1904,7 +1906,7 @@ export default function NotebookExplorer() {
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
-                        <div style={styles.editPaneMainCard} className={printTarget === 'detail' ? 'print-area' : ''}>
+                        <div style={styles.editPaneMainCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
                           {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
@@ -2183,7 +2185,7 @@ export default function NotebookExplorer() {
                       )}
 
                       {(!isMobile || mobileSubTab === 'sub') && (
-                                                <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : ''}>
+                                                <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
                             display: 'flex',
@@ -2535,7 +2537,7 @@ export default function NotebookExplorer() {
                   <div style={styles.splitReadContainer}>
                     {/* Left Card: Primary Note Content */}
                     {(!isMobile || mobileSubTab === 'main') && (
-                      <div style={styles.leftPaneCard} className={printTarget === 'detail' ? 'print-area' : ''}>
+                      <div style={styles.leftPaneCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
                         {/* Title Header Line with Right-aligned Edit Button */}
                         <div style={{
                           display: 'flex',
@@ -2688,7 +2690,7 @@ export default function NotebookExplorer() {
 
                     {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
-                                              <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : ''}>
+                                              <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
                             display: 'flex',
