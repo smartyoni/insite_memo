@@ -2787,31 +2787,12 @@ export default function NotebookExplorer() {
                                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', minWidth: '20px' }}>
                                   #{idx + 1}
                                 </span>
-                              <input
-                                type="text"
+                              <textarea
+                                rows={Math.max(1, (checkItem.text || '').split('\n').length)}
                                 value={checkItem.text || ''}
                                 onChange={(e) => handleUpdateTplChecklistInCanvas(idx, 'text', e.target.value)}
-                                onPaste={(e) => {
-                                  const text = e.clipboardData ? e.clipboardData.getData('text') : '';
-                                  if (text && text.includes('\n')) {
-                                    e.preventDefault();
-                                    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                                    if (lines.length > 0) {
-                                      setTplDraftChecklists(prev => {
-                                        const updated = [...prev];
-                                        const newCheckItems = lines.map((line, i) => ({
-                                          id: `tplchk_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
-                                          text: line,
-                                          priority: updated[idx]?.priority || null
-                                        }));
-                                        updated.splice(idx, 1, ...newCheckItems);
-                                        return updated;
-                                      });
-                                    }
-                                  }
-                                }}
-                                placeholder="체크리스트 사전 항목 내용..."
-                                style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #C4B5FD', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                                placeholder="체크리스트 사전 항목 내용... (Enter 키로 줄바꿈 가능)"
+                                style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #C4B5FD', fontSize: '13px', lineHeight: 1.4, whiteSpace: 'pre-wrap', backgroundColor: '#FFFFFF', fontFamily: 'inherit', resize: 'vertical' }}
                               />
                               <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                                 <button onClick={() => handleRemoveTplChecklistInCanvas(idx)} style={{ ...styles.iconBtn, padding: '5px' }} title="삭제">
@@ -3108,8 +3089,8 @@ export default function NotebookExplorer() {
                                                     }}
                                                     style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
                                                   />
-                                                  <input
-                                                    type="text"
+                                                  <textarea
+                                                    rows={Math.max(1, (chkItem.text || '').split('\n').length)}
                                                     value={chkItem.text || ''}
                                                     onChange={(e) => {
                                                       const currentArr = Array.isArray(fieldVal)
@@ -3121,23 +3102,8 @@ export default function NotebookExplorer() {
                                                       };
                                                       setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
-                                                    onPaste={(e) => {
-                                                      const text = e.clipboardData ? e.clipboardData.getData('text') : '';
-                                                      if (text && text.includes('\n')) {
-                                                        e.preventDefault();
-                                                        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                                                        if (lines.length > 0) {
-                                                          const currentArr = Array.isArray(fieldVal)
-                                                            ? [...fieldVal]
-                                                            : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                          const newItems = lines.map(line => ({ text: line, completed: false }));
-                                                          currentArr.splice(chkItem.originalIndex, 1, ...newItems);
-                                                          setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
-                                                        }
-                                                      }
-                                                    }}
                                                     onKeyDown={(e) => {
-                                                      if (e.key === 'Enter' && !e.shiftKey) {
+                                                      if (e.key === 'Enter' && (e.ctrlKey || e.altKey)) {
                                                         e.preventDefault();
                                                         const currentArr = Array.isArray(fieldVal)
                                                           ? [...fieldVal]
@@ -3146,7 +3112,8 @@ export default function NotebookExplorer() {
                                                         setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                       }
                                                     }}
-                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF' }}
+                                                    placeholder="체크리스트 항목 내용..."
+                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', lineHeight: 1.5, whiteSpace: 'pre-wrap', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF', fontFamily: 'inherit', resize: 'vertical' }}
                                                   />
                                                   <button
                                                     onClick={() => {
@@ -3763,6 +3730,8 @@ export default function NotebookExplorer() {
                                                       textDecoration: chk.completed ? 'line-through' : 'none',
                                                       color: chk.completed ? '#94A3B8' : '#1E293B',
                                                       fontWeight: chk.completed ? 400 : 500,
+                                                      whiteSpace: 'pre-wrap',
+                                                      lineHeight: 1.5,
                                                       flex: 1
                                                     }}
                                                   >
