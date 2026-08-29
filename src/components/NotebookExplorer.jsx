@@ -1885,11 +1885,11 @@ export default function NotebookExplorer() {
                               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                                 {/* Label Input */}
                                 <div style={{ flex: 1, minWidth: '140px' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
-                                    항목명 (Label)
-                                    <span style={{ fontSize: '10px', color: borderColor, fontWeight: 600 }}>
-                                      ({field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'})
-                                    </span>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
+                                    {field.type === 'text' && '📝 텍스트'}
+                                    {field.type === 'phone' && '📞 전화번호'}
+                                    {field.type === 'datetime' && '📅 날짜/시간'}
+                                    {field.type === 'checklist' && '☑️ 체크리스트'}
                                   </label>
                                   <input
                                     type="text"
