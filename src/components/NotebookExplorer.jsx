@@ -1006,7 +1006,7 @@ export default function NotebookExplorer() {
     setTplEditorSection('fields');
   };
 
-  const handleAddTplFieldInCanvas = (type) => {
+  const handleAddTplFieldInCanvas = (type, targetGroupTitle = '') => {
     const newId = `field_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     let defaultLabel = '새 항목';
     let defaultPlaceholder = '';
@@ -1028,7 +1028,7 @@ export default function NotebookExplorer() {
 
     setTplDraftFields((prev) => [
       ...prev,
-      { id: newId, type, label: defaultLabel, placeholder: defaultPlaceholder, ...extraProps }
+      { id: newId, type, label: defaultLabel, placeholder: defaultPlaceholder, groupTitle: targetGroupTitle, ...extraProps }
     ]);
   };
 
@@ -2090,33 +2090,57 @@ export default function NotebookExplorer() {
                       </div>
 
                       {/* Selection & Grouping Action Bar */}
-                      {selectedTplFieldIds.length > 0 && (
-                        <div style={{ backgroundColor: '#EFF6FF', border: '1.5px solid #60A5FA', borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <CheckSquare size={14} color="#2563EB" /> {selectedTplFieldIds.length}개 요소 선택됨
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <button
-                              onClick={handleGroupSelectedFields}
-                              style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <Folder size={13} /> 선택 요소 그룹화
-                            </button>
-                            <button
-                              onClick={handleUngroupSelectedFields}
-                              style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              그룹 해제
-                            </button>
-                            <button
-                              onClick={() => setSelectedTplFieldIds([])}
-                              style={{ padding: '4px 6px', borderRadius: '6px', backgroundColor: 'transparent', color: '#64748B', border: 'none', fontSize: '11px', cursor: 'pointer' }}
-                            >
-                              취소
-                            </button>
+                      {selectedTplFieldIds.length > 0 && (() => {
+                        const existingGroupTitles = Array.from(new Set(tplDraftFields.map(f => f.groupTitle).filter(Boolean)));
+                        return (
+                          <div style={{ backgroundColor: '#EFF6FF', border: '1.5px solid #60A5FA', borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <CheckSquare size={14} color="#2563EB" /> {selectedTplFieldIds.length}개 요소 선택됨
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={handleGroupSelectedFields}
+                                style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Folder size={13} /> 새 그룹 생성
+                              </button>
+
+                              {existingGroupTitles.length > 0 && (
+                                <select
+                                  onChange={(e) => {
+                                    const gTitle = e.target.value;
+                                    if (!gTitle) return;
+                                    setTplDraftFields((prev) =>
+                                      prev.map((f) => (selectedTplFieldIds.includes(f.id) ? { ...f, groupTitle: gTitle } : f))
+                                    );
+                                    setSelectedTplFieldIds([]);
+                                  }}
+                                  value=""
+                                  style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#1E40AF', border: '1px solid #93C5FD', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  <option value="" disabled>📂 기존 그룹으로 이동...</option>
+                                  {existingGroupTitles.map(gt => (
+                                    <option key={gt} value={gt}>{gt} 그룹으로 편입</option>
+                                  ))}
+                                </select>
+                              )}
+
+                              <button
+                                onClick={handleUngroupSelectedFields}
+                                style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                그룹 해제
+                              </button>
+                              <button
+                                onClick={() => setSelectedTplFieldIds([])}
+                                style={{ padding: '4px 6px', borderRadius: '6px', backgroundColor: 'transparent', color: '#64748B', border: 'none', fontSize: '11px', cursor: 'pointer' }}
+                              >
+                                취소
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {tplDraftFields.length === 0 ? (
                         <div style={{ padding: '36px 16px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '2px dashed #CBD5E1' }}>
@@ -2157,7 +2181,7 @@ export default function NotebookExplorer() {
                                   transition: 'all 0.15s ease'
                                 }}
                               >
-                                {/* Group Header: Drag handle, Group Title, Block Move Controls */}
+                                {/* Group Header: Drag handle, Group Title, Add inner elements, Group release */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1.5px solid #DBEAFE', flexWrap: 'wrap', gap: '8px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="그룹 전체 드래그하여 순서 변경">
@@ -2169,14 +2193,50 @@ export default function NotebookExplorer() {
                                     </span>
                                   </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: '#FFFFFF', padding: '2px 6px', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginRight: '2px' }}>+ 요소 추가:</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddTplFieldInCanvas('text', block.groupTitle)}
+                                        style={{ padding: '3px 7px', borderRadius: '6px', backgroundColor: '#F8FAFC', color: '#1E293B', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                        title="이 그룹에 텍스트 요소 추가"
+                                      >
+                                        📝 텍스트
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddTplFieldInCanvas('phone', block.groupTitle)}
+                                        style={{ padding: '3px 7px', borderRadius: '6px', backgroundColor: '#FDF2F8', color: '#DB2777', border: '1px solid #F472B6', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                        title="이 그룹에 전화번호 요소 추가"
+                                      >
+                                        📞 전화번호
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddTplFieldInCanvas('datetime', block.groupTitle)}
+                                        style={{ padding: '3px 7px', borderRadius: '6px', backgroundColor: '#F0FDF4', color: '#059669', border: '1px solid #34D399', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                        title="이 그룹에 날짜/시간 요소 추가"
+                                      >
+                                        📅 일시
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddTplFieldInCanvas('checklist', block.groupTitle)}
+                                        style={{ padding: '3px 7px', borderRadius: '6px', backgroundColor: '#F5F3FF', color: '#7C3AED', border: '1px solid #A78BFA', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                        title="이 그룹에 체크리스트 요소 추가"
+                                      >
+                                        ☑️ 체크
+                                      </button>
+                                    </div>
+
                                     <button
                                       onClick={() => {
                                         setTplDraftFields((prev) =>
                                           prev.map((f) => ((f.groupTitle || '') === block.groupTitle ? { ...f, groupTitle: '' } : f))
                                         );
                                       }}
-                                      style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                      style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#DC2626', border: '1px solid #FCA5A5', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                                       title="그룹 해제"
                                     >
                                       그룹 해제
