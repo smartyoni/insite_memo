@@ -218,6 +218,32 @@ export default function NotebookExplorer() {
   // Detail View (Pane 3) states - Split 2-pane Layout
   const [isEditMode, setIsEditMode] = useState(false);
   const [printTarget, setPrintTarget] = useState('detail');
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [selectedPrintFieldIds, setSelectedPrintFieldIds] = useState({});
+
+  const handleOpenDetailPrint = () => {
+    const tpl = activeItem?.templateId ? templates.find(t => t.id === activeItem.templateId) : null;
+    if (tpl && tpl.fields && tpl.fields.length > 0) {
+      const initialMap = {};
+      tpl.fields.forEach(f => {
+        initialMap[f.id] = true;
+      });
+      setSelectedPrintFieldIds(initialMap);
+      setIsPrintModalOpen(true);
+    } else {
+      handlePrint('detail');
+    }
+  };
+
+  const handleConfirmTemplatePrint = () => {
+    setIsPrintModalOpen(false);
+    handlePrint('detail');
+  };
+
+  const isPrintFieldSelected = (fieldId) => {
+    if (!activeItem?.templateId) return true;
+    return selectedPrintFieldIds[fieldId] !== false;
+  };
 
   const handlePrint = (target) => {
     setPrintTarget(target);
@@ -2514,7 +2540,7 @@ export default function NotebookExplorer() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
                             <button
-                              onClick={() => handlePrint('detail')}
+                              onClick={handleOpenDetailPrint}
                               style={styles.btnSecondary}
                               className="no-print"
                               title="상세내용 인쇄"
@@ -2554,7 +2580,7 @@ export default function NotebookExplorer() {
 
                                     if (field.type === 'phone') {
                                       return (
-                                        <div key={field.id} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                                             <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                               <Phone size={14} color="#10B981" />
@@ -2579,7 +2605,7 @@ export default function NotebookExplorer() {
                                     if (field.type === 'datetime') {
                                       const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
                                       return (
-                                        <div key={field.id} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                                             <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                               <CalendarIcon size={14} color="#8B5CF6" />
@@ -2594,7 +2620,7 @@ export default function NotebookExplorer() {
                                     }
 
                                     return (
-                                      <div key={field.id} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                      <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             {field.type === 'text' && <Type size={14} color="#2563EB" />}
@@ -3019,6 +3045,88 @@ export default function NotebookExplorer() {
         </div>
       )}
         </React.Fragment>
+      )}
+
+      
+      {/* Template Field Print Selection Modal */}
+      {isPrintModalOpen && (
+        <div style={styles.modalOverlay} onClick={() => setIsPrintModalOpen(false)}>
+          <div style={{ ...styles.modalContent, maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+                <Printer size={18} color="#2563EB" />
+                <span>인쇄 항목 선택</span>
+              </div>
+              <button onClick={() => setIsPrintModalOpen(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
+              출력할 템플릿 항목을 선택해 주세요:
+            </p>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const activeTpl = templates.find(t => t.id === activeItem?.templateId);
+                  const allObj = {};
+                  activeTpl?.fields?.forEach(f => { allObj[f.id] = true; });
+                  setSelectedPrintFieldIds(allObj);
+                }}
+                style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+              >
+                전체 선택
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const activeTpl = templates.find(t => t.id === activeItem?.templateId);
+                  const noneObj = {};
+                  activeTpl?.fields?.forEach(f => { noneObj[f.id] = false; });
+                  setSelectedPrintFieldIds(noneObj);
+                }}
+                style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+              >
+                전체 해제
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
+              {(() => {
+                const activeTpl = templates.find(t => t.id === activeItem?.templateId);
+                if (!activeTpl || !activeTpl.fields) return null;
+                return activeTpl.fields.map(field => (
+                  <label key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPrintFieldIds[field.id] !== false}
+                      onChange={(e) => setSelectedPrintFieldIds({ ...selectedPrintFieldIds, [field.id]: e.target.checked })}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
+                      {field.label}
+                      <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '6px', fontWeight: 400 }}>
+                        ({field.type === 'phone' ? '전화번호' : field.type === 'datetime' ? '일시' : field.type === 'checklist' ? '체크리스트' : '텍스트'})
+                      </span>
+                    </span>
+                  </label>
+                ));
+              })()}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button onClick={() => setIsPrintModalOpen(false)} style={styles.btnSecondary}>
+                취소
+              </button>
+              <button onClick={handleConfirmTemplatePrint} style={styles.btnPrimary}>
+                <Printer size={14} />
+                <span>선택 항목 인쇄</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Global Custom Delete Confirmation Modal */}
