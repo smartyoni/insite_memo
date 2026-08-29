@@ -1389,7 +1389,7 @@ export default function NotebookExplorer() {
             }}>
               {/* Standard Note Items List for Pane 2 */}
               <>
-                {!isMobile && (
+                {!isMobile ? (
                   <div style={styles.pane2Header}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={styles.pane2Title}>
@@ -1421,6 +1421,44 @@ export default function NotebookExplorer() {
                         <Plus size={18} />
                       </button>
                     </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    height: '52px',
+                    padding: '0 12px 0 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'space-between',
+                    borderBottom: '1px solid #E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    flexShrink: 0
+                  }}>
+                    <button
+                      onClick={navigateBack}
+                      style={styles.mobileBackBtn}
+                    >
+                      <ArrowLeft size={16} />
+                      <span>카테고리</span>
+                    </button>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                      {activeCategory ? activeCategory.name : '목록'} ({filteredItems.length})
+                    </span>
+                    <button
+                      onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                      style={{
+                        ...styles.iconBtnLight,
+                        padding: '4px 6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        fontSize: '11px',
+                        color: '#4B5563'
+                      }}
+                      title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
+                    >
+                      {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                      <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
+                    </button>
                   </div>
                 )}
 
@@ -1502,9 +1540,24 @@ export default function NotebookExplorer() {
                       })
                     )}
                   </div>
-                </>
-              </div>
-            )}
+
+                {/* Floating Action Button (FAB) for Mobile Sublist */}
+                {isMobile && (
+                  <button
+                    onClick={handleAddItem}
+                    style={styles.mobileFabBtn}
+                    title="새 메모 추가"
+                    aria-label="새 메모 추가"
+                  >
+                    <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
+                  </button>
+                )}
+
+                {/* Mobile Footer for Pane 2 */}
+                {isMobile && renderMobileFooter(null)}
+              </>
+            </div>
+          )}
 
           {/* Pane 3: Detail Workspace OR Template Canvas (Flex 1 or 100% on Mobile) */}
           {(!isMobile || mobileView === 'detail') && (
@@ -2910,6 +2963,25 @@ const styles = {
     paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))',
     boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
     zIndex: 90
+  },
+
+  mobileFabBtn: {
+    position: 'fixed',
+    bottom: 'max(76px, calc(env(safe-area-inset-bottom, 0px) + 76px))',
+    right: '20px',
+    width: '56px',
+    height: '56px',
+    borderRadius: '50%',
+    backgroundColor: '#2563EB',
+    color: '#FFFFFF',
+    border: 'none',
+    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.45)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 1000,
+    transition: 'transform 0.15s ease, background-color 0.15s ease'
   },
 
   // Pane 1: Category (Pastel Blue, 280px)
