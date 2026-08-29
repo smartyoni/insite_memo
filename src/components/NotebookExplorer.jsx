@@ -64,6 +64,29 @@ export const autoFormatPhoneNumber = (val) => {
   return `${raw.slice(0, 3)}-${raw.slice(3, 7)}-${raw.slice(7, 11)}`;
 };
 
+export const groupFieldsList = (fields) => {
+  const groups = [];
+  let curGroup = null;
+  let curFields = [];
+
+  (fields || []).forEach((f) => {
+    const gTitle = f.groupTitle || '';
+    if (gTitle !== curGroup) {
+      if (curFields.length > 0) {
+        groups.push({ title: curGroup, fields: curFields });
+      }
+      curGroup = gTitle;
+      curFields = [f];
+    } else {
+      curFields.push(f);
+    }
+  });
+  if (curFields.length > 0) {
+    groups.push({ title: curGroup, fields: curFields });
+  }
+  return groups;
+};
+
 export const DEFAULT_TAGS = [
   { id: 'def_1', name: '계약서작성', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
   { id: 'def_2', name: '잔금', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
@@ -292,6 +315,7 @@ export default function NotebookExplorer() {
   const [tplDraftTitle, setTplDraftTitle] = useState('');
   const [tplDraftFields, setTplDraftFields] = useState([]);
   const [tplDraftChecklists, setTplDraftChecklists] = useState([]);
+  const [selectedTplFieldIds, setSelectedTplFieldIds] = useState([]); // Array of field IDs selected for grouping
   const [tplEditorSection, setTplEditorSection] = useState('fields'); // 'fields' | 'checklists'
   const [isSavingTpl, setIsSavingTpl] = useState(false);
 
@@ -923,6 +947,36 @@ export default function NotebookExplorer() {
     });
   };
 
+  // Field Grouping Handlers
+  const handleToggleSelectField = (fieldId) => {
+    setSelectedTplFieldIds((prev) =>
+      prev.includes(fieldId) ? prev.filter((id) => id !== fieldId) : [...prev, fieldId]
+    );
+  };
+
+  const handleGroupSelectedFields = () => {
+    if (selectedTplFieldIds.length === 0) {
+      alert('그룹화할 요소를 먼저 1개 이상 선택해 주세요.');
+      return;
+    }
+    const name = prompt('그룹 이름을 입력해 주세요 (예: 기본 정보, 계약 상세):', '신규 그룹');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+
+    setTplDraftFields((prev) =>
+      prev.map((f) => (selectedTplFieldIds.includes(f.id) ? { ...f, groupTitle: trimmed } : f))
+    );
+    setSelectedTplFieldIds([]);
+  };
+
+  const handleUngroupSelectedFields = () => {
+    if (selectedTplFieldIds.length === 0) return;
+    setTplDraftFields((prev) =>
+      prev.map((f) => (selectedTplFieldIds.includes(f.id) ? { ...f, groupTitle: '' } : f))
+    );
+    setSelectedTplFieldIds([]);
+  };
+
   // Template Checklist Handlers
   const handleAddTplChecklistInCanvas = () => {
     setTplDraftChecklists((prev) => [
@@ -980,7 +1034,8 @@ export default function NotebookExplorer() {
         type: f.type || 'text',
         label: f.label || '항목',
         placeholder: f.placeholder || '',
-        defaultItems: Array.isArray(f.defaultItems) ? f.defaultItems : []
+        defaultItems: Array.isArray(f.defaultItems) ? f.defaultItems : [],
+        groupTitle: f.groupTitle || ''
       }));
 
       const cleanChecklists = tplDraftChecklists.map((c) => ({
@@ -1747,6 +1802,35 @@ export default function NotebookExplorer() {
                         </div>
                       </div>
 
+                      {/* Selection & Grouping Action Bar */}
+                      {selectedTplFieldIds.length > 0 && (
+                        <div style={{ backgroundColor: '#EFF6FF', border: '1.5px solid #60A5FA', borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <CheckSquare size={14} color="#2563EB" /> {selectedTplFieldIds.length}개 요소 선택됨
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <button
+                              onClick={handleGroupSelectedFields}
+                              style={{ padding: '4px 10px', borderRadius: '6px', backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Folder size={13} /> 선택 요소 그룹화
+                            </button>
+                            <button
+                              onClick={handleUngroupSelectedFields}
+                              style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              그룹 해제
+                            </button>
+                            <button
+                              onClick={() => setSelectedTplFieldIds([])}
+                              style={{ padding: '4px 6px', borderRadius: '6px', backgroundColor: 'transparent', color: '#64748B', border: 'none', fontSize: '11px', cursor: 'pointer' }}
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {tplDraftFields.length === 0 ? (
                         <div style={{ padding: '36px 16px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '2px dashed #CBD5E1' }}>
                           <p style={{ fontSize: '14px', color: '#334155', fontWeight: 700, margin: 0 }}>
@@ -1763,6 +1847,41 @@ export default function NotebookExplorer() {
 
                           return (
                             <div key={field.id} style={{ backgroundColor: bgColor, border: `1.5px solid ${borderColor}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                              {/* Header: Checkbox & Group Title Badge */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px', borderBottom: '1px dashed #E2E8F0', paddingBottom: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTplFieldIds.includes(field.id)}
+                                    onChange={() => handleToggleSelectField(field.id)}
+                                    style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563EB' }}
+                                  />
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: borderColor }}>
+                                    #{idx + 1} {field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'}
+                                  </span>
+                                </div>
+
+                                {field.groupTitle ? (
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BFDBFE', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <Folder size={12} color="#2563EB" /> 그룹: {field.groupTitle}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const updated = [...tplDraftFields];
+                                        updated[idx].groupTitle = '';
+                                        setTplDraftFields(updated);
+                                      }}
+                                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, marginLeft: '4px', color: '#64748B', display: 'inline-flex', alignItems: 'center' }}
+                                      title="그룹 해제"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '10px', color: '#94A3B8' }}>체크 후 그룹화</span>
+                                )}
+                              </div>
+
                               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                                 {/* Label Input */}
                                 <div style={{ flex: 1, minWidth: '140px' }}>
@@ -2112,128 +2231,145 @@ export default function NotebookExplorer() {
                                     </button>
                                   </div>
 
-                                  {activeTpl.fields.map((field) => {
-                                    const fieldVal = draftTemplateValues[field.id];
+                                  {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
+                                    const renderedFields = grp.fields.map((field) => {
+                                      const fieldVal = draftTemplateValues[field.id];
 
-                                    if (field.type === 'phone') {
+                                      if (field.type === 'phone') {
+                                        return (
+                                          <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                              <Phone size={14} color="#10B981" />
+                                              {field.label}
+                                            </label>
+                                            <input
+                                              type="tel"
+                                              value={fieldVal || ''}
+                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: autoFormatPhoneNumber(e.target.value) })}
+                                              placeholder={field.placeholder || '010-0000-0000'}
+                                              style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
+                                            />
+                                            {fieldVal && (
+                                              <a
+                                                href={`sms:${fieldVal.replace(/[^0-9]/g, '')}`}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
+                                              >
+                                                <MessageSquare size={12} />
+                                                SMS 전송
+                                              </a>
+                                            )}
+                                          </div>
+                                        );
+                                      }
+
+                                      if (field.type === 'datetime') {
+                                        return (
+                                          <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                              <CalendarIcon size={14} color="#8B5CF6" />
+                                              {field.label}
+                                            </label>
+                                            <input
+                                              type="datetime-local"
+                                              value={fieldVal || ''}
+                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                              style={{ flex: 1, minWidth: '160px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box', color: '#0F172A', fontFamily: 'inherit' }}
+                                            />
+                                          </div>
+                                        );
+                                      }
+
                                       return (
-                                        <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
-                                            <Phone size={14} color="#10B981" />
-                                            {field.label}
-                                          </label>
-                                          <input
-                                            type="tel"
-                                            value={fieldVal || ''}
-                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: autoFormatPhoneNumber(e.target.value) })}
-                                            placeholder={field.placeholder || '010-0000-0000'}
-                                            style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
-                                          />
-                                          {fieldVal && (
-                                            <a
-                                              href={`sms:${fieldVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
-                                            >
-                                              <MessageSquare size={12} />
-                                              SMS 전송
-                                            </a>
+                                        <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                              {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                              {field.label}
+                                            </label>
+                                          </div>
+
+                                          {field.type === 'text' && (() => {
+                                            const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                            const currentTextVal = fieldVal !== undefined ? fieldVal : defaultTextVal;
+                                            const lineCount = currentTextVal.split('\n').length;
+                                            return (
+                                              <textarea
+                                                value={currentTextVal}
+                                                onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                                placeholder="내용을 입력하세요"
+                                                rows={Math.max(3, lineCount)}
+                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                              />
+                                            );
+                                          })()}
+
+                                          {field.type === 'checklist' && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                                              {((Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })))).map((chkItem, chkIdx, arr) => (
+                                                <div key={chkIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={chkItem.completed || false}
+                                                    onChange={(e) => {
+                                                      const updatedArr = [...arr];
+                                                      updatedArr[chkIdx] = { ...chkItem, completed: e.target.checked };
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                    }}
+                                                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                  />
+                                                  <input
+                                                    type="text"
+                                                    value={chkItem.text || ''}
+                                                    onChange={(e) => {
+                                                      const updatedArr = [...arr];
+                                                      updatedArr[chkIdx] = { ...chkItem, text: e.target.value };
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                    }}
+                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
+                                                  />
+                                                  <button
+                                                    onClick={() => {
+                                                      const updatedArr = arr.filter((_, i) => i !== chkIdx);
+                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                    }}
+                                                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                                  >
+                                                    <Trash2 size={13} />
+                                                  </button>
+                                                </div>
+                                              ))}
+                                              <button
+                                                onClick={() => {
+                                                  const currentArr = (Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })));
+                                                  const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
+                                                  setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                }}
+                                                style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer', marginTop: '4px' }}
+                                              >
+                                                <Plus size={13} />
+                                                항목 추가
+                                              </button>
+                                            </div>
                                           )}
                                         </div>
-                                       );
-                                     }
+                                      );
+                                    });
 
-                                     if (field.type === 'datetime') {
+                                    if (grp.title) {
                                       return (
-                                        <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
-                                            <CalendarIcon size={14} color="#8B5CF6" />
-                                            {field.label}
-                                          </label>
-                                          <input
-                                            type="datetime-local"
-                                            value={fieldVal || ''}
-                                            onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                            style={{ flex: 1, minWidth: '160px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box', color: '#0F172A', fontFamily: 'inherit' }}
-                                          />
+                                        <div key={`edit_grp_${gIdx}`} style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #BFDBFE', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #DBEAFE', paddingBottom: '6px' }}>
+                                            <Folder size={15} color="#2563EB" /> {grp.title}
+                                          </div>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {renderedFields}
+                                          </div>
                                         </div>
                                       );
                                     }
 
-                                    return (
-                                      <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
-                                            {field.label}
-                                          </label>
-                                        </div>
-
-                                        {field.type === 'text' && (() => {
-                                          const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
-                                          const currentTextVal = fieldVal !== undefined ? fieldVal : defaultTextVal;
-                                          const lineCount = currentTextVal.split('\n').length;
-                                          return (
-                                            <textarea
-                                              value={currentTextVal}
-                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                              placeholder="내용을 입력하세요"
-                                              rows={Math.max(3, lineCount)}
-                                              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
-                                            />
-                                          );
-                                        })()}
-
-                                        {field.type === 'checklist' && (
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                                            {((Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })))).map((chkItem, chkIdx, arr) => (
-                                              <div key={chkIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={chkItem.completed || false}
-                                                  onChange={(e) => {
-                                                    const updatedArr = [...arr];
-                                                    updatedArr[chkIdx] = { ...chkItem, completed: e.target.checked };
-                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                                  }}
-                                                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                                />
-                                                <input
-                                                  type="text"
-                                                  value={chkItem.text || ''}
-                                                  onChange={(e) => {
-                                                    const updatedArr = [...arr];
-                                                    updatedArr[chkIdx] = { ...chkItem, text: e.target.value };
-                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                                  }}
-                                                  style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B' }}
-                                                />
-                                                <button
-                                                  onClick={() => {
-                                                    const updatedArr = arr.filter((_, i) => i !== chkIdx);
-                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                                  }}
-                                                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                                                >
-                                                  <Trash2 size={13} />
-                                                </button>
-                                              </div>
-                                            ))}
-                                            <button
-                                              onClick={() => {
-                                                const currentArr = (Array.isArray(fieldVal) ? fieldVal : (field.defaultItems || []).map(t => ({ text: t, completed: false })));
-                                                const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
-                                                setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                              }}
-                                              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer', marginTop: '4px' }}
-                                            >
-                                              <Plus size={13} />
-                                              항목 추가
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
+                                    return <React.Fragment key={`edit_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
                                   })}
                                 </div>
                               );
@@ -2657,84 +2793,101 @@ export default function NotebookExplorer() {
                                   <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <span>📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨</span>
                                   </div>
-                                  {activeTpl.fields && activeTpl.fields.map((field) => {
-                                    const val = values[field.id];
-                                    const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
-                                    const currentVal = val !== undefined ? val : defaultTextVal;
+                                  {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
+                                    const renderedFields = grp.fields.map((field) => {
+                                      const val = values[field.id];
+                                      const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                      const currentVal = val !== undefined ? val : defaultTextVal;
 
-                                    if (field.type === 'phone') {
+                                      if (field.type === 'phone') {
+                                        return (
+                                          <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                <Phone size={14} color="#10B981" />
+                                                {field.label}
+                                              </span>
+                                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {currentVal || '(전화번호 없음)'}
+                                              </span>
+                                            </div>
+                                            {currentVal && (
+                                              <a
+                                                href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
+                                                style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                              >
+                                                <MessageSquare size={12} /> SMS 전송
+                                              </a>
+                                            )}
+                                          </div>
+                                        );
+                                      }
+
+                                      if (field.type === 'datetime') {
+                                        const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
+                                        return (
+                                          <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                <CalendarIcon size={14} color="#8B5CF6" />
+                                                {field.label}
+                                              </span>
+                                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {formattedDt || '(날짜/시간 미선택)'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+
                                       return (
-                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                              <Phone size={14} color="#10B981" />
+                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                              {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
                                               {field.label}
                                             </span>
-                                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                              {currentVal || '(전화번호 없음)'}
-                                            </span>
                                           </div>
-                                          {currentVal && (
-                                            <a
-                                              href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
-                                              style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
-                                            >
-                                              <MessageSquare size={12} /> SMS 전송
-                                            </a>
+
+                                          {field.type === 'text' && (
+                                            <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
+                                              {renderWithLinks(currentVal || '(내용 없음)')}
+                                            </div>
+                                          )}
+
+                                          {field.type === 'checklist' && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                                              {(Array.isArray(currentVal) ? currentVal : (field.defaultItems || []).map(t => ({ text: t, completed: false }))).map((chk, cIdx) => (
+                                                <div key={cIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <span style={{ color: chk.completed ? '#10B981' : '#CBD5E1', fontWeight: 700, fontSize: '14px' }}>
+                                                    {chk.completed ? '☑' : '☐'}
+                                                  </span>
+                                                  <span style={{ fontSize: '12px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
+                                                    {chk.text}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
                                           )}
                                         </div>
                                       );
-                                    }
+                                    });
 
-                                    if (field.type === 'datetime') {
-                                      const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
+                                    if (grp.title) {
                                       return (
-                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                              <CalendarIcon size={14} color="#8B5CF6" />
-                                              {field.label}
-                                            </span>
-                                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                              {formattedDt || '(날짜/시간 미선택)'}
-                                            </span>
+                                        <div key={`read_grp_${gIdx}`} style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #BFDBFE', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #DBEAFE', paddingBottom: '6px' }}>
+                                            <Folder size={15} color="#2563EB" /> {grp.title}
+                                          </div>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {renderedFields}
                                           </div>
                                         </div>
                                       );
                                     }
 
-                                    return (
-                                      <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                            {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
-                                            {field.label}
-                                          </span>
-                                        </div>
-
-                                        {field.type === 'text' && (
-                                          <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
-                                            {renderWithLinks(currentVal || '(내용 없음)')}
-                                          </div>
-                                        )}
-
-                                        {field.type === 'checklist' && (
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                                            {(Array.isArray(currentVal) ? currentVal : (field.defaultItems || []).map(t => ({ text: t, completed: false }))).map((chk, cIdx) => (
-                                              <div key={cIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ color: chk.completed ? '#10B981' : '#CBD5E1', fontWeight: 700, fontSize: '14px' }}>
-                                                  {chk.completed ? '☑' : '☐'}
-                                                </span>
-                                                <span style={{ fontSize: '12px', textDecoration: chk.completed ? 'line-through' : 'none', color: chk.completed ? '#94A3B8' : '#1E293B' }}>
-                                                  {chk.text}
-                                                </span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
+                                    return <React.Fragment key={`read_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
                                   })}
                                 </div>
                               );
