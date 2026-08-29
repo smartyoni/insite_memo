@@ -353,6 +353,13 @@ export default function NotebookExplorer() {
   const [tplEditorSection, setTplEditorSection] = useState('fields'); // 'fields' | 'checklists'
   const [isSavingTpl, setIsSavingTpl] = useState(false);
 
+  // Template checklist multiline input states
+  const [tplChecklistInputModes, setTplChecklistInputModes] = useState({}); // { [fieldId]: 'textarea' | 'list' }
+  const [showTplBulkChecklistInput, setShowTplBulkChecklistInput] = useState(false);
+  const [tplBulkChecklistText, setTplBulkChecklistText] = useState('');
+  const [noteBulkChecklistInputs, setNoteBulkChecklistInputs] = useState({}); // { [fieldId]: boolean }
+  const [noteBulkChecklistTexts, setNoteBulkChecklistTexts] = useState({}); // { [fieldId]: string }
+
   // Drag and Drop States for Template Canvas Blocks and Intra-Group Items
   const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
   const [dragOverBlockIndex, setDragOverBlockIndex] = useState(null);
@@ -2277,45 +2284,145 @@ export default function NotebookExplorer() {
 
                                         {field.type === 'checklist' && (
                                           <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: `1px dashed ${borderColor}` }}>
-                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '4px' }}>기본 체크리스트 세부 요소들 배치</label>
-                                            {(field.defaultItems || []).map((subItemText, subIdx) => (
-                                              <div key={subIdx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
-                                                <input
-                                                  type="text"
-                                                  value={subItemText}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor }}>
+                                                기본 체크리스트 세부 요소들 배치
+                                                <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 400 }}>
+                                                  ({(field.defaultItems || []).length}개 항목)
+                                                </span>
+                                              </label>
+                                              <div style={{ display: 'flex', gap: '3px' }}>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setTplChecklistInputModes({ ...tplChecklistInputModes, [field.id]: 'textarea' })}
+                                                  style={{
+                                                    padding: '2px 8px',
+                                                    fontSize: '10px',
+                                                    borderRadius: '4px',
+                                                    border: `1px solid ${tplChecklistInputModes[field.id] !== 'list' ? borderColor : '#CBD5E1'}`,
+                                                    backgroundColor: tplChecklistInputModes[field.id] !== 'list' ? '#EDE9FE' : '#FFFFFF',
+                                                    color: tplChecklistInputModes[field.id] !== 'list' ? borderColor : '#475569',
+                                                    fontWeight: tplChecklistInputModes[field.id] !== 'list' ? 700 : 500,
+                                                    cursor: 'pointer'
+                                                  }}
+                                                >
+                                                  📝 줄바꿈 입력
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setTplChecklistInputModes({ ...tplChecklistInputModes, [field.id]: 'list' })}
+                                                  style={{
+                                                    padding: '2px 8px',
+                                                    fontSize: '10px',
+                                                    borderRadius: '4px',
+                                                    border: `1px solid ${tplChecklistInputModes[field.id] === 'list' ? borderColor : '#CBD5E1'}`,
+                                                    backgroundColor: tplChecklistInputModes[field.id] === 'list' ? '#EDE9FE' : '#FFFFFF',
+                                                    color: tplChecklistInputModes[field.id] === 'list' ? borderColor : '#475569',
+                                                    fontWeight: tplChecklistInputModes[field.id] === 'list' ? 700 : 500,
+                                                    cursor: 'pointer'
+                                                  }}
+                                                >
+                                                  ☰ 개별 목록
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            {tplChecklistInputModes[field.id] !== 'list' ? (
+                                              <div>
+                                                <textarea
+                                                  rows={Math.max(3, (field.defaultItems || []).length + 1)}
+                                                  value={(field.defaultItems || []).join('\n')}
                                                   onChange={(e) => {
+                                                    const lines = e.target.value.split('\n');
                                                     const updated = [...tplDraftFields];
                                                     if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
-                                                    updated[originalIdx].defaultItems[subIdx] = e.target.value;
+                                                    updated[originalIdx].defaultItems = lines;
                                                     setTplDraftFields(updated);
                                                   }}
-                                                  style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                                                  placeholder={`체크리스트 항목을 줄바꿈(Enter)으로 연속 입력해 주세요.\n예:\n현장 방문 및 상태 확인\n계약 서류 검토\n잔금 납부 및 확인`}
+                                                  style={{
+                                                    width: '100%',
+                                                    padding: '8px 10px',
+                                                    borderRadius: '6px',
+                                                    border: `1px solid ${borderColor}`,
+                                                    fontSize: '12px',
+                                                    lineHeight: '1.5',
+                                                    backgroundColor: '#FFFFFF',
+                                                    boxSizing: 'border-box',
+                                                    resize: 'vertical'
+                                                  }}
                                                 />
+                                                <div style={{ fontSize: '10px', color: '#7C3AED', marginTop: '3px', fontWeight: 500 }}>
+                                                  💡 Enter(줄바꿈)를 치면 새 항목이 생성됩니다. 텍스트 붙여넣기도 지원됩니다.
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <div>
+                                                {(field.defaultItems || []).map((subItemText, subIdx) => (
+                                                  <div key={subIdx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                                                    <input
+                                                      type="text"
+                                                      value={subItemText}
+                                                      onChange={(e) => {
+                                                        const updated = [...tplDraftFields];
+                                                        if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                        updated[originalIdx].defaultItems[subIdx] = e.target.value;
+                                                        setTplDraftFields(updated);
+                                                      }}
+                                                      onPaste={(e) => {
+                                                        const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+                                                        if (text && text.includes('\n')) {
+                                                          e.preventDefault();
+                                                          const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                                          if (lines.length > 0) {
+                                                            const updated = [...tplDraftFields];
+                                                            const currentItems = [...(updated[originalIdx].defaultItems || [])];
+                                                            currentItems.splice(subIdx, 1, ...lines);
+                                                            updated[originalIdx].defaultItems = currentItems;
+                                                            setTplDraftFields(updated);
+                                                          }
+                                                        }
+                                                      }}
+                                                      onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                          e.preventDefault();
+                                                          const updated = [...tplDraftFields];
+                                                          if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                          updated[originalIdx].defaultItems.splice(subIdx + 1, 0, '');
+                                                          setTplDraftFields(updated);
+                                                        }
+                                                      }}
+                                                      placeholder={`체크 요소 #${subIdx + 1}`}
+                                                      style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                                                    />
+                                                    <button
+                                                      onClick={() => {
+                                                        const updated = [...tplDraftFields];
+                                                        if (updated[originalIdx].defaultItems) {
+                                                          updated[originalIdx].defaultItems.splice(subIdx, 1);
+                                                        }
+                                                        setTplDraftFields(updated);
+                                                      }}
+                                                      style={styles.iconBtn}
+                                                      title="삭제"
+                                                    >
+                                                      <Trash2 size={13} color="#EF4444" />
+                                                    </button>
+                                                  </div>
+                                                ))}
                                                 <button
                                                   onClick={() => {
                                                     const updated = [...tplDraftFields];
-                                                    if (updated[originalIdx].defaultItems) {
-                                                      updated[originalIdx].defaultItems.splice(subIdx, 1);
-                                                    }
+                                                    if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                    updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
                                                     setTplDraftFields(updated);
                                                   }}
-                                                  style={styles.iconBtn}
+                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
                                                 >
-                                                  <Trash2 size={13} color="#EF4444" />
+                                                  <Plus size={13} /> 요소 추가
                                                 </button>
                                               </div>
-                                            ))}
-                                            <button
-                                              onClick={() => {
-                                                const updated = [...tplDraftFields];
-                                                if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
-                                                updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
-                                                setTplDraftFields(updated);
-                                              }}
-                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
-                                            >
-                                              <Plus size={13} /> 요소 추가
-                                            </button>
+                                            )}
                                           </div>
                                         )}
                                       </div>
@@ -2422,45 +2529,145 @@ export default function NotebookExplorer() {
 
                               {field.type === 'checklist' && (
                                 <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: `1px dashed ${borderColor}` }}>
-                                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '4px' }}>기본 체크리스트 세부 요소들 배치</label>
-                                  {(field.defaultItems || []).map((subItemText, subIdx) => (
-                                    <div key={subIdx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
-                                      <input
-                                        type="text"
-                                        value={subItemText}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor }}>
+                                      기본 체크리스트 세부 요소들 배치
+                                      <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 400 }}>
+                                        ({(field.defaultItems || []).length}개 항목)
+                                      </span>
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '3px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setTplChecklistInputModes({ ...tplChecklistInputModes, [field.id]: 'textarea' })}
+                                        style={{
+                                          padding: '2px 8px',
+                                          fontSize: '10px',
+                                          borderRadius: '4px',
+                                          border: `1px solid ${tplChecklistInputModes[field.id] !== 'list' ? borderColor : '#CBD5E1'}`,
+                                          backgroundColor: tplChecklistInputModes[field.id] !== 'list' ? '#EDE9FE' : '#FFFFFF',
+                                          color: tplChecklistInputModes[field.id] !== 'list' ? borderColor : '#475569',
+                                          fontWeight: tplChecklistInputModes[field.id] !== 'list' ? 700 : 500,
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        📝 줄바꿈 입력
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setTplChecklistInputModes({ ...tplChecklistInputModes, [field.id]: 'list' })}
+                                        style={{
+                                          padding: '2px 8px',
+                                          fontSize: '10px',
+                                          borderRadius: '4px',
+                                          border: `1px solid ${tplChecklistInputModes[field.id] === 'list' ? borderColor : '#CBD5E1'}`,
+                                          backgroundColor: tplChecklistInputModes[field.id] === 'list' ? '#EDE9FE' : '#FFFFFF',
+                                          color: tplChecklistInputModes[field.id] === 'list' ? borderColor : '#475569',
+                                          fontWeight: tplChecklistInputModes[field.id] === 'list' ? 700 : 500,
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        ☰ 개별 목록
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {tplChecklistInputModes[field.id] !== 'list' ? (
+                                    <div>
+                                      <textarea
+                                        rows={Math.max(3, (field.defaultItems || []).length + 1)}
+                                        value={(field.defaultItems || []).join('\n')}
                                         onChange={(e) => {
+                                          const lines = e.target.value.split('\n');
                                           const updated = [...tplDraftFields];
                                           if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
-                                          updated[originalIdx].defaultItems[subIdx] = e.target.value;
+                                          updated[originalIdx].defaultItems = lines;
                                           setTplDraftFields(updated);
                                         }}
-                                        style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                                        placeholder={`체크리스트 항목을 줄바꿈(Enter)으로 연속 입력해 주세요.\n예:\n현장 방문 및 상태 확인\n계약 서류 검토\n잔금 납부 및 확인`}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 10px',
+                                          borderRadius: '6px',
+                                          border: `1px solid ${borderColor}`,
+                                          fontSize: '12px',
+                                          lineHeight: '1.5',
+                                          backgroundColor: '#FFFFFF',
+                                          boxSizing: 'border-box',
+                                          resize: 'vertical'
+                                        }}
                                       />
+                                      <div style={{ fontSize: '10px', color: '#7C3AED', marginTop: '3px', fontWeight: 500 }}>
+                                        💡 Enter(줄바꿈)를 치면 새 항목이 생성됩니다. 텍스트 붙여넣기도 지원됩니다.
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      {(field.defaultItems || []).map((subItemText, subIdx) => (
+                                        <div key={subIdx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                                          <input
+                                            type="text"
+                                            value={subItemText}
+                                            onChange={(e) => {
+                                              const updated = [...tplDraftFields];
+                                              if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                              updated[originalIdx].defaultItems[subIdx] = e.target.value;
+                                              setTplDraftFields(updated);
+                                            }}
+                                            onPaste={(e) => {
+                                              const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+                                              if (text && text.includes('\n')) {
+                                                e.preventDefault();
+                                                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                                if (lines.length > 0) {
+                                                  const updated = [...tplDraftFields];
+                                                  const currentItems = [...(updated[originalIdx].defaultItems || [])];
+                                                  currentItems.splice(subIdx, 1, ...lines);
+                                                  updated[originalIdx].defaultItems = currentItems;
+                                                  setTplDraftFields(updated);
+                                                }
+                                              }
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                const updated = [...tplDraftFields];
+                                                if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                updated[originalIdx].defaultItems.splice(subIdx + 1, 0, '');
+                                                setTplDraftFields(updated);
+                                              }
+                                            }}
+                                            placeholder={`체크 요소 #${subIdx + 1}`}
+                                            style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                                          />
+                                          <button
+                                            onClick={() => {
+                                              const updated = [...tplDraftFields];
+                                              if (updated[originalIdx].defaultItems) {
+                                                updated[originalIdx].defaultItems.splice(subIdx, 1);
+                                              }
+                                              setTplDraftFields(updated);
+                                            }}
+                                            style={styles.iconBtn}
+                                            title="삭제"
+                                          >
+                                            <Trash2 size={13} color="#EF4444" />
+                                          </button>
+                                        </div>
+                                      ))}
                                       <button
                                         onClick={() => {
                                           const updated = [...tplDraftFields];
-                                          if (updated[originalIdx].defaultItems) {
-                                            updated[originalIdx].defaultItems.splice(subIdx, 1);
-                                          }
+                                          if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                          updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
                                           setTplDraftFields(updated);
                                         }}
-                                        style={styles.iconBtn}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
                                       >
-                                        <Trash2 size={13} color="#EF4444" />
+                                        <Plus size={13} /> 요소 추가
                                       </button>
                                     </div>
-                                  ))}
-                                  <button
-                                    onClick={() => {
-                                      const updated = [...tplDraftFields];
-                                      if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
-                                      updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
-                                      setTplDraftFields(updated);
-                                    }}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
-                                  >
-                                    <Plus size={13} /> 요소 추가
-                                  </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -2475,13 +2682,65 @@ export default function NotebookExplorer() {
                         <span style={{ fontSize: '14px', fontWeight: 700, color: '#4C1D95', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <CheckSquare size={16} color="#8B5CF6" /> 2. 체크리스트 미리 설정 ({tplDraftChecklists.length})
                         </span>
-                        <button
-                          onClick={handleAddTplChecklistInCanvas}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '8px', border: '1px solid #8B5CF6', backgroundColor: '#FFFFFF', color: '#7C3AED', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
-                        >
-                          <Plus size={14} /> 체크 항목 추가
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            onClick={() => setShowTplBulkChecklistInput(!showTplBulkChecklistInput)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: '8px', border: '1px solid #8B5CF6', backgroundColor: showTplBulkChecklistInput ? '#8B5CF6' : '#FFFFFF', color: showTplBulkChecklistInput ? '#FFFFFF' : '#7C3AED', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                            title="여러 항목을 줄바꿈하여 한 번에 추가"
+                          >
+                            📝 줄바꿈 일괄 추가
+                          </button>
+                          <button
+                            onClick={handleAddTplChecklistInCanvas}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '8px', border: '1px solid #8B5CF6', backgroundColor: '#FFFFFF', color: '#7C3AED', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                          >
+                            <Plus size={14} /> 체크 항목 추가
+                          </button>
+                        </div>
                       </div>
+
+                      {showTplBulkChecklistInput && (
+                        <div style={{ padding: '12px', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1.5px solid #8B5CF6', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 8px rgba(124,58,237,0.15)' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: '#6D28D9' }}>📝 줄바꿈으로 일괄 추가</label>
+                          <textarea
+                            rows={4}
+                            value={tplBulkChecklistText}
+                            onChange={(e) => setTplBulkChecklistText(e.target.value)}
+                            placeholder={`추가할 체크 항목들을 줄바꿈(Enter)으로 입력해 주세요.\n예:\n1. 현장 점검\n2. 서류 검토\n3. 최종 승인`}
+                            style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #C4B5FD', fontSize: '12px', lineHeight: '1.4', boxSizing: 'border-box' }}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                            <button
+                              onClick={() => {
+                                setShowTplBulkChecklistInput(false);
+                                setTplBulkChecklistText('');
+                              }}
+                              style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F1F5F9', fontSize: '11px', cursor: 'pointer' }}
+                            >
+                              취소
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!tplBulkChecklistText.trim()) return;
+                                const lines = tplBulkChecklistText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                if (lines.length > 0) {
+                                  const newItems = lines.map((text, i) => ({
+                                    id: `tplchk_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+                                    text,
+                                    priority: null
+                                  }));
+                                  setTplDraftChecklists(prev => [...prev, ...newItems]);
+                                }
+                                setTplBulkChecklistText('');
+                                setShowTplBulkChecklistInput(false);
+                              }}
+                              style={{ padding: '4px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#7C3AED', color: '#FFFFFF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              {tplBulkChecklistText.trim() ? `${tplBulkChecklistText.split(/\r?\n/).filter(Boolean).length}개 항목 일괄 추가` : '추가'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {tplDraftChecklists.length === 0 ? (
                         <div style={{ padding: '36px 16px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '2px dashed #C4B5FD' }}>
@@ -2532,6 +2791,25 @@ export default function NotebookExplorer() {
                                 type="text"
                                 value={checkItem.text || ''}
                                 onChange={(e) => handleUpdateTplChecklistInCanvas(idx, 'text', e.target.value)}
+                                onPaste={(e) => {
+                                  const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+                                  if (text && text.includes('\n')) {
+                                    e.preventDefault();
+                                    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                    if (lines.length > 0) {
+                                      setTplDraftChecklists(prev => {
+                                        const updated = [...prev];
+                                        const newCheckItems = lines.map((line, i) => ({
+                                          id: `tplchk_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+                                          text: line,
+                                          priority: updated[idx]?.priority || null
+                                        }));
+                                        updated.splice(idx, 1, ...newCheckItems);
+                                        return updated;
+                                      });
+                                    }
+                                  }
+                                }}
                                 placeholder="체크리스트 사전 항목 내용..."
                                 style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #C4B5FD', fontSize: '13px', backgroundColor: '#FFFFFF' }}
                               />
@@ -2843,6 +3121,31 @@ export default function NotebookExplorer() {
                                                       };
                                                       setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
+                                                    onPaste={(e) => {
+                                                      const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+                                                      if (text && text.includes('\n')) {
+                                                        e.preventDefault();
+                                                        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                                        if (lines.length > 0) {
+                                                          const currentArr = Array.isArray(fieldVal)
+                                                            ? [...fieldVal]
+                                                            : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                          const newItems = lines.map(line => ({ text: line, completed: false }));
+                                                          currentArr.splice(chkItem.originalIndex, 1, ...newItems);
+                                                          setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
+                                                        }
+                                                      }
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        const currentArr = Array.isArray(fieldVal)
+                                                          ? [...fieldVal]
+                                                          : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                        currentArr.splice(chkItem.originalIndex + 1, 0, { text: '', completed: false });
+                                                        setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
+                                                      }
+                                                    }}
                                                     style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF' }}
                                                   />
                                                   <button
@@ -2859,19 +3162,68 @@ export default function NotebookExplorer() {
                                                   </button>
                                                 </div>
                                               ))}
-                                              <button
-                                                onClick={() => {
-                                                  const currentArr = Array.isArray(fieldVal)
-                                                    ? [...fieldVal]
-                                                    : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                  const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
-                                                  setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                                }}
-                                                style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer', marginTop: '4px' }}
-                                              >
-                                                <Plus size={13} />
-                                                항목 추가
-                                              </button>
+
+                                              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                                <button
+                                                  onClick={() => {
+                                                    const currentArr = Array.isArray(fieldVal)
+                                                      ? [...fieldVal]
+                                                      : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                    const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
+                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
+                                                  }}
+                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer' }}
+                                                >
+                                                  <Plus size={13} /> 항목 추가
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: !prev[field.id] }));
+                                                  }}
+                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: noteBulkChecklistInputs[field.id] ? '#EDE9FE' : '#F1F5F9', border: `1px solid ${noteBulkChecklistInputs[field.id] ? '#8B5CF6' : '#CBD5E1'}`, fontSize: '12px', color: noteBulkChecklistInputs[field.id] ? '#7C3AED' : '#334155', fontWeight: 600, cursor: 'pointer' }}
+                                                >
+                                                  📝 줄바꿈 일괄 추가
+                                                </button>
+                                              </div>
+
+                                              {noteBulkChecklistInputs[field.id] && (
+                                                <div style={{ marginTop: '6px', padding: '8px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                  <textarea
+                                                    rows={3}
+                                                    value={noteBulkChecklistTexts[field.id] || ''}
+                                                    onChange={(e) => setNoteBulkChecklistTexts(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                                    placeholder={`추가할 항목들을 줄바꿈(Enter)하여 입력하세요.\n예:\n서류 검토\n현장 점검\n계약 체결`}
+                                                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', boxSizing: 'border-box' }}
+                                                  />
+                                                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                                    <button
+                                                      onClick={() => setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: false }))}
+                                                      style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', backgroundColor: '#FFF', fontSize: '11px', cursor: 'pointer' }}
+                                                    >
+                                                      취소
+                                                    </button>
+                                                    <button
+                                                      onClick={() => {
+                                                        const textVal = noteBulkChecklistTexts[field.id] || '';
+                                                        if (!textVal.trim()) return;
+                                                        const lines = textVal.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                                        if (lines.length > 0) {
+                                                          const currentArr = Array.isArray(fieldVal)
+                                                            ? [...fieldVal]
+                                                            : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                          const newItems = lines.map(l => ({ text: l, completed: false }));
+                                                          setDraftTemplateValues({ ...draftTemplateValues, [field.id]: [...currentArr, ...newItems] });
+                                                        }
+                                                        setNoteBulkChecklistTexts(prev => ({ ...prev, [field.id]: '' }));
+                                                        setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: false }));
+                                                      }}
+                                                      style={{ padding: '3px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#10B981', color: '#FFF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                                    >
+                                                      일괄 추가
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
                                           )}
                                         </div>
