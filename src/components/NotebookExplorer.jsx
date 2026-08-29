@@ -88,6 +88,39 @@ export const groupFieldsList = (fields) => {
   return groups;
 };
 
+export const getCanvasBlocks = (fields) => {
+  const blocks = [];
+  let currentGroupTitle = null;
+  let currentGroupFields = [];
+
+  (fields || []).forEach((field, fieldIdx) => {
+    const gTitle = field.groupTitle || '';
+    if (gTitle !== currentGroupTitle) {
+      if (currentGroupFields.length > 0) {
+        blocks.push({
+          type: currentGroupTitle ? 'group' : 'single',
+          groupTitle: currentGroupTitle,
+          fields: currentGroupFields
+        });
+      }
+      currentGroupTitle = gTitle;
+      currentGroupFields = [{ ...field, originalIdx: fieldIdx }];
+    } else {
+      currentGroupFields.push({ ...field, originalIdx: fieldIdx });
+    }
+  });
+
+  if (currentGroupFields.length > 0) {
+    blocks.push({
+      type: currentGroupTitle ? 'group' : 'single',
+      groupTitle: currentGroupTitle,
+      fields: currentGroupFields
+    });
+  }
+
+  return blocks;
+};
+
 export const DEFAULT_TAGS = [
   { id: 'def_1', name: '계약서작성', bg: '#DCFCE7', border: '#86EFAC', color: '#15803D' },
   { id: 'def_2', name: '잔금', bg: '#FEE2E2', border: '#FCA5A5', color: '#B91C1C' }
@@ -320,9 +353,11 @@ export default function NotebookExplorer() {
   const [tplEditorSection, setTplEditorSection] = useState('fields'); // 'fields' | 'checklists'
   const [isSavingTpl, setIsSavingTpl] = useState(false);
 
-  // Drag and Drop States for Template Fields and Checklists
-  const [draggedFieldIndex, setDraggedFieldIndex] = useState(null);
-  const [dragOverFieldIndex, setDragOverFieldIndex] = useState(null);
+  // Drag and Drop States for Template Canvas Blocks and Intra-Group Items
+  const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
+  const [dragOverBlockIndex, setDragOverBlockIndex] = useState(null);
+  const [draggedFieldItem, setDraggedFieldItem] = useState(null); // { groupTitle, indexInGroup }
+  const [dragOverFieldItem, setDragOverFieldItem] = useState(null); // { groupTitle, indexInGroup }
   const [draggedChecklistIndex, setDraggedChecklistIndex] = useState(null);
   const [dragOverChecklistIndex, setDragOverChecklistIndex] = useState(null);
 
@@ -954,38 +989,152 @@ export default function NotebookExplorer() {
     });
   };
 
-  // HTML5 Drag and Drop Handlers for Template Fields
-  const handleFieldDragStart = (e, index) => {
-    setDraggedFieldIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', index.toString());
+  // Block Move Handlers (Whole Groups & Standalone Items)
+  const handleMoveBlockInCanvas = (blockIdx, direction) => {
+    const blocks = getCanvasBlocks(tplDraftFields);
+    const newIdx = blockIdx + direction;
+    if (newIdx < 0 || newIdx >= blocks.length) return;
+
+    const [moved] = blocks.splice(blockIdx, 1);
+    blocks.splice(newIdx, 0, moved);
+
+    const flattened = [];
+    blocks.forEach((blk) => {
+      blk.fields.forEach((f) => {
+        const { originalIdx, ...rest } = f;
+        flattened.push(rest);
+      });
+    });
+    setTplDraftFields(flattened);
   };
 
-  const handleFieldDragOver = (e, index) => {
+  const handleMoveFieldWithinGroup = (groupTitle, fromIdxInGroup, direction) => {
+    const toIdxInGroup = fromIdxInGroup + direction;
+    setTplDraftFields((prev) => {
+      const groupIndices = [];
+      prev.forEach((f, idx) => {
+        if ((f.groupTitle || '') === (groupTitle || '')) {
+          groupIndices.push(idx);
+        }
+      });
+
+      if (toIdxInGroup < 0 || toIdxInGroup >= groupIndices.length) return prev;
+
+      const actualFrom = groupIndices[fromIdxInGroup];
+      const actualTo = groupIndices[toIdxInGroup];
+
+      const updated = [...prev];
+      const [moved] = updated.splice(actualFrom, 1);
+      updated.splice(actualTo, 0, moved);
+      return updated;
+    });
+  };
+
+  // HTML5 Drag and Drop Handlers for Canvas Blocks (Groups & Standalone)
+  const handleBlockDragStart = (e, blockIdx) => {
+    e.stopPropagation();
+    setDraggedBlockIndex(blockIdx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', `block_${blockIdx}`);
+  };
+
+  const handleBlockDragOver = (e, blockIdx) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverFieldIndex !== index) {
-      setDragOverFieldIndex(index);
+    if (draggedBlockIndex !== null && dragOverBlockIndex !== blockIdx) {
+      setDragOverBlockIndex(blockIdx);
     }
   };
 
-  const handleFieldDrop = (e, targetIndex) => {
+  const handleBlockDrop = (e, targetBlockIdx) => {
     e.preventDefault();
-    if (draggedFieldIndex === null || draggedFieldIndex === targetIndex) {
-      setDraggedFieldIndex(null);
-      setDragOverFieldIndex(null);
+    e.stopPropagation();
+    if (draggedBlockIndex === null || draggedBlockIndex === targetBlockIdx) {
+      setDraggedBlockIndex(null);
+      setDragOverBlockIndex(null);
+      return;
+    }
+
+    const blocks = getCanvasBlocks(tplDraftFields);
+    const [movedBlock] = blocks.splice(draggedBlockIndex, 1);
+    blocks.splice(targetBlockIdx, 0, movedBlock);
+
+    const flattened = [];
+    blocks.forEach((blk) => {
+      blk.fields.forEach((f) => {
+        const { originalIdx, ...rest } = f;
+        flattened.push(rest);
+      });
+    });
+
+    setTplDraftFields(flattened);
+    setDraggedBlockIndex(null);
+    setDragOverBlockIndex(null);
+  };
+
+  // HTML5 Drag and Drop Handlers for Intra-Group Field Reordering
+  const handleIntraGroupDragStart = (e, groupTitle, indexInGroup) => {
+    e.stopPropagation();
+    setDraggedFieldItem({ groupTitle, indexInGroup });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', `item_${groupTitle}_${indexInGroup}`);
+  };
+
+  const handleIntraGroupDragOver = (e, groupTitle, indexInGroup) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedFieldItem && draggedFieldItem.groupTitle === groupTitle) {
+      e.dataTransfer.dropEffect = 'move';
+      if (
+        !dragOverFieldItem ||
+        dragOverFieldItem.groupTitle !== groupTitle ||
+        dragOverFieldItem.indexInGroup !== indexInGroup
+      ) {
+        setDragOverFieldItem({ groupTitle, indexInGroup });
+      }
+    } else {
+      e.dataTransfer.dropEffect = 'none';
+    }
+  };
+
+  const handleIntraGroupDrop = (e, groupTitle, targetIndexInGroup) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedFieldItem || draggedFieldItem.groupTitle !== groupTitle) {
+      setDraggedFieldItem(null);
+      setDragOverFieldItem(null);
+      return;
+    }
+
+    const fromIdxInGroup = draggedFieldItem.indexInGroup;
+    if (fromIdxInGroup === targetIndexInGroup) {
+      setDraggedFieldItem(null);
+      setDragOverFieldItem(null);
       return;
     }
 
     setTplDraftFields((prev) => {
+      const groupIndices = [];
+      prev.forEach((f, idx) => {
+        if ((f.groupTitle || '') === (groupTitle || '')) {
+          groupIndices.push(idx);
+        }
+      });
+
+      const actualFrom = groupIndices[fromIdxInGroup];
+      const actualTo = groupIndices[targetIndexInGroup];
+
+      if (actualFrom === undefined || actualTo === undefined) return prev;
+
       const updated = [...prev];
-      const [draggedItem] = updated.splice(draggedFieldIndex, 1);
-      updated.splice(targetIndex, 0, draggedItem);
+      const [movedItem] = updated.splice(actualFrom, 1);
+      updated.splice(actualTo, 0, movedItem);
       return updated;
     });
 
-    setDraggedFieldIndex(null);
-    setDragOverFieldIndex(null);
+    setDraggedFieldItem(null);
+    setDragOverFieldItem(null);
   };
 
   // HTML5 Drag and Drop Handlers for Template Checklists
@@ -1916,37 +2065,273 @@ export default function NotebookExplorer() {
                           </p>
                         </div>
                       ) : (
-                        tplDraftFields.map((field, idx) => {
+                        getCanvasBlocks(tplDraftFields).map((block, blockIdx) => {
+                          const isBlockDragged = draggedBlockIndex === blockIdx;
+                          const isBlockDragOver = dragOverBlockIndex === blockIdx;
+
+                          if (block.type === 'group') {
+                            return (
+                              <div
+                                key={`block_group_${block.groupTitle}_${blockIdx}`}
+                                draggable={true}
+                                onDragStart={(e) => handleBlockDragStart(e, blockIdx)}
+                                onDragOver={(e) => handleBlockDragOver(e, blockIdx)}
+                                onDrop={(e) => handleBlockDrop(e, blockIdx)}
+                                onDragEnd={() => {
+                                  setDraggedBlockIndex(null);
+                                  setDragOverBlockIndex(null);
+                                }}
+                                style={{
+                                  backgroundColor: '#F1F5F9',
+                                  border: `2px solid ${isBlockDragOver ? '#2563EB' : '#BFDBFE'}`,
+                                  borderRadius: '14px',
+                                  padding: '14px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '10px',
+                                  opacity: isBlockDragged ? 0.4 : 1,
+                                  boxShadow: isBlockDragOver ? '0 4px 14px rgba(37,99,235,0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {/* Group Header: Drag handle, Group Title, Block Move Controls */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1.5px solid #DBEAFE', flexWrap: 'wrap', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="그룹 전체 드래그하여 순서 변경">
+                                      <GripVertical size={18} color="#2563EB" />
+                                    </span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                      <Folder size={15} color="#2563EB" />
+                                      그룹: <strong>{block.groupTitle}</strong> ({block.fields.length}개 항목)
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <button
+                                      onClick={() => {
+                                        setTplDraftFields((prev) =>
+                                          prev.map((f) => ((f.groupTitle || '') === block.groupTitle ? { ...f, groupTitle: '' } : f))
+                                        );
+                                      }}
+                                      style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: '#FFFFFF', color: '#475569', border: '1px solid #CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                      title="그룹 해제"
+                                    >
+                                      그룹 해제
+                                    </button>
+                                    <button
+                                      disabled={blockIdx === 0}
+                                      onClick={() => handleMoveBlockInCanvas(blockIdx, -1)}
+                                      style={{ ...styles.iconBtn, opacity: blockIdx === 0 ? 0.3 : 1, padding: '4px 6px' }}
+                                      title="그룹 전체 위로 이동"
+                                    >
+                                      <ArrowUp size={14} />
+                                    </button>
+                                    <button
+                                      disabled={blockIdx === getCanvasBlocks(tplDraftFields).length - 1}
+                                      onClick={() => handleMoveBlockInCanvas(blockIdx, 1)}
+                                      style={{ ...styles.iconBtn, opacity: blockIdx === getCanvasBlocks(tplDraftFields).length - 1 ? 0.3 : 1, padding: '4px 6px' }}
+                                      title="그룹 전체 아래로 이동"
+                                    >
+                                      <ArrowDown size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Group Inner Fields List (Intra-Group Drag & Drop) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                  {block.fields.map((field, indexInGroup) => {
+                                    const originalIdx = field.originalIdx;
+                                    const borderColor = field.type === 'phone' ? '#EC4899' : field.type === 'datetime' ? '#10B981' : field.type === 'checklist' ? '#8B5CF6' : '#1E293B';
+                                    const bgColor = field.type === 'phone' ? '#FDF2F8' : field.type === 'datetime' ? '#F0FDF4' : field.type === 'checklist' ? '#F5F3FF' : '#FFFFFF';
+
+                                    const isFieldDragged = draggedFieldItem && draggedFieldItem.groupTitle === block.groupTitle && draggedFieldItem.indexInGroup === indexInGroup;
+                                    const isFieldDragOver = dragOverFieldItem && dragOverFieldItem.groupTitle === block.groupTitle && dragOverFieldItem.indexInGroup === indexInGroup;
+
+                                    return (
+                                      <div
+                                        key={field.id}
+                                        draggable={true}
+                                        onDragStart={(e) => handleIntraGroupDragStart(e, block.groupTitle, indexInGroup)}
+                                        onDragOver={(e) => handleIntraGroupDragOver(e, block.groupTitle, indexInGroup)}
+                                        onDrop={(e) => handleIntraGroupDrop(e, block.groupTitle, indexInGroup)}
+                                        onDragEnd={() => {
+                                          setDraggedFieldItem(null);
+                                          setDragOverFieldItem(null);
+                                        }}
+                                        style={{
+                                          backgroundColor: bgColor,
+                                          border: `1.5px solid ${isFieldDragOver ? '#2563EB' : borderColor}`,
+                                          borderRadius: '10px',
+                                          padding: '12px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '8px',
+                                          opacity: isFieldDragged ? 0.4 : 1,
+                                          boxShadow: isFieldDragOver ? '0 3px 10px rgba(37,99,235,0.2)' : '0 1px 3px rgba(0,0,0,0.02)',
+                                          transition: 'all 0.15s ease'
+                                        }}
+                                      >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px', borderBottom: '1px dashed #E2E8F0', paddingBottom: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="그룹 내에서 순서 변경">
+                                              <GripVertical size={15} color="#475569" />
+                                            </span>
+                                            <input
+                                              type="checkbox"
+                                              checked={selectedTplFieldIds.includes(field.id)}
+                                              onChange={() => handleToggleSelectField(field.id)}
+                                              style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563EB' }}
+                                            />
+                                            <span style={{ fontSize: '11px', fontWeight: 700, color: borderColor }}>
+                                              #{indexInGroup + 1} {field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'}
+                                            </span>
+                                          </div>
+                                          <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>🔒 그룹 내 이동</span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                                          <div style={{ flex: 1, minWidth: '130px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
+                                              {field.type === 'text' && '📝 텍스트'}
+                                              {field.type === 'phone' && '📞 전화번호'}
+                                              {field.type === 'datetime' && '📅 날짜/시간'}
+                                              {field.type === 'checklist' && '☑️ 체크리스트'}
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={field.label}
+                                              onChange={(e) => {
+                                                const updated = [...tplDraftFields];
+                                                updated[originalIdx].label = e.target.value;
+                                                setTplDraftFields(updated);
+                                              }}
+                                              placeholder="예: 미팅 안건"
+                                              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                                            />
+                                          </div>
+
+                                          {field.type !== 'checklist' && (
+                                            <div style={{ flex: 1.2, minWidth: '130px' }}>
+                                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>초기내용</label>
+                                              <input
+                                                type="text"
+                                                value={field.placeholder || ''}
+                                                onChange={(e) => {
+                                                  const updated = [...tplDraftFields];
+                                                  const val = field.type === 'phone' ? autoFormatPhoneNumber(e.target.value) : e.target.value;
+                                                  updated[originalIdx].placeholder = val;
+                                                  setTplDraftFields(updated);
+                                                }}
+                                                placeholder="예: 소재지/임대료/계약기간"
+                                                style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
+                                              />
+                                            </div>
+                                          )}
+
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingBottom: '2px', marginLeft: 'auto' }}>
+                                            <button
+                                              disabled={indexInGroup === 0}
+                                              onClick={() => handleMoveFieldWithinGroup(block.groupTitle, indexInGroup, -1)}
+                                              style={{ ...styles.iconBtn, opacity: indexInGroup === 0 ? 0.3 : 1, padding: '5px' }}
+                                              title="그룹 내 위로 이동"
+                                            >
+                                              <ArrowUp size={14} />
+                                            </button>
+                                            <button
+                                              disabled={indexInGroup === block.fields.length - 1}
+                                              onClick={() => handleMoveFieldWithinGroup(block.groupTitle, indexInGroup, 1)}
+                                              style={{ ...styles.iconBtn, opacity: indexInGroup === block.fields.length - 1 ? 0.3 : 1, padding: '5px' }}
+                                              title="그룹 내 아래로 이동"
+                                            >
+                                              <ArrowDown size={14} />
+                                            </button>
+                                            <button onClick={() => handleRemoveTplFieldInCanvas(originalIdx)} style={{ ...styles.iconBtn, padding: '5px' }} title="요소 삭제">
+                                              <Trash2 size={14} color="#EF4444" />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {field.type === 'checklist' && (
+                                          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: `1px dashed ${borderColor}` }}>
+                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '4px' }}>기본 체크리스트 세부 요소들 배치</label>
+                                            {(field.defaultItems || []).map((subItemText, subIdx) => (
+                                              <div key={subIdx} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                                                <input
+                                                  type="text"
+                                                  value={subItemText}
+                                                  onChange={(e) => {
+                                                    const updated = [...tplDraftFields];
+                                                    if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                    updated[originalIdx].defaultItems[subIdx] = e.target.value;
+                                                    setTplDraftFields(updated);
+                                                  }}
+                                                  style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
+                                                />
+                                                <button
+                                                  onClick={() => {
+                                                    const updated = [...tplDraftFields];
+                                                    if (updated[originalIdx].defaultItems) {
+                                                      updated[originalIdx].defaultItems.splice(subIdx, 1);
+                                                    }
+                                                    setTplDraftFields(updated);
+                                                  }}
+                                                  style={styles.iconBtn}
+                                                >
+                                                  <Trash2 size={13} color="#EF4444" />
+                                                </button>
+                                              </div>
+                                            ))}
+                                            <button
+                                              onClick={() => {
+                                                const updated = [...tplDraftFields];
+                                                if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                                updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
+                                                setTplDraftFields(updated);
+                                              }}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
+                                            >
+                                              <Plus size={13} /> 요소 추가
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Standalone Single Field Block
+                          const field = block.fields[0];
+                          const originalIdx = field.originalIdx;
                           const borderColor = field.type === 'phone' ? '#EC4899' : field.type === 'datetime' ? '#10B981' : field.type === 'checklist' ? '#8B5CF6' : '#1E293B';
                           const bgColor = field.type === 'phone' ? '#FDF2F8' : field.type === 'datetime' ? '#F0FDF4' : field.type === 'checklist' ? '#F5F3FF' : '#FFFFFF';
-                          const isDragged = draggedFieldIndex === idx;
-                          const isDragOver = dragOverFieldIndex === idx;
 
                           return (
                             <div
                               key={field.id}
                               draggable={true}
-                              onDragStart={(e) => handleFieldDragStart(e, idx)}
-                              onDragOver={(e) => handleFieldDragOver(e, idx)}
-                              onDrop={(e) => handleFieldDrop(e, idx)}
+                              onDragStart={(e) => handleBlockDragStart(e, blockIdx)}
+                              onDragOver={(e) => handleBlockDragOver(e, blockIdx)}
+                              onDrop={(e) => handleBlockDrop(e, blockIdx)}
                               onDragEnd={() => {
-                                setDraggedFieldIndex(null);
-                                setDragOverFieldIndex(null);
+                                setDraggedBlockIndex(null);
+                                setDragOverBlockIndex(null);
                               }}
                               style={{
                                 backgroundColor: bgColor,
-                                border: `1.5px solid ${isDragOver ? '#2563EB' : borderColor}`,
+                                border: `1.5px solid ${isBlockDragOver ? '#2563EB' : borderColor}`,
                                 borderRadius: '12px',
                                 padding: '14px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '10px',
-                                boxShadow: isDragOver ? '0 4px 12px rgba(37,99,235,0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
-                                opacity: isDragged ? 0.4 : 1,
+                                opacity: isBlockDragged ? 0.4 : 1,
+                                boxShadow: isBlockDragOver ? '0 4px 12px rgba(37,99,235,0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
                                 transition: 'all 0.15s ease'
                               }}
                             >
-                              {/* Header: Grip Handle, Checkbox & Group Title Badge */}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px', borderBottom: '1px dashed #E2E8F0', paddingBottom: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="드래그하여 순서 변경">
@@ -1959,33 +2344,13 @@ export default function NotebookExplorer() {
                                     style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#2563EB' }}
                                   />
                                   <span style={{ fontSize: '11px', fontWeight: 700, color: borderColor }}>
-                                    #{idx + 1} {field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'}
+                                    #{originalIdx + 1} {field.type === 'text' ? '📝 텍스트' : field.type === 'phone' ? '📞 전화번호' : field.type === 'datetime' ? '📅 날짜/시간' : '☑️ 체크리스트'}
                                   </span>
                                 </div>
-
-                                {field.groupTitle ? (
-                                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#EFF6FF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #BFDBFE', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <Folder size={12} color="#2563EB" /> 그룹: {field.groupTitle}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const updated = [...tplDraftFields];
-                                        updated[idx].groupTitle = '';
-                                        setTplDraftFields(updated);
-                                      }}
-                                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, marginLeft: '4px', color: '#64748B', display: 'inline-flex', alignItems: 'center' }}
-                                      title="그룹 해제"
-                                    >
-                                      <X size={12} />
-                                    </button>
-                                  </span>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: '#94A3B8' }}>체크 후 그룹화</span>
-                                )}
+                                <span style={{ fontSize: '10px', color: '#94A3B8' }}>체크 후 그룹화</span>
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                                {/* Label Input */}
                                 <div style={{ flex: 1, minWidth: '140px' }}>
                                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
                                     {field.type === 'text' && '📝 텍스트'}
@@ -1998,7 +2363,7 @@ export default function NotebookExplorer() {
                                     value={field.label}
                                     onChange={(e) => {
                                       const updated = [...tplDraftFields];
-                                      updated[idx].label = e.target.value;
+                                      updated[originalIdx].label = e.target.value;
                                       setTplDraftFields(updated);
                                     }}
                                     placeholder="예: 미팅 안건"
@@ -2006,7 +2371,6 @@ export default function NotebookExplorer() {
                                   />
                                 </div>
 
-                                {/* Placeholder/Default Value Input */}
                                 {field.type !== 'checklist' && (
                                   <div style={{ flex: 1.2, minWidth: '140px' }}>
                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>초기내용</label>
@@ -2016,7 +2380,7 @@ export default function NotebookExplorer() {
                                       onChange={(e) => {
                                         const updated = [...tplDraftFields];
                                         const val = field.type === 'phone' ? autoFormatPhoneNumber(e.target.value) : e.target.value;
-                                        updated[idx].placeholder = val;
+                                        updated[originalIdx].placeholder = val;
                                         setTplDraftFields(updated);
                                       }}
                                       placeholder="예: 소재지/임대료/계약기간"
@@ -2025,15 +2389,14 @@ export default function NotebookExplorer() {
                                   </div>
                                 )}
 
-                                {/* Controls */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingBottom: '2px', marginLeft: 'auto' }}>
-                                  <button disabled={idx === 0} onClick={() => handleMoveTplFieldInCanvas(idx, -1)} style={{ ...styles.iconBtn, opacity: idx === 0 ? 0.3 : 1, padding: '5px' }} title="위로 이동">
+                                  <button disabled={blockIdx === 0} onClick={() => handleMoveBlockInCanvas(blockIdx, -1)} style={{ ...styles.iconBtn, opacity: blockIdx === 0 ? 0.3 : 1, padding: '5px' }} title="위로 이동">
                                     <ArrowUp size={15} />
                                   </button>
-                                  <button disabled={idx === tplDraftFields.length - 1} onClick={() => handleMoveTplFieldInCanvas(idx, 1)} style={{ ...styles.iconBtn, opacity: idx === tplDraftFields.length - 1 ? 0.3 : 1, padding: '5px' }} title="아래로 이동">
+                                  <button disabled={blockIdx === getCanvasBlocks(tplDraftFields).length - 1} onClick={() => handleMoveBlockInCanvas(blockIdx, 1)} style={{ ...styles.iconBtn, opacity: blockIdx === getCanvasBlocks(tplDraftFields).length - 1 ? 0.3 : 1, padding: '5px' }} title="아래로 이동">
                                     <ArrowDown size={15} />
                                   </button>
-                                  <button onClick={() => handleRemoveTplFieldInCanvas(idx)} style={{ ...styles.iconBtn, padding: '5px' }} title="요소 삭제">
+                                  <button onClick={() => handleRemoveTplFieldInCanvas(originalIdx)} style={{ ...styles.iconBtn, padding: '5px' }} title="요소 삭제">
                                     <Trash2 size={15} color="#EF4444" />
                                   </button>
                                 </div>
@@ -2049,8 +2412,8 @@ export default function NotebookExplorer() {
                                         value={subItemText}
                                         onChange={(e) => {
                                           const updated = [...tplDraftFields];
-                                          if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
-                                          updated[idx].defaultItems[subIdx] = e.target.value;
+                                          if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                          updated[originalIdx].defaultItems[subIdx] = e.target.value;
                                           setTplDraftFields(updated);
                                         }}
                                         style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '12px', backgroundColor: '#FFFFFF' }}
@@ -2058,8 +2421,8 @@ export default function NotebookExplorer() {
                                       <button
                                         onClick={() => {
                                           const updated = [...tplDraftFields];
-                                          if (updated[idx].defaultItems) {
-                                            updated[idx].defaultItems.splice(subIdx, 1);
+                                          if (updated[originalIdx].defaultItems) {
+                                            updated[originalIdx].defaultItems.splice(subIdx, 1);
                                           }
                                           setTplDraftFields(updated);
                                         }}
@@ -2072,8 +2435,8 @@ export default function NotebookExplorer() {
                                   <button
                                     onClick={() => {
                                       const updated = [...tplDraftFields];
-                                      if (!updated[idx].defaultItems) updated[idx].defaultItems = [];
-                                      updated[idx].defaultItems.push(`체크 요소 ${updated[idx].defaultItems.length + 1}`);
+                                      if (!updated[originalIdx].defaultItems) updated[originalIdx].defaultItems = [];
+                                      updated[originalIdx].defaultItems.push(`체크 요소 ${updated[originalIdx].defaultItems.length + 1}`);
                                       setTplDraftFields(updated);
                                     }}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, backgroundColor: '#FFFFFF', fontSize: '11px', cursor: 'pointer', marginTop: '2px', color: borderColor, fontWeight: 600 }}
