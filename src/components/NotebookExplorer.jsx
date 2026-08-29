@@ -217,6 +217,14 @@ export default function NotebookExplorer() {
 
   // Detail View (Pane 3) states - Split 2-pane Layout
   const [isEditMode, setIsEditMode] = useState(false);
+  const [printTarget, setPrintTarget] = useState('detail');
+
+  const handlePrint = (target) => {
+    setPrintTarget(target);
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
   const [draftCategoryId, setDraftCategoryId] = useState('inbox');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
@@ -1846,7 +1854,7 @@ export default function NotebookExplorer() {
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
-                        <div style={styles.editPaneMainCard} className="print-area">
+                        <div style={styles.editPaneMainCard} className={printTarget === 'detail' ? 'print-area' : ''}>
                           {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
@@ -2125,7 +2133,7 @@ export default function NotebookExplorer() {
                       )}
 
                       {(!isMobile || mobileSubTab === 'sub') && (
-                                                <div style={styles.rightPaneCard} className="print-area">
+                                                <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : ''}>
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
                             display: 'flex',
@@ -2143,7 +2151,7 @@ export default function NotebookExplorer() {
                               </span>
                             </div>
                             <button
-                              onClick={() => window.print()}
+                              onClick={() => handlePrint('checklist')}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2477,7 +2485,7 @@ export default function NotebookExplorer() {
                   <div style={styles.splitReadContainer}>
                     {/* Left Card: Primary Note Content */}
                     {(!isMobile || mobileSubTab === 'main') && (
-                      <div style={styles.leftPaneCard} className="print-area">
+                      <div style={styles.leftPaneCard} className={printTarget === 'detail' ? 'print-area' : ''}>
                         {/* Title Header Line with Right-aligned Edit Button */}
                         <div style={{
                           display: 'flex',
@@ -2506,7 +2514,7 @@ export default function NotebookExplorer() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
                             <button
-                              onClick={() => window.print()}
+                              onClick={() => handlePrint('detail')}
                               style={styles.btnSecondary}
                               className="no-print"
                               title="상세내용 인쇄"
@@ -2630,7 +2638,7 @@ export default function NotebookExplorer() {
 
                     {/* Right Card: Standalone Checklist Card */}
                     {(!isMobile || mobileSubTab === 'sub') && (
-                                              <div style={styles.rightPaneCard} className="print-area">
+                                              <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : ''}>
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
                             display: 'flex',
