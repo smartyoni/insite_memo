@@ -42,7 +42,8 @@ import {
   MessageSquare,
   Type,
   ExternalLink,
-  Printer
+  Printer,
+  GripVertical
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -318,6 +319,12 @@ export default function NotebookExplorer() {
   const [selectedTplFieldIds, setSelectedTplFieldIds] = useState([]); // Array of field IDs selected for grouping
   const [tplEditorSection, setTplEditorSection] = useState('fields'); // 'fields' | 'checklists'
   const [isSavingTpl, setIsSavingTpl] = useState(false);
+
+  // Drag and Drop States for Template Fields and Checklists
+  const [draggedFieldIndex, setDraggedFieldIndex] = useState(null);
+  const [dragOverFieldIndex, setDragOverFieldIndex] = useState(null);
+  const [draggedChecklistIndex, setDraggedChecklistIndex] = useState(null);
+  const [dragOverChecklistIndex, setDragOverChecklistIndex] = useState(null);
 
   // Checklist local states
   const [newChecklistText, setNewChecklistText] = useState('');
@@ -945,6 +952,74 @@ export default function NotebookExplorer() {
       updated[newIndex] = target;
       return updated;
     });
+  };
+
+  // HTML5 Drag and Drop Handlers for Template Fields
+  const handleFieldDragStart = (e, index) => {
+    setDraggedFieldIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleFieldDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverFieldIndex !== index) {
+      setDragOverFieldIndex(index);
+    }
+  };
+
+  const handleFieldDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedFieldIndex === null || draggedFieldIndex === targetIndex) {
+      setDraggedFieldIndex(null);
+      setDragOverFieldIndex(null);
+      return;
+    }
+
+    setTplDraftFields((prev) => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(draggedFieldIndex, 1);
+      updated.splice(targetIndex, 0, draggedItem);
+      return updated;
+    });
+
+    setDraggedFieldIndex(null);
+    setDragOverFieldIndex(null);
+  };
+
+  // HTML5 Drag and Drop Handlers for Template Checklists
+  const handleChecklistDragStart = (e, index) => {
+    setDraggedChecklistIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleChecklistDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverChecklistIndex !== index) {
+      setDragOverChecklistIndex(index);
+    }
+  };
+
+  const handleChecklistDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedChecklistIndex === null || draggedChecklistIndex === targetIndex) {
+      setDraggedChecklistIndex(null);
+      setDragOverChecklistIndex(null);
+      return;
+    }
+
+    setTplDraftChecklists((prev) => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(draggedChecklistIndex, 1);
+      updated.splice(targetIndex, 0, draggedItem);
+      return updated;
+    });
+
+    setDraggedChecklistIndex(null);
+    setDragOverChecklistIndex(null);
   };
 
   // Field Grouping Handlers
@@ -1844,12 +1919,39 @@ export default function NotebookExplorer() {
                         tplDraftFields.map((field, idx) => {
                           const borderColor = field.type === 'phone' ? '#EC4899' : field.type === 'datetime' ? '#10B981' : field.type === 'checklist' ? '#8B5CF6' : '#1E293B';
                           const bgColor = field.type === 'phone' ? '#FDF2F8' : field.type === 'datetime' ? '#F0FDF4' : field.type === 'checklist' ? '#F5F3FF' : '#FFFFFF';
+                          const isDragged = draggedFieldIndex === idx;
+                          const isDragOver = dragOverFieldIndex === idx;
 
                           return (
-                            <div key={field.id} style={{ backgroundColor: bgColor, border: `1.5px solid ${borderColor}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                              {/* Header: Checkbox & Group Title Badge */}
+                            <div
+                              key={field.id}
+                              draggable={true}
+                              onDragStart={(e) => handleFieldDragStart(e, idx)}
+                              onDragOver={(e) => handleFieldDragOver(e, idx)}
+                              onDrop={(e) => handleFieldDrop(e, idx)}
+                              onDragEnd={() => {
+                                setDraggedFieldIndex(null);
+                                setDragOverFieldIndex(null);
+                              }}
+                              style={{
+                                backgroundColor: bgColor,
+                                border: `1.5px solid ${isDragOver ? '#2563EB' : borderColor}`,
+                                borderRadius: '12px',
+                                padding: '14px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px',
+                                boxShadow: isDragOver ? '0 4px 12px rgba(37,99,235,0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
+                                opacity: isDragged ? 0.4 : 1,
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {/* Header: Grip Handle, Checkbox & Group Title Badge */}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px', borderBottom: '1px dashed #E2E8F0', paddingBottom: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="드래그하여 순서 변경">
+                                    <GripVertical size={16} color="#64748B" />
+                                  </span>
                                   <input
                                     type="checkbox"
                                     checked={selectedTplFieldIds.includes(field.id)}
@@ -2010,12 +2112,41 @@ export default function NotebookExplorer() {
                           </p>
                         </div>
                       ) : (
-                        tplDraftChecklists.map((checkItem, idx) => (
-                          <div key={checkItem.id || idx} style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #8B5CF6', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', minWidth: '20px' }}>
-                                #{idx + 1}
-                              </span>
+                        tplDraftChecklists.map((checkItem, idx) => {
+                          const isDragged = draggedChecklistIndex === idx;
+                          const isDragOver = dragOverChecklistIndex === idx;
+
+                          return (
+                            <div
+                              key={checkItem.id || idx}
+                              draggable={true}
+                              onDragStart={(e) => handleChecklistDragStart(e, idx)}
+                              onDragOver={(e) => handleChecklistDragOver(e, idx)}
+                              onDrop={(e) => handleChecklistDrop(e, idx)}
+                              onDragEnd={() => {
+                                setDraggedChecklistIndex(null);
+                                setDragOverChecklistIndex(null);
+                              }}
+                              style={{
+                                backgroundColor: '#FFFFFF',
+                                border: `1.5px solid ${isDragOver ? '#7C3AED' : '#8B5CF6'}`,
+                                borderRadius: '12px',
+                                padding: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                boxShadow: isDragOver ? '0 4px 12px rgba(124,58,237,0.2)' : '0 2px 4px rgba(0,0,0,0.02)',
+                                opacity: isDragged ? 0.4 : 1,
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center' }} title="드래그하여 순서 변경">
+                                  <GripVertical size={16} color="#8B5CF6" />
+                                </span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', minWidth: '20px' }}>
+                                  #{idx + 1}
+                                </span>
                               <input
                                 type="text"
                                 value={checkItem.text || ''}
@@ -2050,7 +2181,8 @@ export default function NotebookExplorer() {
                               </select>
                             </div>
                           </div>
-                        ))
+                        );
+                      })
                       )}
                     </div>
                   </div>
