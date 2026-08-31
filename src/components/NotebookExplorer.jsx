@@ -214,6 +214,34 @@ const getFixedCategoryForTab = (tab) => {
   return INBOX_CATEGORY;
 };
 
+// Helper to highlight matching searchQuery in text
+export function highlightText(text, searchQuery) {
+  if (!text || typeof text !== 'string' || !searchQuery || !searchQuery.trim()) {
+    return text;
+  }
+  const q = searchQuery.trim();
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const segs = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return segs.map((seg, idx) =>
+    seg.toLowerCase() === q.toLowerCase() ? (
+      <mark
+        key={`hl_${idx}`}
+        style={{
+          backgroundColor: '#FDE047',
+          color: '#854D0E',
+          padding: '0 2px',
+          borderRadius: '3px',
+          fontWeight: 700
+        }}
+      >
+        {seg}
+      </mark>
+    ) : (
+      seg
+    )
+  );
+}
+
 // Helper to safely extract milliseconds timestamp from item updated/created time
 function getItemTimestamp(item) {
   if (!item) return 0;
@@ -650,6 +678,53 @@ export default function NotebookExplorer() {
       Object.values(obj).forEach(val => extractAllStrings(val, acc));
     }
     return acc;
+  };
+
+  const getMatchedSnippet = (item, searchQuery) => {
+    if (!searchQuery || !searchQuery.trim()) return null;
+    const q = searchQuery.trim().toLowerCase();
+
+    const formatSnippet = (str, label) => {
+      if (!str || typeof str !== 'string') return null;
+      const idx = str.toLowerCase().indexOf(q);
+      if (idx === -1) return null;
+      const start = Math.max(0, idx - 18);
+      const end = Math.min(str.length, idx + q.length + 22);
+      const prefix = start > 0 ? '...' : '';
+      const suffix = end < str.length ? '...' : '';
+      return {
+        snippetText: prefix + str.substring(start, end) + suffix,
+        label
+      };
+    };
+
+    // 1. Check body
+    const bodySnip = formatSnippet(item.body, '본문');
+    if (bodySnip) return bodySnip;
+
+    // 2. Check subBody
+    const subBodySnip = formatSnippet(item.subBody, '보충노트');
+    if (subBodySnip) return subBodySnip;
+
+    // 3. Check checklists
+    if (item.checklists) {
+      const listStrings = extractAllStrings(item.checklists);
+      for (let s of listStrings) {
+        const snip = formatSnippet(s, '체크리스트');
+        if (snip) return snip;
+      }
+    }
+
+    // 4. Check templateValues
+    if (item.templateValues) {
+      const tplStrings = extractAllStrings(item.templateValues);
+      for (let s of tplStrings) {
+        const snip = formatSnippet(s, '템플릿');
+        if (snip) return snip;
+      }
+    }
+
+    return null;
   };
 
   const checkItemMatches = (item, searchLower) => {
@@ -2193,7 +2268,7 @@ export default function NotebookExplorer() {
                                     textOverflow: 'ellipsis',
                                     flex: 1
                                   }}>
-                                    {item.title || '제목 없음'}
+                                    {highlightText(item.title || '제목 없음', searchQuery)}
                                   </span>
                                 )}
                               </div>
@@ -2216,18 +2291,37 @@ export default function NotebookExplorer() {
                               </div>
                             </div>
 
-                            {isSearchActive && (
-                              <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
-                                  {getCategoryBadgeName(item.categoryId)}
-                                </span>
-                                {getItemMatchBadges(item, searchLower).map((b, bIdx) => (
-                                  <span key={bIdx} style={{ fontSize: '10px', backgroundColor: b.bg, color: b.color, padding: '1px 5px', borderRadius: '4px' }}>
-                                    {b.label}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            {isSearchActive && (() => {
+                              const snip = getMatchedSnippet(item, searchQuery);
+                              return (
+                                <>
+                                  {snip && (
+                                    <div style={{
+                                      fontSize: '11px',
+                                      color: '#475569',
+                                      backgroundColor: '#F8FAFC',
+                                      padding: '4px 6px',
+                                      borderRadius: '4px',
+                                      borderLeft: '2.5px solid #3B82F6',
+                                      marginTop: '2px',
+                                      wordBreak: 'break-all'
+                                    }}>
+                                      💡 {highlightText(snip.snippetText, searchQuery)}
+                                    </div>
+                                  )}
+                                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                      {getCategoryBadgeName(item.categoryId)}
+                                    </span>
+                                    {getItemMatchBadges(item, searchLower).map((b, bIdx) => (
+                                      <span key={bIdx} style={{ fontSize: '10px', backgroundColor: b.bg, color: b.color, padding: '1px 5px', borderRadius: '4px' }}>
+                                        {b.label}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         );
                       })
@@ -3880,7 +3974,7 @@ export default function NotebookExplorer() {
                               </button>
                             )}
                             <h1 style={{ ...styles.readTitle, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {activeItem.title}
+                              {highlightText(activeItem.title, searchQuery)}
                             </h1>
                           </div>
 
@@ -3978,7 +4072,7 @@ export default function NotebookExplorer() {
 
                                           {field.type === 'text' && (
                                             <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
-                                              {renderWithLinks(currentVal || '(내용 없음)')}
+                                              {renderWithLinks(currentVal || '(내용 없음)', searchQuery)}
                                             </div>
                                           )}
 
@@ -4020,7 +4114,7 @@ export default function NotebookExplorer() {
                                                       flex: 1
                                                     }}
                                                   >
-                                                    {chk.text}
+                                                    {highlightText(chk.text, searchQuery)}
                                                   </span>
                                                   {chk.completed && (
                                                     <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, backgroundColor: '#D1FAE5', padding: '1px 6px', borderRadius: '4px' }}>
@@ -4054,7 +4148,7 @@ export default function NotebookExplorer() {
                               );
                             })()
                           ) : (
-                            renderWithLinks(activeItem.body)
+                            renderWithLinks(activeItem.body, searchQuery)
                           )}
                         </div>
                       </div>
