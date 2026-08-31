@@ -178,14 +178,18 @@ const BLOG_INBOX_CATEGORY = { id: 'blog_inbox', name: 'In-box', order: -99999, i
 const CLIPBOARD_INBOX_CATEGORY = { id: 'clipboard_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clipboard' };
 const BALANCE_INBOX_CATEGORY = { id: 'balance_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'balance' };
 const CLIP_INBOX_CATEGORY = { id: 'clip_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clip' };
+const OFFICE_INBOX_CATEGORY = { id: 'office_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'office' };
+const AD_INBOX_CATEGORY = { id: 'ad_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'ad' };
 
-const FIXED_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox'];
+const FIXED_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox', 'office_inbox', 'ad_inbox'];
 
 const getScopeForTab = (tab) => {
   if (tab === 'blog') return 'blog';
   if (tab === 'clipboard') return 'clipboard';
   if (tab === 'balance') return 'balance';
   if (tab === 'clip') return 'clip';
+  if (tab === 'office') return 'office';
+  if (tab === 'ad') return 'ad';
   return 'explorer';
 };
 
@@ -194,6 +198,8 @@ const getInboxIdForTab = (tab) => {
   if (tab === 'clipboard') return 'clipboard_inbox';
   if (tab === 'balance') return 'balance_inbox';
   if (tab === 'clip') return 'clip_inbox';
+  if (tab === 'office') return 'office_inbox';
+  if (tab === 'ad') return 'ad_inbox';
   return 'inbox';
 };
 
@@ -202,6 +208,8 @@ const getFixedCategoryForTab = (tab) => {
   if (tab === 'clipboard') return CLIPBOARD_INBOX_CATEGORY;
   if (tab === 'balance') return BALANCE_INBOX_CATEGORY;
   if (tab === 'clip') return CLIP_INBOX_CATEGORY;
+  if (tab === 'office') return OFFICE_INBOX_CATEGORY;
+  if (tab === 'ad') return AD_INBOX_CATEGORY;
   return INBOX_CATEGORY;
 };
 
@@ -1450,7 +1458,7 @@ export default function NotebookExplorer() {
       flexDirection: 'column',
       gap: '4px'
     }}>
-      {/* Top Row: 노트, 블로그, 앱개발, 캘린더 */}
+      {/* Top Row: 노트, 블로그, 사무실, 앱개발 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
         <button
           onClick={() => handleTabSwitch('explorer')}
@@ -1477,6 +1485,18 @@ export default function NotebookExplorer() {
           <span>블로그</span>
         </button>
         <button
+          onClick={() => handleTabSwitch('office')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'office' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'office' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'office' ? 700 : 500
+          }}
+        >
+          <span>사무실</span>
+        </button>
+        <button
           onClick={() => handleTabSwitch('balance')}
           style={{
             ...styles.mainModeTabBtn,
@@ -1490,7 +1510,7 @@ export default function NotebookExplorer() {
         </button>
       </div>
 
-      {/* Bottom Row: 계약, 클립, 템플릿 */}
+      {/* Bottom Row: 계약, 광고, 클립, 템플릿 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
         <button
           onClick={() => handleTabSwitch('clipboard')}
@@ -1503,6 +1523,18 @@ export default function NotebookExplorer() {
           }}
         >
           <span>계약</span>
+        </button>
+        <button
+          onClick={() => handleTabSwitch('ad')}
+          style={{
+            ...styles.mainModeTabBtn,
+            flex: 1,
+            backgroundColor: activeMainTab === 'ad' ? '#2563EB' : 'transparent',
+            color: activeMainTab === 'ad' ? '#FFFFFF' : '#4A607A',
+            fontWeight: activeMainTab === 'ad' ? 700 : 500
+          }}
+        >
+          <span>광고</span>
         </button>
         <button
           onClick={() => handleTabSwitch('clip')}
