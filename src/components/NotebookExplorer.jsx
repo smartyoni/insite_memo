@@ -43,7 +43,8 @@ import {
   Type,
   ExternalLink,
   Printer,
-  GripVertical
+  GripVertical,
+  Search
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -238,6 +239,35 @@ export default function NotebookExplorer() {
 
   // Item List Sort Order State (Default: 'asc' for ascending order)
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const searchLower = searchQuery.trim().toLowerCase();
+  const isSearchActive = searchLower.length > 0;
+
+  const getCategoryBadgeName = (categoryId) => {
+    const scopeMap = {
+      explorer: '노트',
+      blog: '블로그',
+      clipboard: '계약',
+      balance: '앱개발',
+      clip: '클립',
+      office: '사무실',
+      ad: '광고'
+    };
+    const foundFixed = [
+      INBOX_CATEGORY, BLOG_INBOX_CATEGORY, CLIPBOARD_INBOX_CATEGORY, 
+      BALANCE_INBOX_CATEGORY, CLIP_INBOX_CATEGORY, OFFICE_INBOX_CATEGORY, AD_INBOX_CATEGORY
+    ].find(c => c.id === categoryId);
+    if (foundFixed) {
+      return `${scopeMap[foundFixed.scope] || '노트'} > In-box`;
+    }
+    const found = categories.find(c => c.id === categoryId);
+    if (found) {
+      const scopeName = scopeMap[found.scope || 'explorer'] || '노트';
+      return `${scopeName} > ${found.name}`;
+    }
+    return '기타';
+  };
 
   // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
   const currentFixedCategory = getFixedCategoryForTab(activeMainTab);
@@ -608,6 +638,47 @@ export default function NotebookExplorer() {
       const tB = getItemTimestamp(b);
       return itemSortOrder === 'asc' ? tA - tB : tB - tA;
     });
+
+  // Search matched items (across ALL categories and tabs if search is active)
+  const matchedItems = isSearchActive
+    ? items
+        .filter((item) => {
+          // 1. Title match
+          if ((item.title || '').toLowerCase().includes(searchLower)) return true;
+          // 2. Body match
+          if ((item.body || '').toLowerCase().includes(searchLower)) return true;
+          // 3. SubBody match
+          if ((item.subBody || '').toLowerCase().includes(searchLower)) return true;
+          // 4. Checklists match
+          if (item.checklists && Array.isArray(item.checklists)) {
+            if (item.checklists.some(c => (c.text || '').toLowerCase().includes(searchLower))) return true;
+          }
+          // 5. TemplateValues match
+          if (item.templateValues && typeof item.templateValues === 'object') {
+            const vals = Object.values(item.templateValues);
+            for (let val of vals) {
+              if (typeof val === 'string' && val.toLowerCase().includes(searchLower)) return true;
+              if (Array.isArray(val)) {
+                if (val.some(v => typeof v === 'string' ? v.toLowerCase().includes(searchLower) : (v.text || '').toLowerCase().includes(searchLower))) return true;
+              }
+            }
+          }
+          return false;
+        })
+        .sort((a, b) => {
+          const titleA = (a.title || '').trim();
+          const titleB = (b.title || '').trim();
+          const comp = titleA.localeCompare(titleB, 'ko-KR', { numeric: true, sensitivity: 'base' });
+          if (comp !== 0) {
+            return itemSortOrder === 'asc' ? comp : -comp;
+          }
+          const tA = getItemTimestamp(a);
+          const tB = getItemTimestamp(b);
+          return itemSortOrder === 'asc' ? tA - tB : tB - tA;
+        })
+    : [];
+
+  const displayedItems = isSearchActive ? matchedItems : filteredItems;
 
   // Auto-select first item when category changes if current selected item not in category
   useEffect(() => {
@@ -1893,7 +1964,7 @@ export default function NotebookExplorer() {
                   <div style={styles.pane2Header}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={styles.pane2Title}>
-                        {activeCategory ? activeCategory.name : '목록'}
+                        {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1928,7 +1999,7 @@ export default function NotebookExplorer() {
                     padding: '0 12px 0 16px',
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     borderBottom: '1px solid #E2E8F0',
                     backgroundColor: '#F8FAFC',
                     flexShrink: 0
@@ -1941,7 +2012,7 @@ export default function NotebookExplorer() {
                       <span>카테고리</span>
                     </button>
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
-                      {activeCategory ? activeCategory.name : '목록'} ({filteredItems.length})
+                      {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                     </span>
                     <button
                       onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
@@ -1962,13 +2033,49 @@ export default function NotebookExplorer() {
                   </div>
                 )}
 
+                {/* Global Search Input Bar */}
+                <div style={{ padding: '8px 12px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#FFFFFF' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#F1F5F9',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    border: '1px solid #CBD5E1'
+                  }}>
+                    <Search size={15} color="#64748B" style={{ marginRight: '6px', flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="전체 메모/체크리스트 내용 검색..."
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        fontSize: '12px',
+                        color: '#1E293B'
+                      }}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      >
+                        <X size={14} color="#64748B" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div style={styles.paneContent}>
-                  {filteredItems.length === 0 ? (
+                  {displayedItems.length === 0 ? (
                     <div style={styles.emptyStateText}>
-                      등록된 메모가 없습니다.
+                      {isSearchActive ? '검색 결과와 일치하는 메모가 없습니다.' : '등록된 메모가 없습니다.'}
                     </div>
                   ) : (
-                    filteredItems.map((item) => {
+                    displayedItems.map((item) => {
                         const isSelected = item.id === selectedItemId;
                         const isEditing = item.id === editingItemId;
                         const isDeleting = item.id === deletingItemId;
@@ -1977,12 +2084,39 @@ export default function NotebookExplorer() {
                           <div
                             key={item.id}
                             onClick={() => {
-                              if (!isEditing && !isDeleting) navigateToDetail(item.id);
+                              if (!isEditing && !isDeleting) {
+                                if (isSearchActive) {
+                                  const itemCat = categories.find(c => c.id === item.categoryId);
+                                  const itemFixedCat = [
+                                    INBOX_CATEGORY, BLOG_INBOX_CATEGORY, CLIPBOARD_INBOX_CATEGORY, 
+                                    BALANCE_INBOX_CATEGORY, CLIP_INBOX_CATEGORY, OFFICE_INBOX_CATEGORY, AD_INBOX_CATEGORY
+                                  ].find(c => c.id === item.categoryId);
+                                  
+                                  const targetScope = itemFixedCat ? itemFixedCat.scope : (itemCat ? (itemCat.scope || 'explorer') : 'explorer');
+                                  const scopeToTabMap = {
+                                    explorer: 'explorer',
+                                    blog: 'blog',
+                                    clipboard: 'clipboard',
+                                    balance: 'balance',
+                                    clip: 'clip',
+                                    office: 'office',
+                                    ad: 'ad'
+                                  };
+                                  if (scopeToTabMap[targetScope]) {
+                                    setActiveMainTab(scopeToTabMap[targetScope]);
+                                  }
+                                  setSelectedCategoryId(item.categoryId);
+                                }
+                                navigateToDetail(item.id);
+                              }
                             }}
                             style={{
                               ...styles.itemCard,
                               backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
-                              borderColor: isSelected ? '#3F7A63' : '#ECEBE7'
+                              borderColor: isSelected ? '#3F7A63' : '#ECEBE7',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
@@ -2034,7 +2168,25 @@ export default function NotebookExplorer() {
                               </div>
                             </div>
 
-
+                            {isSearchActive && (
+                              <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                  {getCategoryBadgeName(item.categoryId)}
+                                </span>
+                                {(item.title || '').toLowerCase().includes(searchLower) && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 5px', borderRadius: '4px' }}>제목</span>
+                                )}
+                                {(item.body || '').toLowerCase().includes(searchLower) && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#E0F2FE', color: '#0369A1', padding: '1px 5px', borderRadius: '4px' }}>본문</span>
+                                )}
+                                {(item.checklists && item.checklists.some(c => (c.text || '').toLowerCase().includes(searchLower))) && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '1px 5px', borderRadius: '4px' }}>체크리스트</span>
+                                )}
+                                {(item.subBody || '').toLowerCase().includes(searchLower) && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#F3E8FF', color: '#7E22CE', padding: '1px 5px', borderRadius: '4px' }}>보충노트</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })
