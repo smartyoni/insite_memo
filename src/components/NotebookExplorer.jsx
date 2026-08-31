@@ -639,32 +639,80 @@ export default function NotebookExplorer() {
       return itemSortOrder === 'asc' ? tA - tB : tB - tA;
     });
 
+  // Helper to extract all text strings from any object recursively
+  const extractAllStrings = (obj, acc = []) => {
+    if (obj === null || obj === undefined) return acc;
+    if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+      acc.push(String(obj));
+    } else if (Array.isArray(obj)) {
+      obj.forEach(item => extractAllStrings(item, acc));
+    } else if (typeof obj === 'object') {
+      Object.values(obj).forEach(val => extractAllStrings(val, acc));
+    }
+    return acc;
+  };
+
+  const checkItemMatches = (item, searchLower) => {
+    if (!searchLower) return false;
+
+    // 1. Check title
+    if ((item.title || '').toLowerCase().includes(searchLower)) return true;
+
+    // 2. Check body (상세내용)
+    if ((item.body || '').toLowerCase().includes(searchLower)) return true;
+
+    // 3. Check subBody (보충노트 / 체크리스트 텍스트)
+    if ((item.subBody || '').toLowerCase().includes(searchLower)) return true;
+
+    // 4. Check checklists array (재귀 텍스트 추출)
+    if (item.checklists) {
+      const checklistTexts = extractAllStrings(item.checklists).join(' ').toLowerCase();
+      if (checklistTexts.includes(searchLower)) return true;
+    }
+
+    // 5. Check templateValues (템플릿 필드 입력값 재귀 텍스트 추출)
+    if (item.templateValues) {
+      const templateTexts = extractAllStrings(item.templateValues).join(' ').toLowerCase();
+      if (templateTexts.includes(searchLower)) return true;
+    }
+
+    return false;
+  };
+
+  const getItemMatchBadges = (item, searchLower) => {
+    const badges = [];
+    if (!searchLower) return badges;
+
+    // Title match
+    if ((item.title || '').toLowerCase().includes(searchLower)) {
+      badges.push({ label: '제목', bg: '#FEF3C7', color: '#B45309' });
+    }
+
+    // Body match
+    if ((item.body || '').toLowerCase().includes(searchLower)) {
+      badges.push({ label: '본문', bg: '#E0F2FE', color: '#0369A1' });
+    }
+
+    // Checklist / SubBody match
+    const subBodyMatch = (item.subBody || '').toLowerCase().includes(searchLower);
+    const checklistMatch = item.checklists && extractAllStrings(item.checklists).join(' ').toLowerCase().includes(searchLower);
+    if (subBodyMatch || checklistMatch) {
+      badges.push({ label: '체크리스트', bg: '#DCFCE7', color: '#15803D' });
+    }
+
+    // TemplateValues match
+    const templateMatch = item.templateValues && extractAllStrings(item.templateValues).join(' ').toLowerCase().includes(searchLower);
+    if (templateMatch) {
+      badges.push({ label: '템플릿', bg: '#F3E8FF', color: '#7E22CE' });
+    }
+
+    return badges;
+  };
+
   // Search matched items (across ALL categories and tabs if search is active)
   const matchedItems = isSearchActive
     ? items
-        .filter((item) => {
-          // 1. Title match
-          if ((item.title || '').toLowerCase().includes(searchLower)) return true;
-          // 2. Body match
-          if ((item.body || '').toLowerCase().includes(searchLower)) return true;
-          // 3. SubBody match
-          if ((item.subBody || '').toLowerCase().includes(searchLower)) return true;
-          // 4. Checklists match
-          if (item.checklists && Array.isArray(item.checklists)) {
-            if (item.checklists.some(c => (c.text || '').toLowerCase().includes(searchLower))) return true;
-          }
-          // 5. TemplateValues match
-          if (item.templateValues && typeof item.templateValues === 'object') {
-            const vals = Object.values(item.templateValues);
-            for (let val of vals) {
-              if (typeof val === 'string' && val.toLowerCase().includes(searchLower)) return true;
-              if (Array.isArray(val)) {
-                if (val.some(v => typeof v === 'string' ? v.toLowerCase().includes(searchLower) : (v.text || '').toLowerCase().includes(searchLower))) return true;
-              }
-            }
-          }
-          return false;
-        })
+        .filter((item) => checkItemMatches(item, searchLower))
         .sort((a, b) => {
           const titleA = (a.title || '').trim();
           const titleB = (b.title || '').trim();
@@ -2173,18 +2221,11 @@ export default function NotebookExplorer() {
                                 <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
                                   {getCategoryBadgeName(item.categoryId)}
                                 </span>
-                                {(item.title || '').toLowerCase().includes(searchLower) && (
-                                  <span style={{ fontSize: '10px', backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 5px', borderRadius: '4px' }}>제목</span>
-                                )}
-                                {(item.body || '').toLowerCase().includes(searchLower) && (
-                                  <span style={{ fontSize: '10px', backgroundColor: '#E0F2FE', color: '#0369A1', padding: '1px 5px', borderRadius: '4px' }}>본문</span>
-                                )}
-                                {(item.checklists && item.checklists.some(c => (c.text || '').toLowerCase().includes(searchLower))) && (
-                                  <span style={{ fontSize: '10px', backgroundColor: '#DCFCE7', color: '#15803D', padding: '1px 5px', borderRadius: '4px' }}>체크리스트</span>
-                                )}
-                                {(item.subBody || '').toLowerCase().includes(searchLower) && (
-                                  <span style={{ fontSize: '10px', backgroundColor: '#F3E8FF', color: '#7E22CE', padding: '1px 5px', borderRadius: '4px' }}>보충노트</span>
-                                )}
+                                {getItemMatchBadges(item, searchLower).map((b, bIdx) => (
+                                  <span key={bIdx} style={{ fontSize: '10px', backgroundColor: b.bg, color: b.color, padding: '1px 5px', borderRadius: '4px' }}>
+                                    {b.label}
+                                  </span>
+                                ))}
                               </div>
                             )}
                           </div>
