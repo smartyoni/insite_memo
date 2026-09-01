@@ -883,9 +883,13 @@ export default function NotebookExplorer() {
       [fieldId]: updatedList
     };
 
-    if (onUpdateNote) {
-      onUpdateNote({ ...activeItem, templateValues: updatedTemplateValues });
-    }
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === activeItem.id
+          ? { ...item, templateValues: updatedTemplateValues }
+          : item
+      )
+    );
 
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
