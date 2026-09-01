@@ -2642,12 +2642,6 @@ export default function NotebookExplorer() {
 
                                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                                           <div style={{ flex: 1, minWidth: '130px' }}>
-                                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
-                                              {field.type === 'text' && '📝 텍스트'}
-                                              {field.type === 'phone' && '📞 전화번호'}
-                                              {field.type === 'datetime' && '📅 날짜/시간'}
-                                              {field.type === 'checklist' && '☑️ 체크리스트'}
-                                            </label>
                                             <input
                                               type="text"
                                               value={field.label}
@@ -2656,14 +2650,13 @@ export default function NotebookExplorer() {
                                                 updated[originalIdx].label = e.target.value;
                                                 setTplDraftFields(updated);
                                               }}
-                                              placeholder="예: 미팅 안건"
+                                              placeholder="라벨명 입력"
                                               style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                                             />
                                           </div>
 
                                           {field.type !== 'checklist' && (
                                             <div style={{ flex: 1.2, minWidth: '130px' }}>
-                                              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>초기내용</label>
                                               <input
                                                 type="text"
                                                 value={field.placeholder || ''}
@@ -2673,7 +2666,7 @@ export default function NotebookExplorer() {
                                                   updated[originalIdx].placeholder = val;
                                                   setTplDraftFields(updated);
                                                 }}
-                                                placeholder="예: 소재지/임대료/계약기간"
+                                                placeholder="초기내용 입력"
                                                 style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                                               />
                                             </div>
@@ -2887,12 +2880,6 @@ export default function NotebookExplorer() {
 
                               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1, minWidth: '140px' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>
-                                    {field.type === 'text' && '📝 텍스트'}
-                                    {field.type === 'phone' && '📞 전화번호'}
-                                    {field.type === 'datetime' && '📅 날짜/시간'}
-                                    {field.type === 'checklist' && '☑️ 체크리스트'}
-                                  </label>
                                   <input
                                     type="text"
                                     value={field.label}
@@ -2901,14 +2888,13 @@ export default function NotebookExplorer() {
                                       updated[originalIdx].label = e.target.value;
                                       setTplDraftFields(updated);
                                     }}
-                                    placeholder="예: 미팅 안건"
+                                    placeholder="라벨명 입력"
                                     style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                                   />
                                 </div>
 
                                 {field.type !== 'checklist' && (
                                   <div style={{ flex: 1.2, minWidth: '140px' }}>
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: borderColor, marginBottom: '3px' }}>초기내용</label>
                                     <input
                                       type="text"
                                       value={field.placeholder || ''}
@@ -2918,7 +2904,7 @@ export default function NotebookExplorer() {
                                         updated[originalIdx].placeholder = val;
                                         setTplDraftFields(updated);
                                       }}
-                                      placeholder="예: 소재지/임대료/계약기간"
+                                      placeholder="초기내용 입력"
                                       style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${borderColor}`, fontSize: '13px', boxSizing: 'border-box', backgroundColor: '#FFFFFF' }}
                                     />
                                   </div>
