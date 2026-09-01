@@ -96,10 +96,31 @@ export const getCanvasBlocks = (fields) => {
 
   (fields || []).forEach((field, fieldIdx) => {
     const gTitle = field.groupTitle || '';
-    if (gTitle !== currentGroupTitle) {
+
+    // ungrouped fields: each becomes its own standalone block
+    if (!gTitle) {
+      // flush any open group first
       if (currentGroupFields.length > 0) {
         blocks.push({
           type: currentGroupTitle ? 'group' : 'single',
+          groupTitle: currentGroupTitle,
+          fields: currentGroupFields
+        });
+        currentGroupFields = [];
+        currentGroupTitle = null;
+      }
+      blocks.push({
+        type: 'single',
+        groupTitle: '',
+        fields: [{ ...field, originalIdx: fieldIdx }]
+      });
+      return;
+    }
+
+    if (gTitle !== currentGroupTitle) {
+      if (currentGroupFields.length > 0) {
+        blocks.push({
+          type: 'group',
           groupTitle: currentGroupTitle,
           fields: currentGroupFields
         });
