@@ -4972,8 +4972,11 @@ const styles = {
 
   pane3Body: {
     flex: 1,
-    overflowY: 'auto',
-    padding: '10px 12px'
+    overflow: 'hidden',
+    padding: '10px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0
   },
   pane3Empty: {
     height: '100%',
@@ -4989,12 +4992,15 @@ const styles = {
     display: 'flex',
     gap: '10px',
     width: '100%',
-    minHeight: '100%',
+    flex: 1,
+    minHeight: 0,
     alignItems: 'stretch'
   },
   leftPaneCard: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
+    overflowY: 'auto',
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
     borderRadius: '8px',
@@ -5004,6 +5010,8 @@ const styles = {
   rightPaneCard: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
+    overflowY: 'auto',
     backgroundColor: '#F8FAFC',
     border: '1px solid #CBD5E1',
     borderRadius: '8px',
@@ -5060,14 +5068,15 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
-    height: '100%',
+    flex: 1,
+    minHeight: 0,
     width: '100%'
   },
   splitEditFields: {
     display: 'flex',
     gap: '10px',
     flex: 1,
-    minHeight: '420px'
+    minHeight: 0
   },
   editPaneMainCard: {
     flex: 1,
@@ -5075,6 +5084,8 @@ const styles = {
     flexDirection: 'column',
     gap: '6px',
     minWidth: 0,
+    minHeight: 0,
+    overflowY: 'auto',
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
     borderRadius: '8px',
@@ -5087,6 +5098,8 @@ const styles = {
     flexDirection: 'column',
     gap: '6px',
     minWidth: 0,
+    minHeight: 0,
+    overflowY: 'auto',
     backgroundColor: '#F8FAFC',
     border: '1px solid #CBD5E1',
     borderRadius: '8px',
