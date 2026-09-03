@@ -32,7 +32,6 @@ import {
   Square,
   ListChecks,
   Calendar as CalendarIcon,
-  Clock,
   Tag,
   ArrowUp,
   ArrowDown,
@@ -44,6 +43,7 @@ import {
   ExternalLink,
   Printer,
   GripVertical,
+  MoreVertical,
   Search
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
@@ -457,17 +457,12 @@ export default function NotebookExplorer() {
 
   // Checklist local states
   const [newChecklistText, setNewChecklistText] = useState('');
-  const [newCheckDueDate, setNewCheckDueDate] = useState('');
-  const [newCheckIsAllDay, setNewCheckIsAllDay] = useState(true);
-  const [newCheckDueTime, setNewCheckDueTime] = useState('09:00');
 
   const [editingCheckId, setEditingCheckId] = useState(null);
   const [editingCheckText, setEditingCheckText] = useState('');
-  const [editingCheckDueDate, setEditingCheckDueDate] = useState('');
-  const [editingCheckIsAllDay, setEditingCheckIsAllDay] = useState(true);
-  const [editingCheckDueTime, setEditingCheckDueTime] = useState('09:00');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
+  const [openMenuCheckId, setOpenMenuCheckId] = useState(null);
 
 
 
@@ -941,16 +936,10 @@ export default function NotebookExplorer() {
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
-      completed: false,
-      dueDate: newCheckDueDate || null,
-      isAllDay: newCheckIsAllDay,
-      dueTime: newCheckIsAllDay ? null : (newCheckDueTime || '09:00')
+      completed: false
     };
     const updated = [...currentChecklists, newItem];
     setNewChecklistText('');
-    setNewCheckDueDate('');
-    setNewCheckIsAllDay(true);
-    setNewCheckDueTime('09:00');
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -969,18 +958,12 @@ export default function NotebookExplorer() {
         ? {
             ...c,
             text: editingCheckText.trim(),
-            dueDate: editingCheckDueDate || null,
-            isAllDay: editingCheckIsAllDay,
-            dueTime: editingCheckIsAllDay ? null : (editingCheckDueTime || '09:00'),
             tag: finalTag || null
           }
         : c
     );
     setEditingCheckId(null);
     setEditingCheckText('');
-    setEditingCheckDueDate('');
-    setEditingCheckIsAllDay(true);
-    setEditingCheckDueTime('09:00');
     setEditingCheckTag('');
     setCustomTagInput('');
     try {
@@ -3098,9 +3081,6 @@ export default function NotebookExplorer() {
                                             id: `tcheck_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
                                             text: typeof c === 'string' ? c : c.text,
                                             completed: false,
-                                            dueDate: typeof c === 'object' ? (c.dueDate || null) : null,
-                                            isAllDay: typeof c === 'object' && c.isAllDay !== undefined ? c.isAllDay : true,
-                                            dueTime: typeof c === 'object' ? (c.dueTime || '09:00') : '09:00',
                                             tag: typeof c === 'object' ? (c.tag || null) : null
                                           }));
                                           setDraftChecklists(converted);
@@ -3533,93 +3513,41 @@ export default function NotebookExplorer() {
                                           autoFocus
                                         />
 
-                                        {/* Clean 1-Line Dataview Control Bar: Date + Cancel/Save */}
+                                        {/* Simplified Edit Controls: Cancel / Save */}
                                         <div style={{
                                           display: 'flex',
                                           alignItems: 'center',
-                                          justifyContent: 'space-between',
+                                          justifyContent: 'flex-end',
                                           gap: '6px',
-                                          backgroundColor: '#F8FAFC',
-                                          padding: '4px 8px',
-                                          borderRadius: '8px',
-                                          border: '1px solid #CBD5E1',
-                                          marginTop: '4px'
+                                          marginTop: '6px'
                                         }}>
-                                          {/* Left Controls: Date Picker */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
-                                            {/* Date Picker */}
-                                            <div style={styles.scheduleField}>
-                                              <CalendarIcon size={13} color="#64748B" />
-                                              <input
-                                                type="date"
-                                                value={editingCheckDueDate}
-                                                onChange={(e) => setEditingCheckDueDate(e.target.value)}
-                                                style={styles.scheduleDateInput}
-                                              />
-                                              {editingCheckDueDate && (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setEditingCheckDueDate('');
-                                                    setEditingCheckIsAllDay(true);
-                                                  }}
-                                                  style={styles.scheduleClearBtn}
-                                                  title="일정 삭제"
-                                                >
-                                                  <X size={12} />
-                                                </button>
-                                              )}
-                                            </div>
-
-                                            {/* All-Day / Time Input (Only when date is set) */}
-                                            {editingCheckDueDate && (
-                                              <>
-                                                <label style={styles.allDayCheckLabel}>
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={editingCheckIsAllDay}
-                                                    onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
-                                                  />
-                                                  <span>종일</span>
-                                                </label>
-                                                {!editingCheckIsAllDay && (
-                                                  <div style={styles.scheduleField}>
-                                                    <Clock size={13} color="#64748B" />
-                                                    <input
-                                                      type="time"
-                                                      value={editingCheckDueTime}
-                                                      onChange={(e) => setEditingCheckDueTime(e.target.value)}
-                                                      style={styles.scheduleTimeInput}
-                                                    />
-                                                  </div>
-                                                )}
-                                              </>
-                                            )}
-                                          </div>
-
-                                          {/* Right Controls: Cancel & Save Buttons */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: 'auto' }}>
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditingCheckId(null)}
-                                              style={styles.btnSmallCancel}
-                                            >
-                                              <X size={13} /> 취소
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                              style={styles.btnSmallSave}
-                                            >
-                                              <Check size={13} /> 저장
-                                            </button>
-                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingCheckId(null)}
+                                            style={styles.btnSmallCancel}
+                                          >
+                                            <X size={13} /> 취소
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                            style={styles.btnSmallSave}
+                                          >
+                                            <Check size={13} /> 저장
+                                          </button>
                                         </div>
                                       </div>
                                     ) : (
-                                      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '6px' }}>
-                                        {/* Top Content Row: Checkbox + Pure Text */}
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+                                      <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        gap: '8px',
+                                        minHeight: '26px'
+                                      }}>
+                                        {/* Left Row: Checkbox + Pure Text + Tag */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                           <button
                                             onClick={() => handleToggleChecklist(checkItem.id)}
                                             style={styles.checkboxBtn}
@@ -3638,91 +3566,134 @@ export default function NotebookExplorer() {
                                               minWidth: 0,
                                               textDecoration: checkItem.completed ? 'line-through' : 'none',
                                               color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                              fontWeight: checkItem.completed ? 400 : 500,
-                                              paddingTop: '1px'
+                                              fontWeight: checkItem.completed ? 400 : 500
                                             }}
                                           >
                                             {renderWithLinks(checkItem.text)}
                                           </span>
+
+                                          {checkItem.tag && (() => {
+                                            const tagStyle = getTagStyle(checkItem.tag);
+                                            return (
+                                              <span
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  fontSize: '11px',
+                                                  fontWeight: 700,
+                                                  padding: '1px 6px',
+                                                  borderRadius: '4px',
+                                                  backgroundColor: tagStyle.bg,
+                                                  color: tagStyle.color,
+                                                  border: `1px solid ${tagStyle.border}`,
+                                                  flexShrink: 0
+                                                }}
+                                              >
+                                                {checkItem.tag}
+                                              </span>
+                                            );
+                                          })()}
                                         </div>
 
-                                        {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
-                                        <div style={styles.checkitemStatusBar} className="no-print">
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                                            {checkItem.dueDate && (
-                                              <div style={styles.itemScheduleBadge}>
-                                                {checkItem.isAllDay !== false ? (
-                                                  <span>📅 {checkItem.dueDate} (종일)</span>
-                                                ) : (
-                                                  <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
-                                                )}
-                                              </div>
-                                            )}
+                                        {/* Right End: 3-dot Menu & Popup on its right */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
+                                          <button
+                                            type="button"
+                                            onClick={() => setOpenMenuCheckId(openMenuCheckId === checkItem.id ? null : checkItem.id)}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: '26px',
+                                              height: '26px',
+                                              borderRadius: '6px',
+                                              border: 'none',
+                                              backgroundColor: openMenuCheckId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                              color: openMenuCheckId === checkItem.id ? '#2563EB' : '#64748B',
+                                              cursor: 'pointer'
+                                            }}
+                                            title="메뉴"
+                                          >
+                                            <MoreVertical size={16} />
+                                          </button>
 
-
-
-                                            {checkItem.tag && (() => {
-                                              const tagStyle = getTagStyle(checkItem.tag);
-                                              return (
-                                                <span
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    fontSize: '11px',
-                                                    fontWeight: 700,
-                                                    padding: '1px 6px',
-                                                    borderRadius: '4px',
-                                                    backgroundColor: tagStyle.bg,
-                                                    color: tagStyle.color,
-                                                    border: `1px solid ${tagStyle.border}`
-                                                  }}
-                                                >
-                                                  {checkItem.tag}
-                                                </span>
-                                              );
-                                            })()}
-
-                                            {checkItem.dueDate && (
-                                              <div style={styles.itemScheduleBadge}>
-                                                {checkItem.isAllDay !== false ? (
-                                                  <span>📅 {checkItem.dueDate} (종일)</span>
-                                                ) : (
-                                                  <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          <div style={styles.checkitemActions}>
-                                            <button
-                                              onClick={() => {
-                                                setEditingCheckId(checkItem.id);
-                                                setEditingCheckText(checkItem.text);
-                                                setEditingCheckDueDate(checkItem.dueDate || '');
-                                                setEditingCheckIsAllDay(checkItem.isAllDay !== false);
-                                                setEditingCheckDueTime(checkItem.dueTime || '09:00');
-                                                setEditingCheckTag(checkItem.tag || '');
+                                          {openMenuCheckId === checkItem.id && (
+                                            <div
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                backgroundColor: '#FFFFFF',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                                border: '1px solid #CBD5E1',
+                                                padding: '2px 4px',
+                                                whiteSpace: 'nowrap'
                                               }}
-                                              style={styles.actionBtnLight}
-                                              title="수정"
                                             >
-                                              <Edit2 size={13} />
-                                            </button>
-                                            <button
-                                              onClick={() => {
-                                                const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                                openDeleteModal(
-                                                  '체크리스트 항목 삭제',
-                                                  `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                  () => handleDeleteChecklist(checkItem.id)
-                                                );
-                                              }}
-                                              style={styles.actionBtnLight}
-                                              title="삭제"
-                                            >
-                                              <Trash2 size={13} />
-                                            </button>
-                                          </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setOpenMenuCheckId(null);
+                                                  setEditingCheckId(checkItem.id);
+                                                  setEditingCheckText(checkItem.text);
+                                                  setEditingCheckTag(checkItem.tag || '');
+                                                }}
+                                                style={{
+                                                  padding: '3px 8px',
+                                                  fontSize: '11px',
+                                                  fontWeight: 600,
+                                                  color: '#2563EB',
+                                                  backgroundColor: '#EFF6FF',
+                                                  border: '1px solid #BFDBFE',
+                                                  borderRadius: '4px',
+                                                  cursor: 'pointer'
+                                                }}
+                                              >
+                                                수정
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setOpenMenuCheckId(null);
+                                                  const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                  openDeleteModal(
+                                                    '체크리스트 항목 삭제',
+                                                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                    () => handleDeleteChecklist(checkItem.id)
+                                                  );
+                                                }}
+                                                style={{
+                                                  padding: '3px 8px',
+                                                  fontSize: '11px',
+                                                  fontWeight: 600,
+                                                  color: '#DC2626',
+                                                  backgroundColor: '#FEF2F2',
+                                                  border: '1px solid #FECACA',
+                                                  borderRadius: '4px',
+                                                  cursor: 'pointer'
+                                                }}
+                                              >
+                                                삭제
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => setOpenMenuCheckId(null)}
+                                                style={{
+                                                  padding: '3px 8px',
+                                                  fontSize: '11px',
+                                                  fontWeight: 600,
+                                                  color: '#64748B',
+                                                  backgroundColor: '#F1F5F9',
+                                                  border: '1px solid #E2E8F0',
+                                                  borderRadius: '4px',
+                                                  cursor: 'pointer'
+                                                }}
+                                              >
+                                                취소
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     )}
@@ -4055,94 +4026,41 @@ export default function NotebookExplorer() {
                                         autoFocus
                                       />
 
-                                      {/* 1-Line Integrated Dataview Control Bar: DUE DATE + Cancel/Save */}
+                                      {/* Simplified Edit Controls: Cancel / Save */}
                                       <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justify: 'space-between',
-                                        gap: '8px',
-                                        backgroundColor: '#F8FAFC',
-                                        padding: '6px 10px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #CBD5E1',
-                                        flexWrap: 'wrap',
-                                        marginTop: '4px'
+                                        justifyContent: 'flex-end',
+                                        gap: '6px',
+                                        marginTop: '6px'
                                       }}>
-                                        {/* Left Controls: DUE DATE */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-                                          {/* Date Picker */}
-                                          <div style={styles.scheduleField}>
-                                            <CalendarIcon size={13} color="#64748B" />
-                                            <input
-                                              type="date"
-                                              value={editingCheckDueDate}
-                                              onChange={(e) => setEditingCheckDueDate(e.target.value)}
-                                              style={styles.scheduleDateInput}
-                                            />
-                                            {editingCheckDueDate && (
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setEditingCheckDueDate('');
-                                                  setEditingCheckIsAllDay(true);
-                                                }}
-                                                style={styles.scheduleClearBtn}
-                                                title="일정 삭제"
-                                              >
-                                                <X size={12} />
-                                              </button>
-                                            )}
-                                          </div>
-
-                                          {/* All-Day / Time Input (Only when date is set) */}
-                                          {editingCheckDueDate && (
-                                            <>
-                                              <label style={styles.allDayCheckLabel}>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={editingCheckIsAllDay}
-                                                  onChange={(e) => setEditingCheckIsAllDay(e.target.checked)}
-                                                />
-                                                <span>종일</span>
-                                              </label>
-                                              {!editingCheckIsAllDay && (
-                                                <div style={styles.scheduleField}>
-                                                  <Clock size={13} color="#64748B" />
-                                                  <input
-                                                    type="time"
-                                                    value={editingCheckDueTime}
-                                                    onChange={(e) => setEditingCheckDueTime(e.target.value)}
-                                                    style={styles.scheduleTimeInput}
-                                                  />
-                                                </div>
-                                              )}
-                                            </>
-                                          )}
-                                        </div>
-
-                                        {/* Right Controls: Cancel & Save Buttons on SAME line */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', flexShrink: 0 }}>
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditingCheckId(null)}
-                                            style={styles.btnSmallCancel}
-                                          >
-                                            <X size={13} /> 취소
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                            style={styles.btnSmallSave}
-                                          >
-                                            <Check size={13} /> 저장
-                                          </button>
-                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingCheckId(null)}
+                                          style={styles.btnSmallCancel}
+                                        >
+                                          <X size={13} /> 취소
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                          style={styles.btnSmallSave}
+                                        >
+                                          <Check size={13} /> 저장
+                                        </button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '6px' }}>
-                                      {/* Top Content Row: Checkbox + Pure Text */}
-                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      width: '100%',
+                                      gap: '8px',
+                                      minHeight: '26px'
+                                    }}>
+                                      {/* Left Row: Checkbox + Pure Text + Tag */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                         <button
                                           onClick={() => handleToggleChecklist(checkItem.id)}
                                           style={styles.checkboxBtn}
@@ -4161,79 +4079,134 @@ export default function NotebookExplorer() {
                                             minWidth: 0,
                                             textDecoration: checkItem.completed ? 'line-through' : 'none',
                                             color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                            fontWeight: checkItem.completed ? 400 : 500,
-                                            paddingTop: '1px'
+                                            fontWeight: checkItem.completed ? 400 : 500
                                           }}
                                         >
                                           {renderWithLinks(checkItem.text)}
                                         </span>
+
+                                        {checkItem.tag && (() => {
+                                          const tagStyle = getTagStyle(checkItem.tag);
+                                          return (
+                                            <span
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                fontSize: '11px',
+                                                fontWeight: 700,
+                                                padding: '1px 6px',
+                                                borderRadius: '4px',
+                                                backgroundColor: tagStyle.bg,
+                                                color: tagStyle.color,
+                                                border: `1px solid ${tagStyle.border}`,
+                                                flexShrink: 0
+                                              }}
+                                            >
+                                              {checkItem.tag}
+                                            </span>
+                                          );
+                                        })()}
                                       </div>
 
-                                      {/* Bottom Status Bar: Badge + Schedule (Left), Edit + Delete (Right) */}
-                                      <div style={styles.checkitemStatusBar} className="no-print">
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                                          {checkItem.tag && (() => {
-                                            const tagStyle = getTagStyle(checkItem.tag);
-                                            return (
-                                              <span
-                                                style={{
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  fontSize: '11px',
-                                                  fontWeight: 700,
-                                                  padding: '1px 6px',
-                                                  borderRadius: '4px',
-                                                  backgroundColor: tagStyle.bg,
-                                                  color: tagStyle.color,
-                                                  border: `1px solid ${tagStyle.border}`
-                                                }}
-                                              >
-                                                {checkItem.tag}
-                                              </span>
-                                            );
-                                          })()}
+                                      {/* Right End: 3-dot Menu & Popup on its right */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
+                                        <button
+                                          type="button"
+                                          onClick={() => setOpenMenuCheckId(openMenuCheckId === checkItem.id ? null : checkItem.id)}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '26px',
+                                            height: '26px',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            backgroundColor: openMenuCheckId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                            color: openMenuCheckId === checkItem.id ? '#2563EB' : '#64748B',
+                                            cursor: 'pointer'
+                                          }}
+                                          title="메뉴"
+                                        >
+                                          <MoreVertical size={16} />
+                                        </button>
 
-                                          {checkItem.dueDate && (
-                                            <div style={styles.itemScheduleBadge}>
-                                              {checkItem.isAllDay !== false ? (
-                                                <span>📅 {checkItem.dueDate} (종일)</span>
-                                              ) : (
-                                                <span>⏰ {checkItem.dueDate} {checkItem.dueTime || '09:00'}</span>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        <div style={styles.checkitemActions}>
-                                          <button
-                                            onClick={() => {
-                                              setEditingCheckId(checkItem.id);
-                                              setEditingCheckText(checkItem.text);
-                                              setEditingCheckDueDate(checkItem.dueDate || '');
-                                              setEditingCheckIsAllDay(checkItem.isAllDay !== false);
-                                              setEditingCheckDueTime(checkItem.dueTime || '09:00');
-                                              setEditingCheckTag(checkItem.tag || '');
+                                        {openMenuCheckId === checkItem.id && (
+                                          <div
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              backgroundColor: '#FFFFFF',
+                                              borderRadius: '6px',
+                                              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                              border: '1px solid #CBD5E1',
+                                              padding: '2px 4px',
+                                              whiteSpace: 'nowrap'
                                             }}
-                                            style={styles.actionBtnLight}
-                                            title="수정"
                                           >
-                                            <Edit2 size={13} />
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                              openDeleteModal(
-                                                '체크리스트 항목 삭제',
-                                                `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                () => handleDeleteChecklist(checkItem.id)
-                                              );
-                                            }}
-                                            style={styles.actionBtnLight}
-                                            title="삭제"
-                                          >
-                                            <Trash2 size={13} />
-                                          </button>
-                                        </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setOpenMenuCheckId(null);
+                                                setEditingCheckId(checkItem.id);
+                                                setEditingCheckText(checkItem.text);
+                                                setEditingCheckTag(checkItem.tag || '');
+                                              }}
+                                              style={{
+                                                padding: '3px 8px',
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                color: '#2563EB',
+                                                backgroundColor: '#EFF6FF',
+                                                border: '1px solid #BFDBFE',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                              }}
+                                            >
+                                              수정
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setOpenMenuCheckId(null);
+                                                const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                openDeleteModal(
+                                                  '체크리스트 항목 삭제',
+                                                  `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                  () => handleDeleteChecklist(checkItem.id)
+                                                );
+                                              }}
+                                              style={{
+                                                padding: '3px 8px',
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                color: '#DC2626',
+                                                backgroundColor: '#FEF2F2',
+                                                border: '1px solid #FECACA',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                              }}
+                                            >
+                                              삭제
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setOpenMenuCheckId(null)}
+                                              style={{
+                                                padding: '3px 8px',
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                color: '#64748B',
+                                                backgroundColor: '#F1F5F9',
+                                                border: '1px solid #E2E8F0',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                              }}
+                                            >
+                                              취소
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   )}
