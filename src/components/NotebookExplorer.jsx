@@ -462,7 +462,7 @@ export default function NotebookExplorer() {
   const [editingCheckText, setEditingCheckText] = useState('');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
-  const [checklistModalItem, setChecklistModalItem] = useState(null);
+  const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
 
 
 
@@ -1015,8 +1015,8 @@ export default function NotebookExplorer() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (checklistModalItem) {
-          setChecklistModalItem(null);
+        if (openChecklistMenuId) {
+          setOpenChecklistMenuId(null);
         } else if (deleteModalState.isOpen) {
           closeDeleteModal();
         } else if (isEditMode) {
@@ -1026,7 +1026,7 @@ export default function NotebookExplorer() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [checklistModalItem, deleteModalState.isOpen, isEditMode, activeItem]);
+  }, [openChecklistMenuId, deleteModalState.isOpen, isEditMode, activeItem]);
 
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
@@ -3597,11 +3597,14 @@ export default function NotebookExplorer() {
                                           })()}
                                         </div>
 
-                                        {/* Right End: 3-dot Menu Button (Opens Modal) */}
-                                        <div style={{ flexShrink: 0 }} className="no-print">
+                                        {/* Right End: 3-dot Menu with Floating Dropdown */}
+                                        <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
                                           <button
                                             type="button"
-                                            onClick={() => setChecklistModalItem(checkItem)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenChecklistMenuId(openChecklistMenuId === checkItem.id ? null : checkItem.id);
+                                            }}
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
@@ -3610,14 +3613,87 @@ export default function NotebookExplorer() {
                                               height: '28px',
                                               borderRadius: '6px',
                                               border: 'none',
-                                              backgroundColor: 'transparent',
-                                              color: '#64748B',
+                                              backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                              color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
                                               cursor: 'pointer'
                                             }}
                                             title="메뉴"
                                           >
                                             <MoreVertical size={16} />
                                           </button>
+
+                                          {openChecklistMenuId === checkItem.id && (
+                                            <>
+                                              {/* Invisible backdrop to close dropdown on click outside */}
+                                              <div
+                                                style={{
+                                                  position: 'fixed',
+                                                  top: 0,
+                                                  left: 0,
+                                                  right: 0,
+                                                  bottom: 0,
+                                                  zIndex: 999,
+                                                  backgroundColor: 'transparent'
+                                                }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setOpenChecklistMenuId(null);
+                                                }}
+                                              />
+
+                                              {/* Context Dropdown Card */}
+                                              <div
+                                                style={styles.checklistDropdownMenu}
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setOpenChecklistMenuId(null);
+                                                    setEditingCheckId(checkItem.id);
+                                                    setEditingCheckText(checkItem.text);
+                                                    setEditingCheckTag(checkItem.tag || '');
+                                                  }}
+                                                  style={styles.checklistDropdownItem}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <Edit2 size={14} color="#475569" />
+                                                  <span>수정</span>
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setOpenChecklistMenuId(null);
+                                                    const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                    openDeleteModal(
+                                                      '체크리스트 항목 삭제',
+                                                      `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                      () => handleDeleteChecklist(checkItem.id)
+                                                    );
+                                                  }}
+                                                  style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <Trash2 size={14} color="#DC2626" />
+                                                  <span>삭제</span>
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setOpenChecklistMenuId(null)}
+                                                  style={styles.checklistDropdownItem}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <X size={14} color="#64748B" />
+                                                  <span>취소</span>
+                                                </button>
+                                              </div>
+                                            </>
+                                          )}
                                         </div>
                                       </div>
                                     )}
@@ -4032,11 +4108,14 @@ export default function NotebookExplorer() {
                                         })()}
                                       </div>
 
-                                      {/* Right End: 3-dot Menu Button (Opens Modal) */}
-                                      <div style={{ flexShrink: 0 }} className="no-print">
+                                      {/* Right End: 3-dot Menu with Floating Dropdown */}
+                                      <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
                                         <button
                                           type="button"
-                                          onClick={() => setChecklistModalItem(checkItem)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenChecklistMenuId(openChecklistMenuId === checkItem.id ? null : checkItem.id);
+                                          }}
                                           style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -4045,14 +4124,87 @@ export default function NotebookExplorer() {
                                             height: '28px',
                                             borderRadius: '6px',
                                             border: 'none',
-                                            backgroundColor: 'transparent',
-                                            color: '#64748B',
+                                            backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                            color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
                                             cursor: 'pointer'
                                           }}
                                           title="메뉴"
                                         >
                                           <MoreVertical size={16} />
                                         </button>
+
+                                        {openChecklistMenuId === checkItem.id && (
+                                          <>
+                                            {/* Invisible backdrop to close dropdown on click outside */}
+                                            <div
+                                              style={{
+                                                position: 'fixed',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                zIndex: 999,
+                                                backgroundColor: 'transparent'
+                                              }}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenChecklistMenuId(null);
+                                              }}
+                                            />
+
+                                            {/* Context Dropdown Card */}
+                                            <div
+                                              style={styles.checklistDropdownMenu}
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setOpenChecklistMenuId(null);
+                                                  setEditingCheckId(checkItem.id);
+                                                  setEditingCheckText(checkItem.text);
+                                                  setEditingCheckTag(checkItem.tag || '');
+                                                }}
+                                                style={styles.checklistDropdownItem}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                              >
+                                                <Edit2 size={14} color="#475569" />
+                                                <span>수정</span>
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setOpenChecklistMenuId(null);
+                                                  const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                  openDeleteModal(
+                                                    '체크리스트 항목 삭제',
+                                                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                    () => handleDeleteChecklist(checkItem.id)
+                                                  );
+                                                }}
+                                                style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                              >
+                                                <Trash2 size={14} color="#DC2626" />
+                                                <span>삭제</span>
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() => setOpenChecklistMenuId(null)}
+                                                style={styles.checklistDropdownItem}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                              >
+                                                <X size={14} color="#64748B" />
+                                                <span>취소</span>
+                                              </button>
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -4320,130 +4472,6 @@ export default function NotebookExplorer() {
               </button>
               <button onClick={handleConfirmDelete} style={styles.btnModalDelete}>
                 삭제하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Checklist Item Action Modal (수정 / 삭제 / 취소) */}
-      {checklistModalItem && (
-        <div style={styles.modalOverlay} onClick={() => setChecklistModalItem(null)}>
-          <div
-            style={{
-              ...styles.modalContent,
-              maxWidth: '320px',
-              padding: '20px',
-              gap: '14px',
-              borderRadius: '16px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={styles.modalHeader}>
-              <h3 style={{ ...styles.modalTitle, fontSize: '15px', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-                <ListChecks size={18} color="#2563EB" />
-                체크리스트 관리
-              </h3>
-              <button onClick={() => setChecklistModalItem(null)} style={styles.modalCloseBtn} title="닫기">
-                <X size={16} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                fontSize: '13px',
-                color: '#334155',
-                backgroundColor: '#F8FAFC',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                maxHeight: '90px',
-                overflowY: 'auto',
-                wordBreak: 'break-word',
-                lineHeight: 1.5
-              }}
-            >
-              {checklistModalItem.text}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const item = checklistModalItem;
-                  setChecklistModalItem(null);
-                  setEditingCheckId(item.id);
-                  setEditingCheckText(item.text);
-                  setEditingCheckTag(item.tag || '');
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '11px 16px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#FFFFFF',
-                  backgroundColor: '#2563EB',
-                  border: 'none',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
-                }}
-              >
-                <Edit2 size={16} /> 수정
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const item = checklistModalItem;
-                  setChecklistModalItem(null);
-                  const preview = item.text.length > 35 ? item.text.slice(0, 35) + '...' : item.text;
-                  openDeleteModal(
-                    '체크리스트 항목 삭제',
-                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                    () => handleDeleteChecklist(item.id)
-                  );
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '11px 16px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#DC2626',
-                  backgroundColor: '#FEE2E2',
-                  border: '1px solid #FECACA',
-                  borderRadius: '10px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Trash2 size={16} /> 삭제
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setChecklistModalItem(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 16px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: '#64748B',
-                  backgroundColor: '#F1F5F9',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  cursor: 'pointer'
-                }}
-              >
-                <X size={16} /> 취소
               </button>
             </div>
           </div>
@@ -5440,5 +5468,39 @@ const styles = {
     whiteSpace: 'nowrap',
     border: '1px solid rgba(255, 255, 255, 0.15)',
     backdropFilter: 'blur(4px)'
+  },
+
+  checklistDropdownMenu: {
+    position: 'absolute',
+    right: 0,
+    top: 'calc(100% + 4px)',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '8px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
+    border: '1px solid #E2E8F0',
+    padding: '4px',
+    zIndex: 1000,
+    minWidth: '100px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    whiteSpace: 'nowrap'
+  },
+  checklistDropdownItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    width: '100%',
+    padding: '7px 12px',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#334155',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'background-color 0.12s ease',
+    userSelect: 'none'
   }
 };
