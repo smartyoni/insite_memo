@@ -460,14 +460,12 @@ export default function NotebookExplorer() {
   const [newCheckDueDate, setNewCheckDueDate] = useState('');
   const [newCheckIsAllDay, setNewCheckIsAllDay] = useState(true);
   const [newCheckDueTime, setNewCheckDueTime] = useState('09:00');
-  const [newCheckPriority, setNewCheckPriority] = useState('');
 
   const [editingCheckId, setEditingCheckId] = useState(null);
   const [editingCheckText, setEditingCheckText] = useState('');
   const [editingCheckDueDate, setEditingCheckDueDate] = useState('');
   const [editingCheckIsAllDay, setEditingCheckIsAllDay] = useState(true);
   const [editingCheckDueTime, setEditingCheckDueTime] = useState('09:00');
-  const [editingCheckPriority, setEditingCheckPriority] = useState('');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
 
@@ -946,15 +944,13 @@ export default function NotebookExplorer() {
       completed: false,
       dueDate: newCheckDueDate || null,
       isAllDay: newCheckIsAllDay,
-      dueTime: newCheckIsAllDay ? null : (newCheckDueTime || '09:00'),
-      priority: newCheckPriority || null
+      dueTime: newCheckIsAllDay ? null : (newCheckDueTime || '09:00')
     };
     const updated = [...currentChecklists, newItem];
     setNewChecklistText('');
     setNewCheckDueDate('');
     setNewCheckIsAllDay(true);
     setNewCheckDueTime('09:00');
-    setNewCheckPriority('');
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -976,7 +972,6 @@ export default function NotebookExplorer() {
             dueDate: editingCheckDueDate || null,
             isAllDay: editingCheckIsAllDay,
             dueTime: editingCheckIsAllDay ? null : (editingCheckDueTime || '09:00'),
-            priority: editingCheckPriority || null,
             tag: finalTag || null
           }
         : c
@@ -986,7 +981,6 @@ export default function NotebookExplorer() {
     setEditingCheckDueDate('');
     setEditingCheckIsAllDay(true);
     setEditingCheckDueTime('09:00');
-    setEditingCheckPriority('');
     setEditingCheckTag('');
     setCustomTagInput('');
     try {
@@ -1495,7 +1489,7 @@ export default function NotebookExplorer() {
   const handleAddTplChecklistInCanvas = () => {
     setTplDraftChecklists((prev) => [
       ...prev,
-      { id: `tplchk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, text: '', priority: null }
+      { id: `tplchk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, text: '' }
     ]);
   };
 
@@ -1554,8 +1548,7 @@ export default function NotebookExplorer() {
 
       const cleanChecklists = tplDraftChecklists.map((c) => ({
         id: c.id || `tplchk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        text: c.text || '',
-        priority: c.priority || null
+        text: c.text || ''
       }));
 
       const tplData = {
@@ -2952,8 +2945,7 @@ export default function NotebookExplorer() {
                                 if (lines.length > 0) {
                                   const newItems = lines.map((text, i) => ({
                                     id: `tplchk_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
-                                    text,
-                                    priority: null
+                                    text
                                   }));
                                   setTplDraftChecklists(prev => [...prev, ...newItems]);
                                 }
@@ -3025,20 +3017,6 @@ export default function NotebookExplorer() {
                                   <Trash2 size={15} color="#EF4444" />
                                 </button>
                               </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
-                              <label style={{ fontWeight: 600, color: '#6D28D9' }}>우선순위:</label>
-                              <select
-                                value={checkItem.priority || ''}
-                                onChange={(e) => handleUpdateTplChecklistInCanvas(idx, 'priority', e.target.value)}
-                                style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #C4B5FD', backgroundColor: '#FFFFFF', fontSize: '11px' }}
-                              >
-                                <option value="">우선순위 없음</option>
-                                <option value="낮음">🟢 낮음</option>
-                                <option value="보통">🟡 보통</option>
-                                <option value="높음">🔴 높음</option>
-                                <option value="긴급">🔥 긴급</option>
-                              </select>
                             </div>
                           </div>
                         );
@@ -3120,7 +3098,6 @@ export default function NotebookExplorer() {
                                             id: `tcheck_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
                                             text: typeof c === 'string' ? c : c.text,
                                             completed: false,
-                                            priority: typeof c === 'object' ? (c.priority || null) : null,
                                             dueDate: typeof c === 'object' ? (c.dueDate || null) : null,
                                             isAllDay: typeof c === 'object' && c.isAllDay !== undefined ? c.isAllDay : true,
                                             dueTime: typeof c === 'object' ? (c.dueTime || '09:00') : '09:00',
@@ -3556,7 +3533,7 @@ export default function NotebookExplorer() {
                                           autoFocus
                                         />
 
-                                        {/* Clean 1-Line Dataview Control Bar: Date + Priority + Cancel/Save */}
+                                        {/* Clean 1-Line Dataview Control Bar: Date + Cancel/Save */}
                                         <div style={{
                                           display: 'flex',
                                           alignItems: 'center',
@@ -3568,7 +3545,7 @@ export default function NotebookExplorer() {
                                           border: '1px solid #CBD5E1',
                                           marginTop: '4px'
                                         }}>
-                                          {/* Left Controls: Date Picker & Priority Dropdown */}
+                                          {/* Left Controls: Date Picker */}
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
                                             {/* Date Picker */}
                                             <div style={styles.scheduleField}>
@@ -3618,28 +3595,6 @@ export default function NotebookExplorer() {
                                                 )}
                                               </>
                                             )}
-
-                                            {/* Priority Dropdown */}
-                                            <div style={styles.scheduleField}>
-                                              <select
-                                                value={editingCheckPriority || ''}
-                                                onChange={(e) => setEditingCheckPriority(e.target.value)}
-                                                style={{
-                                                  border: 'none',
-                                                  fontSize: '12px',
-                                                  fontWeight: 700,
-                                                  color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#64748B',
-                                                  backgroundColor: 'transparent',
-                                                  outline: 'none',
-                                                  cursor: 'pointer'
-                                                }}
-                                              >
-                                                <option value="">우선순위 없음</option>
-                                                <option value="HIGH">🚨 높음</option>
-                                                <option value="MEDIUM">⚡ 보통</option>
-                                                <option value="LOW">💤 낮음</option>
-                                              </select>
-                                            </div>
                                           </div>
 
                                           {/* Right Controls: Cancel & Save Buttons */}
@@ -3704,21 +3659,7 @@ export default function NotebookExplorer() {
                                               </div>
                                             )}
 
-                                            {checkItem.priority && (
-                                              <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                fontSize: '11px',
-                                                fontWeight: 700,
-                                                padding: '1px 6px',
-                                                borderRadius: '4px',
-                                                backgroundColor: checkItem.priority === 'HIGH' ? '#FEE2E2' : checkItem.priority === 'MEDIUM' ? '#FEF3C7' : '#EFF6FF',
-                                                color: checkItem.priority === 'HIGH' ? '#B91C1C' : checkItem.priority === 'MEDIUM' ? '#B45309' : '#1E40AF',
-                                                border: `1px solid ${checkItem.priority === 'HIGH' ? '#FCA5A5' : checkItem.priority === 'MEDIUM' ? '#FDE047' : '#BFDBFE'}`
-                                              }}>
-                                                {checkItem.priority === 'HIGH' ? '🚨 높음' : checkItem.priority === 'MEDIUM' ? '⚡ 보통' : '💤 낮음'}
-                                              </span>
-                                            )}
+
 
                                             {checkItem.tag && (() => {
                                               const tagStyle = getTagStyle(checkItem.tag);
@@ -4114,7 +4055,7 @@ export default function NotebookExplorer() {
                                         autoFocus
                                       />
 
-                                      {/* 1-Line Integrated Dataview Control Bar: DUE DATE + Priority + Cancel/Save */}
+                                      {/* 1-Line Integrated Dataview Control Bar: DUE DATE + Cancel/Save */}
                                       <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -4127,7 +4068,7 @@ export default function NotebookExplorer() {
                                         flexWrap: 'wrap',
                                         marginTop: '4px'
                                       }}>
-                                        {/* Left Controls: DUE DATE & Priority */}
+                                        {/* Left Controls: DUE DATE */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
                                           {/* Date Picker */}
                                           <div style={styles.scheduleField}>
@@ -4177,28 +4118,6 @@ export default function NotebookExplorer() {
                                               )}
                                             </>
                                           )}
-
-                                          {/* Priority Dropdown */}
-                                          <div style={styles.scheduleField}>
-                                            <select
-                                              value={editingCheckPriority || ''}
-                                              onChange={(e) => setEditingCheckPriority(e.target.value)}
-                                              style={{
-                                                border: 'none',
-                                                fontSize: '12px',
-                                                fontWeight: 700,
-                                                color: editingCheckPriority === 'HIGH' ? '#DC2626' : editingCheckPriority === 'MEDIUM' ? '#D97706' : editingCheckPriority === 'LOW' ? '#2563EB' : '#64748B',
-                                                backgroundColor: 'transparent',
-                                                outline: 'none',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              <option value="">우선순위 없음</option>
-                                              <option value="HIGH">🚨 높음</option>
-                                              <option value="MEDIUM">⚡ 보통</option>
-                                              <option value="LOW">💤 낮음</option>
-                                            </select>
-                                          </div>
                                         </div>
 
                                         {/* Right Controls: Cancel & Save Buttons on SAME line */}
