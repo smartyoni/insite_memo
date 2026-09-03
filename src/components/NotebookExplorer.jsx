@@ -3288,7 +3288,7 @@ export default function NotebookExplorer() {
                                                       setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
                                                     }}
                                                     onKeyDown={(e) => {
-                                                      if (e.key === 'Enter' && (e.ctrlKey || e.altKey)) {
+                                                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                                         e.preventDefault();
                                                         const currentArr = Array.isArray(fieldVal)
                                                           ? [...fieldVal]
@@ -3457,12 +3457,12 @@ export default function NotebookExplorer() {
                                 value={newChecklistText}
                                 onChange={(e) => setNewChecklistText(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && (e.altKey || e.ctrlKey)) {
+                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                     e.preventDefault();
                                     handleAddChecklist();
                                   }
                                 }}
-                                placeholder="새 체크리스트 항목 입력... (Alt+Enter 또는 Ctrl+Enter 항목 추가)"
+                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                                 style={styles.checklistTextarea}
                               />
                               <button
@@ -3473,7 +3473,7 @@ export default function NotebookExplorer() {
                                   cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
                                 }}
                                 disabled={!newChecklistText.trim()}
-                                title="체크리스트 추가 (Alt+Enter)"
+                                title="체크리스트 추가 (Ctrl+Enter)"
                               >
                                 <Plus size={15} />
                               </button>
@@ -3505,12 +3505,12 @@ export default function NotebookExplorer() {
                                           rows={2}
                                           value={editingCheckText}
                                           onChange={(e) => setEditingCheckText(e.target.value)}
-                                         onKeyDown={(e) => {
-                                           if (e.key === 'Enter' && (e.altKey || e.ctrlKey)) {
-                                             e.preventDefault();
-                                             handleSaveEditChecklist(checkItem.id);
-                                           }
-                                         }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                              e.preventDefault();
+                                              handleSaveEditChecklist(checkItem.id);
+                                            }
+                                          }}
                                           style={styles.checklistEditTextarea}
                                           autoFocus
                                         />
@@ -3967,12 +3967,12 @@ export default function NotebookExplorer() {
                               value={newChecklistText}
                               onChange={(e) => setNewChecklistText(e.target.value)}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter' && (e.altKey || e.ctrlKey)) {
+                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                   e.preventDefault();
                                   handleAddChecklist();
                                 }
                               }}
-                              placeholder="새 체크리스트 항목 입력... (Alt+Enter 또는 Ctrl+Enter 항목 추가)"
+                              placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                               style={styles.checklistTextarea}
                             />
                             <button
@@ -3983,7 +3983,7 @@ export default function NotebookExplorer() {
                                 cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
                               }}
                               disabled={!newChecklistText.trim()}
-                              title="체크리스트 추가 (Alt+Enter)"
+                              title="체크리스트 추가 (Ctrl+Enter)"
                             >
                               <Plus size={15} />
                               <span>추가</span>
@@ -4017,7 +4017,7 @@ export default function NotebookExplorer() {
                                         value={editingCheckText}
                                         onChange={(e) => setEditingCheckText(e.target.value)}
                                         onKeyDown={(e) => {
-                                          if (e.key === 'Enter' && (e.altKey || e.ctrlKey)) {
+                                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                             e.preventDefault();
                                             handleSaveEditChecklist(checkItem.id);
                                           }
