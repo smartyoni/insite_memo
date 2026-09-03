@@ -462,7 +462,7 @@ export default function NotebookExplorer() {
   const [editingCheckText, setEditingCheckText] = useState('');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
-  const [openMenuCheckId, setOpenMenuCheckId] = useState(null);
+  const [checklistModalItem, setChecklistModalItem] = useState(null);
 
 
 
@@ -1015,7 +1015,9 @@ export default function NotebookExplorer() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (deleteModalState.isOpen) {
+        if (checklistModalItem) {
+          setChecklistModalItem(null);
+        } else if (deleteModalState.isOpen) {
           closeDeleteModal();
         } else if (isEditMode) {
           handleCancelDetailEdit();
@@ -1024,7 +1026,7 @@ export default function NotebookExplorer() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteModalState.isOpen, isEditMode, activeItem]);
+  }, [checklistModalItem, deleteModalState.isOpen, isEditMode, activeItem]);
 
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
@@ -3595,105 +3597,27 @@ export default function NotebookExplorer() {
                                           })()}
                                         </div>
 
-                                        {/* Right End: 3-dot Menu & Popup on its right */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
+                                        {/* Right End: 3-dot Menu Button (Opens Modal) */}
+                                        <div style={{ flexShrink: 0 }} className="no-print">
                                           <button
                                             type="button"
-                                            onClick={() => setOpenMenuCheckId(openMenuCheckId === checkItem.id ? null : checkItem.id)}
+                                            onClick={() => setChecklistModalItem(checkItem)}
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
                                               justifyContent: 'center',
-                                              width: '26px',
-                                              height: '26px',
+                                              width: '28px',
+                                              height: '28px',
                                               borderRadius: '6px',
                                               border: 'none',
-                                              backgroundColor: openMenuCheckId === checkItem.id ? '#E2E8F0' : 'transparent',
-                                              color: openMenuCheckId === checkItem.id ? '#2563EB' : '#64748B',
+                                              backgroundColor: 'transparent',
+                                              color: '#64748B',
                                               cursor: 'pointer'
                                             }}
                                             title="메뉴"
                                           >
                                             <MoreVertical size={16} />
                                           </button>
-
-                                          {openMenuCheckId === checkItem.id && (
-                                            <div
-                                              style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                                backgroundColor: '#FFFFFF',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                                border: '1px solid #CBD5E1',
-                                                padding: '2px 4px',
-                                                whiteSpace: 'nowrap'
-                                              }}
-                                            >
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setOpenMenuCheckId(null);
-                                                  setEditingCheckId(checkItem.id);
-                                                  setEditingCheckText(checkItem.text);
-                                                  setEditingCheckTag(checkItem.tag || '');
-                                                }}
-                                                style={{
-                                                  padding: '3px 8px',
-                                                  fontSize: '11px',
-                                                  fontWeight: 600,
-                                                  color: '#2563EB',
-                                                  backgroundColor: '#EFF6FF',
-                                                  border: '1px solid #BFDBFE',
-                                                  borderRadius: '4px',
-                                                  cursor: 'pointer'
-                                                }}
-                                              >
-                                                수정
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setOpenMenuCheckId(null);
-                                                  const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                                  openDeleteModal(
-                                                    '체크리스트 항목 삭제',
-                                                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                    () => handleDeleteChecklist(checkItem.id)
-                                                  );
-                                                }}
-                                                style={{
-                                                  padding: '3px 8px',
-                                                  fontSize: '11px',
-                                                  fontWeight: 600,
-                                                  color: '#DC2626',
-                                                  backgroundColor: '#FEF2F2',
-                                                  border: '1px solid #FECACA',
-                                                  borderRadius: '4px',
-                                                  cursor: 'pointer'
-                                                }}
-                                              >
-                                                삭제
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => setOpenMenuCheckId(null)}
-                                                style={{
-                                                  padding: '3px 8px',
-                                                  fontSize: '11px',
-                                                  fontWeight: 600,
-                                                  color: '#64748B',
-                                                  backgroundColor: '#F1F5F9',
-                                                  border: '1px solid #E2E8F0',
-                                                  borderRadius: '4px',
-                                                  cursor: 'pointer'
-                                                }}
-                                              >
-                                                취소
-                                              </button>
-                                            </div>
-                                          )}
                                         </div>
                                       </div>
                                     )}
@@ -4108,105 +4032,27 @@ export default function NotebookExplorer() {
                                         })()}
                                       </div>
 
-                                      {/* Right End: 3-dot Menu & Popup on its right */}
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
+                                      {/* Right End: 3-dot Menu Button (Opens Modal) */}
+                                      <div style={{ flexShrink: 0 }} className="no-print">
                                         <button
                                           type="button"
-                                          onClick={() => setOpenMenuCheckId(openMenuCheckId === checkItem.id ? null : checkItem.id)}
+                                          onClick={() => setChecklistModalItem(checkItem)}
                                           style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            width: '26px',
-                                            height: '26px',
+                                            width: '28px',
+                                            height: '28px',
                                             borderRadius: '6px',
                                             border: 'none',
-                                            backgroundColor: openMenuCheckId === checkItem.id ? '#E2E8F0' : 'transparent',
-                                            color: openMenuCheckId === checkItem.id ? '#2563EB' : '#64748B',
+                                            backgroundColor: 'transparent',
+                                            color: '#64748B',
                                             cursor: 'pointer'
                                           }}
                                           title="메뉴"
                                         >
                                           <MoreVertical size={16} />
                                         </button>
-
-                                        {openMenuCheckId === checkItem.id && (
-                                          <div
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '4px',
-                                              backgroundColor: '#FFFFFF',
-                                              borderRadius: '6px',
-                                              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                              border: '1px solid #CBD5E1',
-                                              padding: '2px 4px',
-                                              whiteSpace: 'nowrap'
-                                            }}
-                                          >
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setOpenMenuCheckId(null);
-                                                setEditingCheckId(checkItem.id);
-                                                setEditingCheckText(checkItem.text);
-                                                setEditingCheckTag(checkItem.tag || '');
-                                              }}
-                                              style={{
-                                                padding: '3px 8px',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                color: '#2563EB',
-                                                backgroundColor: '#EFF6FF',
-                                                border: '1px solid #BFDBFE',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              수정
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setOpenMenuCheckId(null);
-                                                const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                                openDeleteModal(
-                                                  '체크리스트 항목 삭제',
-                                                  `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                  () => handleDeleteChecklist(checkItem.id)
-                                                );
-                                              }}
-                                              style={{
-                                                padding: '3px 8px',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                color: '#DC2626',
-                                                backgroundColor: '#FEF2F2',
-                                                border: '1px solid #FECACA',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              삭제
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => setOpenMenuCheckId(null)}
-                                              style={{
-                                                padding: '3px 8px',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                color: '#64748B',
-                                                backgroundColor: '#F1F5F9',
-                                                border: '1px solid #E2E8F0',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                              }}
-                                            >
-                                              취소
-                                            </button>
-                                          </div>
-                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -4474,6 +4320,130 @@ export default function NotebookExplorer() {
               </button>
               <button onClick={handleConfirmDelete} style={styles.btnModalDelete}>
                 삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Checklist Item Action Modal (수정 / 삭제 / 취소) */}
+      {checklistModalItem && (
+        <div style={styles.modalOverlay} onClick={() => setChecklistModalItem(null)}>
+          <div
+            style={{
+              ...styles.modalContent,
+              maxWidth: '320px',
+              padding: '20px',
+              gap: '14px',
+              borderRadius: '16px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <h3 style={{ ...styles.modalTitle, fontSize: '15px', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                <ListChecks size={18} color="#2563EB" />
+                체크리스트 관리
+              </h3>
+              <button onClick={() => setChecklistModalItem(null)} style={styles.modalCloseBtn} title="닫기">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                fontSize: '13px',
+                color: '#334155',
+                backgroundColor: '#F8FAFC',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                maxHeight: '90px',
+                overflowY: 'auto',
+                wordBreak: 'break-word',
+                lineHeight: 1.5
+              }}
+            >
+              {checklistModalItem.text}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const item = checklistModalItem;
+                  setChecklistModalItem(null);
+                  setEditingCheckId(item.id);
+                  setEditingCheckText(item.text);
+                  setEditingCheckTag(item.tag || '');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '11px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#FFFFFF',
+                  backgroundColor: '#2563EB',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(37,99,235,0.2)'
+                }}
+              >
+                <Edit2 size={16} /> 수정
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const item = checklistModalItem;
+                  setChecklistModalItem(null);
+                  const preview = item.text.length > 35 ? item.text.slice(0, 35) + '...' : item.text;
+                  openDeleteModal(
+                    '체크리스트 항목 삭제',
+                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                    () => handleDeleteChecklist(item.id)
+                  );
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '11px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#DC2626',
+                  backgroundColor: '#FEE2E2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '10px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={16} /> 삭제
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChecklistModalItem(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#64748B',
+                  backgroundColor: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} /> 취소
               </button>
             </div>
           </div>
