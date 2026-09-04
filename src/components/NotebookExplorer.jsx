@@ -4075,8 +4075,25 @@ export default function NotebookExplorer() {
                                 const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
 
                                 return (
-                                  <div key={group.section ? group.section.id : `group_edit_${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {/* 그룹 헤더 바 */}
+                                  <div
+                                    key={group.section ? group.section.id : `group_edit_${groupIdx}`}
+                                    style={group.section ? {
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '6px',
+                                      padding: '8px',
+                                      backgroundColor: '#F8FAFC',
+                                      borderRadius: '10px',
+                                      border: isSecDragOver ? '1.5px solid #2563EB' : '1.5px solid #CBD5E1',
+                                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                                      marginTop: groupIdx === 0 ? '0' : '8px'
+                                    } : {
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
                                     {group.section && (
                                       <div
                                         draggable={!isSecEditing}
@@ -4108,10 +4125,10 @@ export default function NotebookExplorer() {
                                           justifyContent: 'space-between',
                                           gap: '8px',
                                           padding: '7px 10px',
-                                          marginTop: groupIdx === 0 ? '2px' : '10px',
-                                          marginBottom: '2px',
-                                          backgroundColor: '#F1F5F9',
-                                          border: isSecDragOver ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                                          marginTop: '0',
+                                          marginBottom: isSecCollapsed ? '0' : '2px',
+                                          backgroundColor: '#EEF2F6',
+                                          border: '1px solid #CBD5E1',
                                           borderRadius: '8px',
                                           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                                           opacity: isSecDragged ? 0.4 : 1,
@@ -4872,7 +4889,24 @@ export default function NotebookExplorer() {
                               const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
 
                               return (
-                                <div key={group.section ? group.section.id : `group_${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div
+                                  key={group.section ? group.section.id : `group_${groupIdx}`}
+                                  style={group.section ? {
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '6px',
+                                    padding: '8px',
+                                    backgroundColor: '#F8FAFC',
+                                    borderRadius: '10px',
+                                    border: isSecDragOver ? '1.5px solid #2563EB' : '1.5px solid #CBD5E1',
+                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                                    marginTop: groupIdx === 0 ? '0' : '8px'
+                                  } : {
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '8px'
+                                  }}
+                                >
                                   {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
                                   {group.section && (
                                     <div
@@ -4905,10 +4939,10 @@ export default function NotebookExplorer() {
                                         justifyContent: 'space-between',
                                         gap: '8px',
                                         padding: '7px 10px',
-                                        marginTop: groupIdx === 0 ? '2px' : '10px',
-                                        marginBottom: '2px',
-                                        backgroundColor: '#F1F5F9',
-                                        border: isSecDragOver ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                                        marginTop: '0',
+                                        marginBottom: isSecCollapsed ? '0' : '2px',
+                                        backgroundColor: '#EEF2F6',
+                                        border: '1px solid #CBD5E1',
                                         borderRadius: '8px',
                                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                                         opacity: isSecDragged ? 0.4 : 1,
