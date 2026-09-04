@@ -67,11 +67,12 @@ export function renderWithLinks(text, searchQuery = '') {
       parts.push(
         <a
           key={matchIndex}
-          href={`tel:${tel}`}
+          href={`sms:${tel}`}
+          title={`${matchedText} SMS 문자 보내기`}
           style={{ color: '#059669', textDecoration: 'underline', textUnderlineOffset: '3px', fontWeight: 600, cursor: 'pointer' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {renderHighlightedSegment(matchedText, `tel_${matchIndex}`)}
+          {renderHighlightedSegment(matchedText, `sms_${matchIndex}`)}
         </a>
       );
     } else {
