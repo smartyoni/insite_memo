@@ -48,7 +48,8 @@ import {
   Printer,
   GripVertical,
   MoreVertical,
-  Search
+  Search,
+  Copy
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 import { DetailBlocksManager, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
@@ -698,6 +699,52 @@ export default function NotebookExplorer() {
   }, [deleteModalState.isOpen]);
 
   const toastTimerRef = useRef(null);
+  const [copyToastText, setCopyToastText] = useState('');
+  const copyToastTimerRef = useRef(null);
+
+  const handleCopyChecklist = async (checkItem) => {
+    setOpenChecklistMenuId(null);
+    if (!checkItem) return;
+
+    let detailText = '';
+    if (checkItem.detail) {
+      detailText = checkItem.detail;
+    } else if (checkItem.detailBlocks && Array.isArray(checkItem.detailBlocks)) {
+      detailText = blocksToPlainText(checkItem.detailBlocks);
+    }
+
+    const trimmedText = (checkItem.text || '').trim();
+    const trimmedDetail = (detailText || '').trim();
+
+    let copyContent = trimmedText;
+    if (trimmedDetail) {
+      copyContent = trimmedText ? `${trimmedText}\n\n${trimmedDetail}` : trimmedDetail;
+    }
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(copyContent);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = copyContent;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyToastText('✓ 체크리스트 내용이 복사되었습니다.');
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => {
+        setCopyToastText('');
+      }, 1800);
+    } catch (err) {
+      console.error('체크리스트 복사 실패:', err);
+    }
+  };
 
   // Resize listener for mobile responsive layout
   useEffect(() => {
@@ -1458,7 +1505,7 @@ export default function NotebookExplorer() {
       setOpenChecklistMenuId(null);
     } else {
       const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 125;
+      const menuHeight = 160;
       const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
       const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
       const right = Math.max(10, window.innerWidth - rect.right);
@@ -4616,6 +4663,14 @@ onClick={() => {
                                                             <Edit2 size={14} color="#475569" />
                                                             <span>수정</span>
                                                           </button>
+<button
+  type="button"
+  onClick={() => handleCopyChecklist(checkItem)}
+  style={styles.checklistDropdownItem}
+>
+  <Copy size={14} color="#475569" />
+  <span>복사</span>
+</button>
                                                           <button
                                                             type="button"
                                                             onClick={() => {
@@ -5461,6 +5516,14 @@ onClick={() => {
                                                           <Edit2 size={14} color="#475569" />
                                                           <span>수정</span>
                                                         </button>
+<button
+  type="button"
+  onClick={() => handleCopyChecklist(checkItem)}
+  style={styles.checklistDropdownItem}
+>
+  <Copy size={14} color="#475569" />
+  <span>복사</span>
+</button>
                                                         <button
                                                           type="button"
                                                           onClick={() => {
@@ -6192,6 +6255,13 @@ onClick={() => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Copy Toast Notification */}
+      {copyToastText && (
+        <div style={styles.exitToast}>
+          {copyToastText}
         </div>
       )}
 
