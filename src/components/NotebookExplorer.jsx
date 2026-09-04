@@ -4463,47 +4463,7 @@ export default function NotebookExplorer() {
                           </div>
                         </div>
 
-                        {/* Category Badge */}
-                        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px' }}>
-                            📂 {getCategoryBadgeName(activeItem.categoryId)}
-                          </span>
-                        </div>
 
-                        {/* Checklist Section Divider & Progress Bar */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          paddingBottom: '8px',
-                          marginBottom: '8px',
-                          borderBottom: '1px solid #E2E8F0'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
-                            <ListChecks size={16} color="#2563EB" />
-                            <span>진행 체크리스트</span>
-                            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                              ({completedCount}/{totalCount})
-                            </span>
-                          </div>
-                          {totalCount > 0 && (
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: progressPercent === 100 ? '#10B981' : '#2563EB' }}>
-                              {progressPercent}% 완료
-                            </span>
-                          )}
-                        </div>
-
-                        {totalCount > 0 && (
-                          <div style={styles.progressBarTrack}>
-                            <div
-                              style={{
-                                ...styles.progressBarFill,
-                                width: `${progressPercent}%`,
-                                backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
-                              }}
-                            />
-                          </div>
-                        )}
 
                         {/* Input Form for new multiline checklist item */}
                         <div style={styles.checklistInputContainer} className="no-print">
