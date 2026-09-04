@@ -57,7 +57,7 @@ export const blocksToPlainText = (blocks) => {
 
 /**
  * 상세내용 상시 블록 관리 컴포넌트
- * 보기 모드와 1:1로 일치하는 Seamless 인라인 에디터 및 자동 높이 조절 지원
+ * 긴 내용 시 헤더 고정(Sticky Header), 본문 스크롤(maxHeight & overflowY) 지원
  */
 export const DetailBlocksManager = ({
   blocks = [],
@@ -71,7 +71,7 @@ export const DetailBlocksManager = ({
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // 텍스트에어리어 높이 자동 조절 (보기 모드 크기와 1:1 일치)
+  // 텍스트에어리어 높이 자동 조절
   const adjustTextareaHeight = (el) => {
     if (!el) return;
     el.style.height = 'auto';
@@ -171,7 +171,7 @@ export const DetailBlocksManager = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '14px',
         flex: 1,
         minHeight: 0,
         overflowY: 'auto',
@@ -187,8 +187,9 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                margin: '8px 0',
-                userSelect: 'none'
+                margin: '6px 0',
+                userSelect: 'none',
+                flexShrink: 0
               }}
             >
               {/* 구분선 실선/대시 */}
@@ -292,23 +293,28 @@ export const DetailBlocksManager = ({
               flexDirection: 'column',
               backgroundColor: isEditingThisBlock ? '#FFFFFF' : '#F8FAFC',
               borderRadius: '10px',
-              border: isEditingThisBlock ? '1px solid #3B82F6' : '1px solid #E2E8F0',
+              border: isEditingThisBlock ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
               boxShadow: isEditingThisBlock
                 ? '0 0 0 2px rgba(59, 130, 246, 0.15)'
                 : '0 1px 2px rgba(0,0,0,0.02)',
               overflow: 'hidden',
+              flexShrink: 0,
               transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
             }}
           >
-            {/* 카드 상단 헤더 바 (텍스트박스 이름 영역 + 컨트롤) */}
+            {/* 카드 상단 헤더 바 (텍스트박스 이름 영역 + 컨트롤): Sticky로 상시 고정 */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '6px 12px',
+                padding: '7px 12px',
                 backgroundColor: isEditingThisBlock ? '#EFF6FF' : '#F1F5F9',
-                borderBottom: isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #E2E8F0'
+                borderBottom: isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #E2E8F0',
+                position: 'sticky',
+                top: 0,
+                zIndex: 5,
+                flexShrink: 0
               }}
             >
               {/* 좌측: 텍스트 박스 이름 (수정 시 input, 평상시 표시) */}
@@ -507,9 +513,16 @@ export const DetailBlocksManager = ({
               </div>
             </div>
 
-            {/* 카드 본문: 보기 모드와 1:1 완벽 일치하는 seamless 인라인 textarea */}
+            {/* 카드 본문: 내용이 많을 경우 최대 높이(maxHeight: 450px) 및 내부 스크롤 지원 */}
             {isEditingThisBlock ? (
-              <div style={{ padding: '12px 14px', backgroundColor: '#FFFFFF' }}>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: '#FFFFFF',
+                  maxHeight: '450px',
+                  overflowY: 'auto'
+                }}
+              >
                 <textarea
                   ref={textareaRef}
                   value={draftContent}
@@ -558,7 +571,9 @@ export const DetailBlocksManager = ({
                   color: '#1E293B',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  cursor: 'text'
+                  cursor: 'text',
+                  maxHeight: '450px',
+                  overflowY: 'auto'
                 }}
               >
                 {block.content && block.content.trim() ? (

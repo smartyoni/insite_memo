@@ -4996,7 +4996,12 @@ export default function NotebookExplorer() {
                                   marginBottom: '12px',
                                   borderBottom: '1px solid #E2E8F0',
                                   gap: '8px',
-                                  flexWrap: 'wrap'
+                                  flexWrap: 'wrap',
+                                  position: 'sticky',
+                                  top: 0,
+                                  backgroundColor: '#F8FAFC',
+                                  zIndex: 10,
+                                  flexShrink: 0
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                     <button
