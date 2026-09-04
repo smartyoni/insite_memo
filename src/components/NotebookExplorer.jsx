@@ -835,8 +835,12 @@ export default function NotebookExplorer() {
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
 
+  const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
+  const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
+  const hasLegacyBody = Boolean(activeItem?.body && activeItem.body.trim().length > 0);
+
   // Compute active item checklists (with legacy subBody fallback)
-  const rawChecklists = activeItem?.checklists
+  const baseChecklists = activeItem?.checklists
     ? activeItem.checklists
     : activeItem?.subBody
       ? activeItem.subBody.split('\n').filter((l) => l.trim().length > 0).map((line, idx) => ({
@@ -845,6 +849,27 @@ export default function NotebookExplorer() {
           completed: false
         }))
       : [];
+
+  const rawChecklists = [];
+  if (hasTpl) {
+    rawChecklists.push({
+      id: '__main__',
+      text: activeTpl.title,
+      completed: Boolean(activeItem?.completed),
+      tag: '템플릿',
+      detail: activeItem.body || '',
+      isTemplate: true
+    });
+  } else if (hasLegacyBody) {
+    rawChecklists.push({
+      id: '__main__',
+      text: '기본 내용',
+      completed: Boolean(activeItem?.completed),
+      tag: null,
+      detail: activeItem.body || ''
+    });
+  }
+  rawChecklists.push(...baseChecklists);
 
   const currentChecklists = [...rawChecklists].sort((a, b) => {
     const aDone = Boolean(a.completed);
@@ -920,7 +945,18 @@ export default function NotebookExplorer() {
   // Checklist Handlers
   const handleToggleChecklist = async (checkId) => {
     if (!activeItem) return;
-    const updated = currentChecklists.map((c) =>
+    if (checkId === '__main__') {
+      try {
+        await updateDoc(doc(db, 'items', activeItem.id), {
+          completed: !activeItem.completed,
+          updatedAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Error toggling main checklist item:', err);
+      }
+      return;
+    }
+    const updated = baseChecklists.map((c) =>
       c.id === checkId ? { ...c, completed: !c.completed } : c
     );
     try {
@@ -941,7 +977,7 @@ export default function NotebookExplorer() {
       completed: false,
       detail: ''
     };
-    const updated = [...currentChecklists, newItem];
+    const updated = [...baseChecklists, newItem];
     setNewChecklistText('');
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
@@ -957,8 +993,13 @@ export default function NotebookExplorer() {
 
   const handleSaveEditChecklist = async (checkId) => {
     if (!activeItem || !editingCheckText.trim()) return;
+    if (checkId === '__main__') {
+      setEditingCheckId(null);
+      setEditingCheckText('');
+      return;
+    }
     const finalTag = editingCheckTag === 'custom' ? customTagInput.trim() : editingCheckTag;
-    const updated = currentChecklists.map((c) =>
+    const updated = baseChecklists.map((c) =>
       c.id === checkId
         ? {
             ...c,
@@ -983,9 +1024,23 @@ export default function NotebookExplorer() {
 
   const handleDeleteChecklist = async (checkId) => {
     if (!activeItem) return;
-    const updated = currentChecklists.filter((c) => c.id !== checkId);
+    if (checkId === '__main__') {
+      try {
+        await updateDoc(doc(db, 'items', activeItem.id), {
+          body: '',
+          templateId: null,
+          templateValues: {},
+          updatedAt: serverTimestamp()
+        });
+        setSelectedChecklistId(baseChecklists[0]?.id || null);
+      } catch (err) {
+        console.error('Error deleting main body:', err);
+      }
+      return;
+    }
+    const updated = baseChecklists.filter((c) => c.id !== checkId);
     if (selectedChecklistId === checkId) {
-      setSelectedChecklistId('__main__');
+      setSelectedChecklistId(hasTpl || hasLegacyBody ? '__main__' : (updated[0]?.id || null));
     }
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
@@ -1000,7 +1055,21 @@ export default function NotebookExplorer() {
   const handleSaveChecklistDetail = async (checkId, text) => {
     if (!activeItem) return;
     const targetText = text !== undefined ? text : checklistDetailDraft;
-    const updated = currentChecklists.map((c) =>
+    if (checkId === '__main__') {
+      try {
+        await updateDoc(doc(db, 'items', activeItem.id), {
+          body: targetText,
+          updatedAt: serverTimestamp()
+        });
+        setShowSavedToast(true);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+      } catch (err) {
+        console.error('Error saving main body:', err);
+      }
+      return;
+    }
+    const updated = baseChecklists.map((c) =>
       c.id === checkId ? { ...c, detail: targetText } : c
     );
     try {
@@ -1026,8 +1095,9 @@ export default function NotebookExplorer() {
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
-      setSelectedChecklistId('__main__');
-      setChecklistDetailDraft('');
+      const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
+      setSelectedChecklistId(firstId);
+      setChecklistDetailDraft(firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || ''));
     } else {
       setDraftTitle('');
       setDraftBody('');
@@ -1036,7 +1106,7 @@ export default function NotebookExplorer() {
       setDraftTemplateId(null);
       setDraftTemplateValues({});
       setDraftChecklists(null);
-      setSelectedChecklistId('__main__');
+      setSelectedChecklistId(null);
       setChecklistDetailDraft('');
     }
     setIsEditMode(false);
@@ -1044,11 +1114,14 @@ export default function NotebookExplorer() {
 
   // Sync checklist detail draft when selectedChecklistId changes
   useEffect(() => {
-    if (selectedChecklistId !== '__main__' && activeItem) {
+    if (!activeItem) return;
+    if (selectedChecklistId === '__main__') {
+      setChecklistDetailDraft(activeItem.body || '');
+    } else {
       const found = currentChecklists.find((c) => c.id === selectedChecklistId);
       setChecklistDetailDraft(found?.detail || '');
     }
-  }, [selectedChecklistId, activeItem?.id]);
+  }, [selectedChecklistId, activeItem?.id, activeItem?.body]);
 
   // ESC key handler for cancelling delete modal & detail edit mode
   useEffect(() => {
@@ -3190,31 +3263,7 @@ export default function NotebookExplorer() {
                             style={{ ...styles.editTitleInput, width: '100%', marginBottom: '10px' }}
                           />
 
-                          {/* Parent info button in edit mode */}
-                          <div
-                            onClick={() => {
-                              setSelectedChecklistId('__main__');
-                              if (isMobile) setMobileSubTab('sub');
-                            }}
-                            style={{
-                              padding: '10px 12px',
-                              borderRadius: '8px',
-                              border: selectedChecklistId === '__main__' ? '2px solid #2563EB' : '1px solid #CBD5E1',
-                              backgroundColor: selectedChecklistId === '__main__' ? '#EFF6FF' : '#FFFFFF',
-                              cursor: 'pointer',
-                              marginBottom: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              boxShadow: selectedChecklistId === '__main__' ? '0 2px 6px rgba(37, 99, 235, 0.15)' : 'none',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            <span style={{ fontSize: '13px', fontWeight: 700, color: selectedChecklistId === '__main__' ? '#1E40AF' : '#1E293B' }}>
-                              {draftTemplateId ? '📋 [양식 본문] 우측 화면에서 필드 입력' : '📌 [메모 본문] 우측 화면에서 본문 입력'}
-                            </span>
-                            <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600 }}>우측 카드 편집 ➔</span>
-                          </div>
+
 
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
@@ -3702,7 +3751,7 @@ export default function NotebookExplorer() {
                           ) : (
                             // Checklist item detail in edit mode
                             (() => {
-                              const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId);
+                              const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId) || currentChecklists[0];
                               if (!selectedCheckItem) {
                                 return (
                                   <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8' }}>
@@ -3814,70 +3863,6 @@ export default function NotebookExplorer() {
                             📂 {getCategoryBadgeName(activeItem.categoryId)}
                           </span>
                         </div>
-
-                        {/* Top Parent Item Card (Overview or Template info) */}
-                        {(() => {
-                          const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
-                          const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
-                          const isSelected = selectedChecklistId === '__main__';
-
-                          return (
-                            <div
-                              onClick={() => {
-                                setSelectedChecklistId('__main__');
-                                if (isMobile) setMobileSubTab('sub');
-                              }}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                border: isSelected ? '2px solid #2563EB' : '1px solid #CBD5E1',
-                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                                cursor: 'pointer',
-                                marginBottom: '12px',
-                                boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.15)' : 'none',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                  {hasTpl ? <Folder size={16} color="#2563EB" /> : <FileText size={16} color="#2563EB" />}
-                                  <span style={{
-                                    fontSize: '13px',
-                                    fontWeight: 700,
-                                    color: isSelected ? '#1E40AF' : '#1E293B',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {hasTpl ? `📋 [기본 정보] ${activeTpl.title}` : '📌 [기본 정보] 메모 전체 개요'}
-                                  </span>
-                                </div>
-                                <span style={{
-                                  fontSize: '11px',
-                                  color: isSelected ? '#1D4ED8' : '#64748B',
-                                  backgroundColor: isSelected ? '#DBEAFE' : '#F1F5F9',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  fontWeight: 600,
-                                  flexShrink: 0
-                                }}>
-                                  {hasTpl ? '양식 필드' : '본문 내용'}
-                                </span>
-                              </div>
-                              <div style={{
-                                fontSize: '12px',
-                                color: isSelected ? '#2563EB' : '#64748B',
-                                marginTop: '4px',
-                                paddingLeft: '24px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                {hasTpl ? '계약/양식 상세 필드 및 설정 내용' : (activeItem.body?.trim() ? activeItem.body.slice(0, 45) + (activeItem.body.length > 45 ? '...' : '') : '(작성된 메모 개요가 없습니다)')}
-                              </div>
-                            </div>
-                          );
-                        })()}
 
                         {/* Checklist Section Divider & Progress Bar */}
                         <div style={{
@@ -4188,8 +4173,8 @@ export default function NotebookExplorer() {
                     {/* Right Card: Detail for Selected Checklist or Parent Item */}
                     {(!isMobile || mobileSubTab === 'sub') && (
                       <div style={styles.rightPaneCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
-                        {selectedChecklistId === '__main__' ? (
-                          // Case 1: Parent Item Selected (Template or Main Note Overview)
+                        {selectedChecklistId === '__main__' && activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
+                          // Case 1: Template Applied
                           <>
                             <div style={{
                               display: 'flex',
@@ -4202,9 +4187,7 @@ export default function NotebookExplorer() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <FileText size={18} color="#2563EB" />
                                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>
-                                  {activeItem.templateId && templates.find(t => t.id === activeItem.templateId)
-                                    ? `📋 [템플릿] ${templates.find(t => t.id === activeItem.templateId).title}`
-                                    : '📌 메모 전체 개요'}
+                                  📋 [템플릿] {templates.find(t => t.id === activeItem.templateId).title}
                                 </span>
                               </div>
 
@@ -4228,44 +4211,44 @@ export default function NotebookExplorer() {
                             </div>
 
                             <div style={styles.readBody}>
-                              {activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
-                                (() => {
-                                  const activeTpl = templates.find(t => t.id === activeItem.templateId);
-                                  const values = activeItem.templateValues || {};
-                                  return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                      <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>
-                                        📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨
-                                      </div>
-                                      {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
-                                        const renderedFields = grp.fields.map((field) => {
-                                          const val = values[field.id];
-                                          const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
-                                          const currentVal = val !== undefined ? val : defaultTextVal;
+                              {(() => {
+                                const activeTpl = templates.find(t => t.id === activeItem.templateId);
+                                const values = activeItem.templateValues || {};
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>
+                                      📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨
+                                    </div>
+                                    {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
+                                      const renderedFields = grp.fields.map((field) => {
+                                        const val = values[field.id];
+                                        const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                        const currentVal = val !== undefined ? val : defaultTextVal;
 
-                                          if (field.type === 'phone') {
-                                            return (
-                                              <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                    <Phone size={14} color="#10B981" />
-                                                    {field.label}
-                                                  </span>
-                                                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {currentVal || '(전화번호 없음)'}
-                                                  </span>
-                                                </div>
-                                                {currentVal && (
-                                                  <a
-                                                    href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
-                                                    style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
-                                                  >
-                                                    <MessageSquare size={12} /> SMS 전송
-                                                  </a>
-                                                )}
+                                        if (field.type === 'phone') {
+                                          return (
+                                            <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                  <Phone size={14} color="#10B981" />
+                                                  {field.label}
+                                                </span>
+                                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                  {currentVal || '(전화번호 없음)'}
+                                                </span>
                                               </div>
-                                            );
-                                          }
+                                              {currentVal && (
+                                                <a
+                                                  href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
+                                                  style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                                >
+                                                  <MessageSquare size={12} /> SMS 전송
+                                                </a>
+                                              )}
+                                            </div>
+                                          );
+                                        }
+
 
                                           if (field.type === 'datetime') {
                                             const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
@@ -4370,16 +4353,13 @@ export default function NotebookExplorer() {
                                       })}
                                     </div>
                                   );
-                                })()
-                              ) : (
-                                renderWithLinks(activeItem.body || '(기본 메모 본문 내용이 없습니다)', searchQuery)
-                              )}
+                                })()}
                             </div>
                           </>
                         ) : (
                           // Case 2: Individual Checklist Item Selected
                           (() => {
-                            const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId);
+                            const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId) || currentChecklists[0];
                             if (!selectedCheckItem) {
                               return (
                                 <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8' }}>
