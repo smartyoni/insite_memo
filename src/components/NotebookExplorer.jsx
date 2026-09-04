@@ -3521,6 +3521,231 @@ export default function NotebookExplorer() {
                           </div>
                         </div>
                       )}
+
+                      {/* Right Card for Edit Mode: Main Body, Template Form, or Checklist Detail */}
+                      {(!isMobile || mobileSubTab === 'sub') && (
+                        <div style={styles.editPaneSubCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
+                          {selectedChecklistId === '__main__' ? (
+                            draftTemplateId === null ? (
+                              <textarea
+                                value={draftBody}
+                                onChange={(e) => setDraftBody(e.target.value)}
+                                placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
+                                style={styles.editBodyTextarea}
+                              />
+                            ) : (
+                              (() => {
+                                const activeTpl = templates.find(t => t.id === draftTemplateId);
+                                if (!activeTpl || !activeTpl.fields || activeTpl.fields.length === 0) {
+                                  return (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
+                                      선택된 템플릿에 필드가 없습니다. 상단 [템플릿 관리]에서 구성 요소를 추가해 주세요.
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                                    <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span>📋 <strong>{activeTpl.title}</strong> 템플릿 서식 편집 중</span>
+                                      <button
+                                        onClick={() => setDraftTemplateId(null)}
+                                        style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
+                                      >
+                                        기본 텍스트박스로 변경
+                                      </button>
+                                    </div>
+
+                                    {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
+                                      const renderedFields = grp.fields.map((field) => {
+                                        const fieldVal = draftTemplateValues[field.id];
+
+                                        if (field.type === 'phone') {
+                                          return (
+                                            <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                              <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                                <Phone size={14} color="#10B981" />
+                                                {field.label}
+                                              </label>
+                                              <input
+                                                type="tel"
+                                                value={fieldVal || ''}
+                                                onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: autoFormatPhoneNumber(e.target.value) })}
+                                                placeholder={field.placeholder || '010-0000-0000'}
+                                                style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
+                                              />
+                                              {fieldVal && (
+                                                <a
+                                                  href={`sms:${fieldVal.replace(/[^0-9]/g, '')}`}
+                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
+                                                >
+                                                  <MessageSquare size={12} />
+                                                  SMS 전송
+                                                </a>
+                                              )}
+                                            </div>
+                                          );
+                                        }
+
+                                        if (field.type === 'datetime') {
+                                          return (
+                                            <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
+                                              <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
+                                                <CalendarIcon size={14} color="#8B5CF6" />
+                                                {field.label}
+                                              </label>
+                                              <input
+                                                type="datetime-local"
+                                                value={fieldVal || ''}
+                                                onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                                style={{ flex: 1, minWidth: '160px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box', color: '#0F172A', fontFamily: 'inherit' }}
+                                              />
+                                            </div>
+                                          );
+                                        }
+
+                                        return (
+                                          <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                              <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                                {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                                {field.label}
+                                              </label>
+                                            </div>
+
+                                            {field.type === 'text' && (() => {
+                                              const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                              const currentTextVal = fieldVal !== undefined ? fieldVal : defaultTextVal;
+                                              const lineCount = currentTextVal.split('\n').length;
+                                              return (
+                                                <textarea
+                                                  value={currentTextVal}
+                                                  onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
+                                                  placeholder="내용을 입력하세요"
+                                                  rows={Math.max(3, lineCount)}
+                                                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                                />
+                                              );
+                                            })()}
+
+                                            {field.type === 'checklist' && (
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                                                {getSortedChecklistItems(fieldVal, field.defaultItems).map((chkItem) => (
+                                                  <div key={chkItem.originalIndex} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={Boolean(chkItem.completed)}
+                                                      onChange={(e) => {
+                                                        const currentArr = Array.isArray(fieldVal)
+                                                          ? [...fieldVal]
+                                                          : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                        currentArr[chkItem.originalIndex] = {
+                                                          ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
+                                                          completed: e.target.checked
+                                                        };
+                                                        setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
+                                                      }}
+                                                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
+                                                    />
+                                                    <textarea
+                                                      rows={Math.max(1, (chkItem.text || '').split('\n').length)}
+                                                      value={chkItem.text || ''}
+                                                      onChange={(e) => {
+                                                        const currentArr = Array.isArray(fieldVal)
+                                                          ? [...fieldVal]
+                                                          : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
+                                                        currentArr[chkItem.originalIndex] = {
+                                                          ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
+                                                          text: e.target.value
+                                                        };
+                                                        setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
+                                                      }}
+                                                      placeholder="체크 항목 내용 입력..."
+                                                      style={{
+                                                        flex: 1,
+                                                        border: 'none',
+                                                        outline: 'none',
+                                                        backgroundColor: 'transparent',
+                                                        fontSize: '13px',
+                                                        color: chkItem.completed ? '#94A3B8' : '#1E293B',
+                                                        textDecoration: chkItem.completed ? 'line-through' : 'none',
+                                                        fontFamily: 'inherit',
+                                                        resize: 'none'
+                                                      }}
+                                                    />
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      });
+
+                                      if (grp.title) {
+                                        return (
+                                          <div key={`edit_grp_${gIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '10px', border: '1px dashed #CBD5E1', padding: '10px', borderRadius: '10px', backgroundColor: '#FAFAFA' }}>
+                                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                                              🏷️ {grp.title}
+                                            </div>
+                                            {renderedFields}
+                                          </div>
+                                        );
+                                      }
+
+                                      return <React.Fragment key={`edit_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
+                                    })}
+                                  </div>
+                                );
+                              })()
+                            )
+                          ) : (
+                            // Checklist item detail in edit mode
+                            (() => {
+                              const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId);
+                              if (!selectedCheckItem) {
+                                return (
+                                  <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8' }}>
+                                    좌측에서 체크리스트 항목을 선택해주세요.
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    paddingBottom: '8px',
+                                    marginBottom: '10px',
+                                    borderBottom: '1px solid #E2E8F0'
+                                  }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                                      ☑️ {selectedCheckItem.text} 상세내용
+                                    </span>
+                                  </div>
+                                  <textarea
+                                    value={checklistDetailDraft}
+                                    onChange={(e) => setChecklistDetailDraft(e.target.value)}
+                                    onBlur={() => handleSaveChecklistDetail(selectedCheckItem.id)}
+                                    onKeyDown={(e) => {
+                                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                        e.preventDefault();
+                                        handleSaveChecklistDetail(selectedCheckItem.id);
+                                      }
+                                    }}
+                                    placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (자동 저장 / Ctrl+S)"
+                                    style={{
+                                      ...styles.editBodyTextarea,
+                                      boxSizing: 'border-box'
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -4235,43 +4460,12 @@ export default function NotebookExplorer() {
                                         handleSaveChecklistDetail(selectedCheckItem.id);
                                       }
                                     }}
-                                    placeholder="이 체크리스트 항목에 대한 상세내용, 진행상황, 메모를 작성하세요... (Ctrl+S 저장 또는 다른 곳 클릭 시 자동저장)"
+                                    placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (자동 저장 / Ctrl+S)"
                                     style={{
-                                      width: '100%',
-                                      minHeight: '220px',
-                                      padding: '12px 14px',
-                                      borderRadius: '8px',
-                                      border: '1px solid #CBD5E1',
-                                      fontSize: '14px',
-                                      lineHeight: 1.6,
-                                      fontFamily: 'inherit',
-                                      resize: 'vertical',
-                                      backgroundColor: '#FFFFFF',
-                                      color: '#1E293B',
-                                      outline: 'none',
+                                      ...styles.editBodyTextarea,
                                       boxSizing: 'border-box'
                                     }}
                                   />
-
-                                  {/* Link & Preview box if content exists */}
-                                  {checklistDetailDraft && checklistDetailDraft.trim().length > 0 && (
-                                    <div style={{
-                                      marginTop: '12px',
-                                      padding: '12px 14px',
-                                      backgroundColor: '#F8FAFC',
-                                      borderRadius: '8px',
-                                      border: '1px solid #E2E8F0',
-                                      overflowY: 'auto',
-                                      maxHeight: '200px'
-                                    }}>
-                                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        🔗 스마트 링크 미리보기 (URL / 전화번호 자동 연결)
-                                      </div>
-                                      <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', whiteSpace: 'pre-wrap' }}>
-                                        {renderWithLinks(checklistDetailDraft, searchQuery)}
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                               </>
                             );
