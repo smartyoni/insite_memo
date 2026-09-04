@@ -64,7 +64,8 @@ export const DetailBlocksManager = ({
   onChangeAndSave,
   searchQuery = '',
   editingBlockId,
-  setEditingBlockId
+  setEditingBlockId,
+  openDeleteModal
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -129,8 +130,8 @@ export const DetailBlocksManager = ({
     }
   };
 
-  // 삭제
-  const handleDelete = (index) => {
+  // 실제 블록 삭제 실행
+  const executeDelete = (index) => {
     const targetBlock = blocks[index];
     if (editingBlockId === targetBlock?.id) {
       setEditingBlockId(null);
@@ -148,6 +149,43 @@ export const DetailBlocksManager = ({
     }
     if (onChangeAndSave) {
       onChangeAndSave(next);
+    }
+  };
+
+  // 삭제 (확인 모달 연동)
+  const handleDelete = (index) => {
+    const targetBlock = blocks[index];
+    if (!targetBlock) return;
+
+    if (openDeleteModal) {
+      if (targetBlock.type === 'divider') {
+        openDeleteModal(
+          '구분선 삭제',
+          '구분선을 정말 삭제하시겠습니까?',
+          () => executeDelete(index)
+        );
+      } else {
+        const titleText = targetBlock.title && targetBlock.title.trim();
+        const contentText = targetBlock.content && targetBlock.content.trim();
+        let message = '';
+
+        if (titleText) {
+          message = `'${titleText}' 텍스트박스를 정말 삭제하시겠습니까?`;
+        } else if (contentText) {
+          const preview = contentText.length > 30 ? contentText.slice(0, 30) + '...' : contentText;
+          message = `'${preview}' 텍스트박스를 정말 삭제하시겠습니까?`;
+        } else {
+          message = '비어 있는 텍스트박스를 삭제하시겠습니까?';
+        }
+
+        openDeleteModal(
+          '텍스트박스 삭제',
+          message,
+          () => executeDelete(index)
+        );
+      }
+    } else {
+      executeDelete(index);
     }
   };
 

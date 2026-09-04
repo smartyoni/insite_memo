@@ -4236,6 +4236,7 @@ export default function NotebookExplorer() {
                                   searchQuery={searchQuery}
                                   editingBlockId={editingBlockId}
                                   setEditingBlockId={setEditingBlockId}
+                                  openDeleteModal={openDeleteModal}
                                 />
                               </div>
                             ) : (
@@ -4435,6 +4436,7 @@ export default function NotebookExplorer() {
                                     searchQuery={searchQuery}
                                     editingBlockId={editingBlockId}
                                     setEditingBlockId={setEditingBlockId}
+                                    openDeleteModal={openDeleteModal}
                                   />
                                 </div>
                               );
@@ -5090,6 +5092,7 @@ export default function NotebookExplorer() {
                                   searchQuery={searchQuery}
                                   editingBlockId={editingBlockId}
                                   setEditingBlockId={setEditingBlockId}
+                                  openDeleteModal={openDeleteModal}
                                 />
                               </>
                             );
