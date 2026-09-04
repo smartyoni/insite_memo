@@ -14,6 +14,7 @@ import {
 import { db } from '../firebase';
 import {
   Plus,
+  Minus,
   Edit2,
   Trash2,
   Check,
