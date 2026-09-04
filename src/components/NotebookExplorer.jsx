@@ -180,6 +180,21 @@ export function saveStoredCustomTags(tags) {
   } catch (e) {}
 }
 
+export function getStoredNavLocation() {
+  try {
+    const saved = localStorage.getItem('insite_last_nav_location');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveStoredNavLocation(loc) {
+  try {
+    localStorage.setItem('insite_last_nav_location', JSON.stringify(loc));
+  } catch (e) {}
+}
+
 export function getTagStyle(tagName, customBadgesList = null) {
   if (!tagName) return null;
   const foundDefault = DEFAULT_TAGS.find(t => t.name === tagName);
@@ -282,14 +297,17 @@ function getItemTimestamp(item) {
 }
 
 export default function NotebookExplorer() {
+  // Nav Location Persistence: Retrieve saved location
+  const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
+
   // Main View Mode Tab state ('explorer' | 'clipboard' | 'balance' | 'clip' | 'calendar')
-  const [activeMainTab, setActiveMainTab] = useState('explorer');
+  const [activeMainTab, setActiveMainTab] = useState(() => initialNavLoc?.activeMainTab || 'explorer');
 
   // Data states
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('inbox');
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(() => initialNavLoc?.selectedCategoryId || 'inbox');
+  const [selectedItemId, setSelectedItemId] = useState(() => initialNavLoc?.selectedItemId || null);
 
   // Item List Sort Order State (Default: 'asc' for ascending order)
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
@@ -455,8 +473,8 @@ export default function NotebookExplorer() {
 
   // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 860);
-  const [mobileView, setMobileView] = useState('categories'); // 'categories' | 'items' | 'detail'
-  const [mobileSubTab, setMobileSubTab] = useState('main'); // 'main' (상세내용) | 'sub' (보충노트)
+  const [mobileView, setMobileView] = useState(() => initialNavLoc?.mobileView || 'categories'); // 'categories' | 'items' | 'detail'
+  const [mobileSubTab, setMobileSubTab] = useState(() => initialNavLoc?.mobileSubTab || 'main'); // 'main' (상세내용) | 'sub' (보충노트)
   const [showExitToast, setShowExitToast] = useState(false);
 
   const lastBackPressRef = useRef(0);
@@ -615,7 +633,7 @@ export default function NotebookExplorer() {
   const [customTagInput, setCustomTagInput] = useState('');
   const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
   const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
-  const [selectedChecklistId, setSelectedChecklistId] = useState('__main__'); // '__main__' (부모 메모/템플릿) | checklistId
+  const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
@@ -732,9 +750,20 @@ export default function NotebookExplorer() {
 
   // Hardware/Browser Back button handling (popstate)
   useEffect(() => {
-    // Initial mount guard state
-    if (window.history.state?.view !== 'categories') {
-      window.history.pushState({ view: 'categories' }, '');
+    // Initial mount guard state - align with initial mobileView
+    const initView = initialNavLoc?.mobileView || 'categories';
+    if (initView !== 'categories') {
+      window.history.replaceState({ view: 'categories' }, '');
+      if (initView === 'items') {
+        window.history.pushState({ view: 'items' }, '');
+      } else if (initView === 'detail') {
+        window.history.pushState({ view: 'items' }, '');
+        window.history.pushState({ view: 'detail' }, '');
+      }
+    } else {
+      if (window.history.state?.view !== 'categories') {
+        window.history.pushState({ view: 'categories' }, '');
+      }
     }
 
     const handlePopState = (e) => {
@@ -841,6 +870,18 @@ export default function NotebookExplorer() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Automatically save current navigation location to localStorage
+  useEffect(() => {
+    saveStoredNavLocation({
+      activeMainTab,
+      selectedCategoryId,
+      selectedItemId,
+      selectedChecklistId,
+      mobileView,
+      mobileSubTab
+    });
+  }, [activeMainTab, selectedCategoryId, selectedItemId, selectedChecklistId, mobileView, mobileSubTab]);
 
   // Filter & Sort items by selected category (Default: ascending order by title / 가나다순)
   const filteredItems = items
@@ -993,8 +1034,9 @@ export default function NotebookExplorer() {
 
   const displayedItems = isSearchActive ? matchedItems : filteredItems;
 
-  // Auto-select first item when category changes if current selected item not in category
+  // Auto-select first item when category changes if current selected item not in category (only after items loaded)
   useEffect(() => {
+    if (items.length === 0) return; // Wait until items are loaded from Firestore before auto-selecting
     if (filteredItems.length > 0) {
       const exists = filteredItems.some((item) => item.id === selectedItemId);
       if (!exists) {
@@ -1003,7 +1045,7 @@ export default function NotebookExplorer() {
     } else {
       setSelectedItemId(null);
     }
-  }, [selectedCategoryId, filteredItems.length]);
+  }, [selectedCategoryId, filteredItems.length, items.length]);
 
   // Get active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
@@ -1447,7 +1489,14 @@ export default function NotebookExplorer() {
       const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
       const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || (Array.isArray(activeItem.detailBlocks) && activeItem.detailBlocks.length > 0));
       const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
-      setSelectedChecklistId(firstId);
+      const isSavedChecklistValid = Boolean(
+        selectedChecklistId && (
+          selectedChecklistId === '__main__' ||
+          baseChecklists.some((c) => c.id === selectedChecklistId)
+        )
+      );
+      const targetCheckId = isSavedChecklistValid ? selectedChecklistId : firstId;
+      setSelectedChecklistId(targetCheckId);
       const initialText = firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || '');
       const initialBlocksData = firstId === '__main__' ? activeItem.detailBlocks : baseChecklists[0]?.detailBlocks;
       setChecklistDetailDraft(initialText);
