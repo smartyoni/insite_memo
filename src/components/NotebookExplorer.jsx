@@ -857,7 +857,7 @@ export default function NotebookExplorer() {
       id: '__main__',
       text: activeTpl.title,
       completed: Boolean(activeItem?.completed),
-      tag: '템플릿',
+      tag: null,
       detail: activeItem.body || '',
       isTemplate: true
     });
@@ -3454,28 +3454,6 @@ export default function NotebookExplorer() {
                                           >
                                             {renderWithLinks(checkItem.text)}
                                           </span>
-
-                                          {checkItem.tag && (() => {
-                                            const tagStyle = getTagStyle(checkItem.tag);
-                                            return (
-                                              <span
-                                                style={{
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  fontSize: '11px',
-                                                  fontWeight: 700,
-                                                  padding: '1px 6px',
-                                                  borderRadius: '4px',
-                                                  backgroundColor: tagStyle.bg,
-                                                  color: tagStyle.color,
-                                                  border: `1px solid ${tagStyle.border}`,
-                                                  flexShrink: 0
-                                                }}
-                                              >
-                                                {checkItem.tag}
-                                              </span>
-                                            );
-                                          })()}
                                         </div>
 
                                         {/* Right End: 3-dot Menu with Floating Dropdown */}
@@ -4042,28 +4020,6 @@ export default function NotebookExplorer() {
                                         >
                                           {renderWithLinks(checkItem.text)}
                                         </span>
-
-                                        {checkItem.tag && (() => {
-                                          const tagStyle = getTagStyle(checkItem.tag);
-                                          return (
-                                            <span
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                fontSize: '11px',
-                                                fontWeight: 700,
-                                                padding: '1px 6px',
-                                                borderRadius: '4px',
-                                                backgroundColor: tagStyle.bg,
-                                                color: tagStyle.color,
-                                                border: `1px solid ${tagStyle.border}`,
-                                                flexShrink: 0
-                                              }}
-                                            >
-                                              {checkItem.tag}
-                                            </span>
-                                          );
-                                        })()}
                                       </div>
 
                                       {/* Right End: 3-dot Menu */}
