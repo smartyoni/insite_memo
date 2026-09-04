@@ -466,6 +466,7 @@ export default function NotebookExplorer() {
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
   const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
+  const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState('__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
 
@@ -1099,8 +1100,22 @@ export default function NotebookExplorer() {
     }
   };
 
+  const handleOpenChecklistMenu = (e, checkItemId) => {
+    e.stopPropagation();
+    if (openChecklistMenuId === checkItemId) {
+      setOpenChecklistMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 125;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenChecklistMenuPos({ top, right });
+      setOpenChecklistMenuId(checkItemId);
+    }
+  };
+
   const handleSaveChecklistDetail = async (checkId, text) => {
-    if (!activeItem) return;
     const targetText = text !== undefined ? text : checklistDetailDraft;
     if (checkId === '__main__') {
       try {
@@ -1202,6 +1217,17 @@ export default function NotebookExplorer() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [openChecklistMenuId, deleteModalState.isOpen, isEditMode, activeItem]);
+
+  useEffect(() => {
+    if (!openChecklistMenuId) return;
+    const handleCloseMenu = () => setOpenChecklistMenuId(null);
+    window.addEventListener('resize', handleCloseMenu);
+    window.addEventListener('scroll', handleCloseMenu, true);
+    return () => {
+      window.removeEventListener('resize', handleCloseMenu);
+      window.removeEventListener('scroll', handleCloseMenu, true);
+    };
+  }, [openChecklistMenuId]);
 
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
@@ -3558,10 +3584,7 @@ export default function NotebookExplorer() {
                                         <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                           <button
                                             type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setOpenChecklistMenuId(openChecklistMenuId === checkItem.id ? null : checkItem.id);
-                                            }}
+                                            onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
@@ -3589,7 +3612,7 @@ export default function NotebookExplorer() {
                                                   left: 0,
                                                   right: 0,
                                                   bottom: 0,
-                                                  zIndex: 999,
+                                                  zIndex: 9999,
                                                   backgroundColor: 'transparent'
                                                 }}
                                                 onClick={(e) => {
@@ -3600,7 +3623,11 @@ export default function NotebookExplorer() {
 
                                               {/* Context Dropdown Card */}
                                               <div
-                                                style={styles.checklistDropdownMenu}
+                                                style={{
+                                                  ...styles.checklistDropdownMenu,
+                                                  top: openChecklistMenuPos?.top ?? 0,
+                                                  right: openChecklistMenuPos?.right ?? 0
+                                                }}
                                                 onClick={(e) => e.stopPropagation()}
                                               >
                                                 <button
@@ -4176,10 +4203,7 @@ export default function NotebookExplorer() {
                                       <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                         <button
                                           type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenChecklistMenuId(openChecklistMenuId === checkItem.id ? null : checkItem.id);
-                                          }}
+                                          onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
                                           style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -4206,7 +4230,7 @@ export default function NotebookExplorer() {
                                                 left: 0,
                                                 right: 0,
                                                 bottom: 0,
-                                                zIndex: 999,
+                                                zIndex: 9999,
                                                 backgroundColor: 'transparent'
                                               }}
                                               onClick={(e) => {
@@ -4215,7 +4239,11 @@ export default function NotebookExplorer() {
                                               }}
                                             />
                                             <div
-                                              style={styles.checklistDropdownMenu}
+                                              style={{
+                                                ...styles.checklistDropdownMenu,
+                                                top: openChecklistMenuPos?.top ?? 0,
+                                                right: openChecklistMenuPos?.right ?? 0
+                                              }}
                                               onClick={(e) => e.stopPropagation()}
                                             >
                                               <button
@@ -5877,15 +5905,13 @@ const styles = {
   },
 
   checklistDropdownMenu: {
-    position: 'absolute',
-    right: 0,
-    top: 'calc(100% + 4px)',
+    position: 'fixed',
     backgroundColor: '#FFFFFF',
     borderRadius: '8px',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
     border: '1px solid #E2E8F0',
     padding: '4px',
-    zIndex: 1000,
+    zIndex: 10000,
     minWidth: '100px',
     display: 'flex',
     flexDirection: 'column',
