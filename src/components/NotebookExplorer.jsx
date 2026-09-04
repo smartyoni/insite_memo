@@ -619,6 +619,7 @@ export default function NotebookExplorer() {
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
+  const [collapsedSections, setCollapsedSections] = useState({});
 
 
 
@@ -1049,15 +1050,60 @@ export default function NotebookExplorer() {
   }
   rawChecklists.push(...baseChecklists);
 
-  const currentChecklists = [...rawChecklists].sort((a, b) => {
-    const aDone = Boolean(a.completed);
-    const bDone = Boolean(b.completed);
-    if (aDone !== bDone) return aDone ? 1 : -1;
-    return 0;
-  });
+  // Group checklists by section header (isSection: true)
+  const checklistGroups = React.useMemo(() => {
+    const groups = [];
+    let currentGroup = { section: null, items: [] };
 
-  const completedCount = currentChecklists.filter((c) => c.completed).length;
-  const totalCount = currentChecklists.length;
+    rawChecklists.forEach((item) => {
+      if (item.isSection) {
+        if (currentGroup.section || currentGroup.items.length > 0) {
+          groups.push(currentGroup);
+        }
+        currentGroup = { section: item, items: [] };
+      } else {
+        currentGroup.items.push(item);
+      }
+    });
+
+    if (currentGroup.section || currentGroup.items.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups.map((g) => {
+      const sortedItems = [...g.items].sort((a, b) => {
+        if (a.id === '__main__') return -1;
+        if (b.id === '__main__') return 1;
+        const aDone = Boolean(a.completed);
+        const bDone = Boolean(b.completed);
+        if (aDone !== bDone) return aDone ? 1 : -1;
+        return 0;
+      });
+
+      const groupCompletedCount = g.items.filter((i) => i.id !== '__main__' && i.completed).length;
+      const groupTotalCount = g.items.filter((i) => i.id !== '__main__').length;
+
+      return {
+        ...g,
+        sortedItems,
+        groupCompletedCount,
+        groupTotalCount
+      };
+    });
+  }, [rawChecklists]);
+
+  const currentChecklists = React.useMemo(() => {
+    return checklistGroups.flatMap((g) => {
+      if (g.section) {
+        return [g.section, ...g.sortedItems];
+      }
+      return g.sortedItems;
+    });
+  }, [checklistGroups]);
+
+  const actualChecklistItems = rawChecklists.filter((c) => !c.isSection && c.id !== '__main__');
+  const completedCount = actualChecklistItems.filter((c) => c.completed).length;
+  const totalCount = actualChecklistItems.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   // Inline Template Checklist Handlers
@@ -1167,6 +1213,36 @@ export default function NotebookExplorer() {
     } catch (err) {
       console.error('Error adding checklist:', err);
     }
+  };
+
+  const handleAddChecklistSection = async () => {
+    if (!activeItem || !newChecklistText.trim()) return;
+    const newSection = {
+      id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      isSection: true,
+      type: 'section',
+      text: newChecklistText.trim()
+    };
+    const updated = [...baseChecklists, newSection];
+    setNewChecklistText('');
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error adding checklist section:', err);
+    }
+  };
+
+  const toggleSectionCollapse = (sectionId) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
   };
 
   const handleNoteChecklistDrop = async (e, targetId) => {
@@ -3925,7 +4001,7 @@ export default function NotebookExplorer() {
                             </button>
                           </div>
 
-                          {/* Input Form for new checklist item */}
+                          {/* Input Form for new checklist item or section */}
                           <div style={styles.checklistInputContainer} className="no-print">
                             <div style={styles.checklistInputGroup}>
                               <textarea
@@ -3938,279 +4014,493 @@ export default function NotebookExplorer() {
                                     handleAddChecklist();
                                   }
                                 }}
-                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
+                                placeholder="새 체크리스트 항목 또는 그룹명 입력... (Ctrl+Enter 항목 추가)"
                                 style={styles.checklistTextarea}
                               />
-                              <button
-                                onClick={handleAddChecklist}
-                                style={{
-                                  ...styles.checklistAddBtn,
-                                  opacity: newChecklistText.trim() ? 1 : 0.6,
-                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
-                                }}
-                                disabled={!newChecklistText.trim()}
-                                title="체크리스트 추가 (Ctrl+Enter)"
-                              >
-                                <Plus size={15} />
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
+                                <button
+                                  onClick={handleAddChecklist}
+                                  style={{
+                                    ...styles.checklistAddBtn,
+                                    opacity: newChecklistText.trim() ? 1 : 0.6,
+                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
+                                    flex: 1,
+                                    height: 'auto',
+                                    padding: '5px 12px'
+                                  }}
+                                  disabled={!newChecklistText.trim()}
+                                  title="체크리스트 추가 (Ctrl+Enter)"
+                                >
+                                  <Plus size={14} />
+                                  <span>항목 추가</span>
+                                </button>
+                                <button
+                                  onClick={handleAddChecklistSection}
+                                  style={{
+                                    ...styles.btnSecondary,
+                                    opacity: newChecklistText.trim() ? 1 : 0.6,
+                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    color: '#1D4ED8',
+                                    backgroundColor: '#EFF6FF',
+                                    borderColor: '#BFDBFE',
+                                    padding: '4px 8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '3px'
+                                  }}
+                                  disabled={!newChecklistText.trim()}
+                                  title="새 그룹(섹션 헤더) 추가"
+                                >
+                                  <FolderPlus size={13} />
+                                  <span>+ 그룹</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Checklist Items List */}
+                          {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                           <div style={styles.checklistListContainer}>
                             {currentChecklists.length === 0 ? (
                               <div style={styles.checklistEmptyText}>
-                                등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목을 추가해보세요!
+                                등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
                               </div>
                             ) : (
-                              currentChecklists.map((checkItem) => {
-                                const isEditing = editingCheckId === checkItem.id;
-                                const isSelected = selectedChecklistId === checkItem.id;
-                                const isDragged = draggedNoteChecklistId === checkItem.id;
-                                const isDragOver = dragOverNoteChecklistId === checkItem.id;
-                                const canDrag = !isEditing && checkItem.id !== '__main__';
+                              checklistGroups.map((group, groupIdx) => {
+                                const isSecEditing = group.section && editingCheckId === group.section.id;
+                                const isSecDragged = group.section && draggedNoteChecklistId === group.section.id;
+                                const isSecDragOver = group.section && dragOverNoteChecklistId === group.section.id;
+                                const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
 
                                 return (
-                                  <div
-                                    key={checkItem.id}
-                                    draggable={canDrag}
-                                    onDragStart={(e) => {
-                                      if (!canDrag) return;
-                                      setDraggedNoteChecklistId(checkItem.id);
-                                      e.dataTransfer.effectAllowed = 'move';
-                                      e.dataTransfer.setData('text/plain', checkItem.id);
-                                    }}
-                                    onDragOver={(e) => {
-                                      if (!canDrag) return;
-                                      e.preventDefault();
-                                      e.dataTransfer.dropEffect = 'move';
-                                      if (dragOverNoteChecklistId !== checkItem.id) {
-                                        setDragOverNoteChecklistId(checkItem.id);
-                                      }
-                                    }}
-                                    onDrop={(e) => {
-                                      if (!canDrag) return;
-                                      handleNoteChecklistDrop(e, checkItem.id);
-                                    }}
-                                    onDragEnd={() => {
-                                      setDraggedNoteChecklistId(null);
-                                      setDragOverNoteChecklistId(null);
-                                    }}
-                                    onClick={() => {
-                                      if (!isEditing) {
-                                        setSelectedChecklistId(checkItem.id);
-                                        if (isMobile) setMobileSubTab('sub');
-                                      }
-                                    }}
-                                    style={{
-                                      ...styles.checklistItemRow,
-                                      backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                      border: isDragOver
-                                        ? '1.5px solid #2563EB'
-                                        : isSelected
-                                          ? '1.5px solid #2563EB'
-                                          : isEditing
-                                            ? '1.5px solid #3B82F6'
-                                            : checkItem.completed
-                                              ? '1px solid #E2E8F0'
-                                              : '1px solid #CBD5E1',
-                                      boxShadow: isDragOver
-                                        ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
-                                        : isSelected
-                                          ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
-                                          : '0 1px 2px rgba(0, 0, 0, 0.03)',
-                                      opacity: isDragged ? 0.4 : 1,
-                                      cursor: canDrag ? 'grab' : 'pointer'
-                                    }}
-                                  >
-                                    {isEditing ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-                                        <textarea
-                                          rows={2}
-                                          value={editingCheckText}
-                                          onChange={(e) => setEditingCheckText(e.target.value)}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                              e.preventDefault();
-                                              handleSaveEditChecklist(checkItem.id);
-                                            }
-                                          }}
-                                          style={styles.checklistEditTextarea}
-                                          autoFocus
-                                        />
-                                        <div style={{
+                                  <div key={group.section ? group.section.id : `group_edit_${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {/* 그룹 헤더 바 */}
+                                    {group.section && (
+                                      <div
+                                        draggable={!isSecEditing}
+                                        onDragStart={(e) => {
+                                          if (isSecEditing) return;
+                                          setDraggedNoteChecklistId(group.section.id);
+                                          e.dataTransfer.effectAllowed = 'move';
+                                          e.dataTransfer.setData('text/plain', group.section.id);
+                                        }}
+                                        onDragOver={(e) => {
+                                          if (isSecEditing) return;
+                                          e.preventDefault();
+                                          e.dataTransfer.dropEffect = 'move';
+                                          if (dragOverNoteChecklistId !== group.section.id) {
+                                            setDragOverNoteChecklistId(group.section.id);
+                                          }
+                                        }}
+                                        onDrop={(e) => {
+                                          if (isSecEditing) return;
+                                          handleNoteChecklistDrop(e, group.section.id);
+                                        }}
+                                        onDragEnd={() => {
+                                          setDraggedNoteChecklistId(null);
+                                          setDragOverNoteChecklistId(null);
+                                        }}
+                                        style={{
                                           display: 'flex',
                                           alignItems: 'center',
-                                          justifyContent: 'flex-end',
-                                          gap: '6px',
-                                          marginTop: '6px'
-                                        }}>
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditingCheckId(null)}
-                                            style={styles.btnSmallCancel}
+                                          justifyContent: 'space-between',
+                                          gap: '8px',
+                                          padding: '7px 10px',
+                                          marginTop: groupIdx === 0 ? '2px' : '10px',
+                                          marginBottom: '2px',
+                                          backgroundColor: '#F1F5F9',
+                                          border: isSecDragOver ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                                          borderRadius: '8px',
+                                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                          opacity: isSecDragged ? 0.4 : 1,
+                                          cursor: isSecEditing ? 'default' : 'pointer',
+                                          userSelect: 'none'
+                                        }}
+                                        onClick={() => {
+                                          if (!isSecEditing) {
+                                            toggleSectionCollapse(group.section.id);
+                                          }
+                                        }}
+                                      >
+                                        {isSecEditing ? (
+                                          <div
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                            onClick={(e) => e.stopPropagation()}
                                           >
-                                            <X size={13} /> 취소
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                            style={styles.btnSmallSave}
-                                          >
-                                            <Check size={13} /> 저장
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        gap: '8px',
-                                        minHeight: '26px'
-                                      }}>
-                                        {/* Left Row: Drag Handle + Checkbox + Pure Text */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                                          {canDrag && (
-                                            <span
-                                              style={{
-                                                cursor: 'grab',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                color: '#94A3B8',
-                                                flexShrink: 0
+                                            <Folder size={14} color="#2563EB" />
+                                            <input
+                                              type="text"
+                                              value={editingCheckText}
+                                              onChange={(e) => setEditingCheckText(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  handleSaveEditChecklist(group.section.id);
+                                                } else if (e.key === 'Escape') {
+                                                  e.preventDefault();
+                                                  setEditingCheckId(null);
+                                                }
                                               }}
-                                              title="드래그하여 순서 변경"
+                                              style={{
+                                                fontSize: '13px',
+                                                fontWeight: 700,
+                                                color: '#1E293B',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                border: '1px solid #2563EB',
+                                                outline: 'none',
+                                                flex: 1
+                                              }}
+                                              autoFocus
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSaveEditChecklist(group.section.id)}
+                                              style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
                                             >
-                                              <GripVertical size={15} />
+                                              저장
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditingCheckId(null)}
+                                              style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                            >
+                                              취소
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                            <span
+                                              style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                                              title={isSecCollapsed ? '펼치기' : '접기'}
+                                            >
+                                              {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                             </span>
-                                          )}
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleToggleChecklist(checkItem.id);
-                                            }}
-                                            style={styles.checkboxBtn}
-                                            title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                          >
-                                            {checkItem.completed ? (
-                                              <CheckSquare size={18} color="#2563EB" />
-                                            ) : (
-                                              <Square size={18} color="#94A3B8" />
+                                            <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
+                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              {group.section.text}
+                                            </span>
+                                            {isSecCollapsed && (
+                                              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                                (접힘)
+                                              </span>
                                             )}
-                                          </button>
-                                          <span
-                                            style={{
-                                              ...styles.checkitemText,
-                                              flex: 1,
-                                              minWidth: 0,
-                                              textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                              color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
-                                              fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
-                                            }}
+                                          </div>
+                                        )}
+
+                                        {!isSecEditing && (
+                                          <div
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                                            onClick={(e) => e.stopPropagation()}
                                           >
-                                            {renderWithLinks(checkItem.text)}
-                                          </span>
-                                        </div>
+                                            {group.groupTotalCount > 0 && (
+                                              <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: 700,
+                                                color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
+                                                backgroundColor: '#FFFFFF',
+                                                padding: '1px 7px',
+                                                borderRadius: '10px',
+                                                border: '1px solid #E2E8F0'
+                                              }}>
+                                                {group.groupCompletedCount}/{group.groupTotalCount} 완료
+                                              </span>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingCheckId(group.section.id);
+                                                setEditingCheckText(group.section.text);
+                                              }}
+                                              style={{
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                padding: '2px 4px',
+                                                color: '#64748B',
+                                                borderRadius: '3px'
+                                              }}
+                                              title="그룹 이름 수정"
+                                            >
+                                              <Edit2 size={13} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                openDeleteModal(
+                                                  '그룹 삭제',
+                                                  `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
+                                                  () => handleDeleteChecklist(group.section.id)
+                                                );
+                                              }}
+                                              style={{
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                padding: '2px 4px',
+                                                color: '#EF4444',
+                                                borderRadius: '3px'
+                                              }}
+                                              title="그룹 삭제"
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                            <div
+                                              title="드래그하여 그룹 순서 이동"
+                                              style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 2px' }}
+                                            >
+                                              <GripVertical size={14} />
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
 
-                                        {/* Right End: 3-dot Menu with Floating Dropdown */}
-                                        <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
-                                            style={{
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              justifyContent: 'center',
-                                              width: '28px',
-                                              height: '28px',
-                                              borderRadius: '6px',
-                                              border: 'none',
-                                              backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
-                                              color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
-                                              cursor: 'pointer'
-                                            }}
-                                            title="메뉴"
-                                          >
-                                            <MoreVertical size={16} />
-                                          </button>
+                                    {/* 하위 항목들 */}
+                                    {!isSecCollapsed && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {group.sortedItems.map((checkItem) => {
+                                          const isEditing = editingCheckId === checkItem.id;
+                                          const isSelected = selectedChecklistId === checkItem.id;
+                                          const isDragged = draggedNoteChecklistId === checkItem.id;
+                                          const isDragOver = dragOverNoteChecklistId === checkItem.id;
+                                          const canDrag = !isEditing && checkItem.id !== '__main__';
 
-                                          {openChecklistMenuId === checkItem.id && (
-                                            <>
-                                              {/* Invisible backdrop to close dropdown on click outside */}
-                                              <div
-                                                style={{
-                                                  position: 'fixed',
-                                                  top: 0,
-                                                  left: 0,
-                                                  right: 0,
-                                                  bottom: 0,
-                                                  zIndex: 9999,
-                                                  backgroundColor: 'transparent'
-                                                }}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setOpenChecklistMenuId(null);
-                                                }}
-                                              />
+                                          return (
+                                            <div
+                                              key={checkItem.id}
+                                              draggable={canDrag}
+                                              onDragStart={(e) => {
+                                                if (!canDrag) return;
+                                                setDraggedNoteChecklistId(checkItem.id);
+                                                e.dataTransfer.effectAllowed = 'move';
+                                                e.dataTransfer.setData('text/plain', checkItem.id);
+                                              }}
+                                              onDragOver={(e) => {
+                                                if (!canDrag) return;
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
+                                                if (dragOverNoteChecklistId !== checkItem.id) {
+                                                  setDragOverNoteChecklistId(checkItem.id);
+                                                }
+                                              }}
+                                              onDrop={(e) => {
+                                                if (!canDrag) return;
+                                                handleNoteChecklistDrop(e, checkItem.id);
+                                              }}
+                                              onDragEnd={() => {
+                                                setDraggedNoteChecklistId(null);
+                                                setDragOverNoteChecklistId(null);
+                                              }}
+                                              onClick={() => {
+                                                if (!isEditing) {
+                                                  setSelectedChecklistId(checkItem.id);
+                                                  if (isMobile) setMobileSubTab('sub');
+                                                }
+                                              }}
+                                              style={{
+                                                ...styles.checklistItemRow,
+                                                backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
+                                                border: isDragOver
+                                                  ? '1.5px solid #2563EB'
+                                                  : isSelected
+                                                    ? '1.5px solid #2563EB'
+                                                    : isEditing
+                                                      ? '1.5px solid #3B82F6'
+                                                      : checkItem.completed
+                                                        ? '1px solid #E2E8F0'
+                                                        : '1px solid #CBD5E1',
+                                                boxShadow: isDragOver
+                                                  ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
+                                                  : isSelected
+                                                    ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
+                                                    : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                                                opacity: isDragged ? 0.4 : 1,
+                                                cursor: canDrag ? 'grab' : 'pointer'
+                                              }}
+                                            >
+                                              {isEditing ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                                                  <textarea
+                                                    rows={2}
+                                                    value={editingCheckText}
+                                                    onChange={(e) => setEditingCheckText(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                        e.preventDefault();
+                                                        handleSaveEditChecklist(checkItem.id);
+                                                      }
+                                                    }}
+                                                    style={styles.checklistEditTextarea}
+                                                    autoFocus
+                                                  />
+                                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => setEditingCheckId(null)}
+                                                      style={styles.btnSmallCancel}
+                                                    >
+                                                      <X size={13} /> 취소
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                                      style={styles.btnSmallSave}
+                                                    >
+                                                      <Check size={13} /> 저장
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'space-between',
+                                                  width: '100%',
+                                                  gap: '8px',
+                                                  minHeight: '26px'
+                                                }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                                    {canDrag && (
+                                                      <span
+                                                        style={{
+                                                          cursor: 'grab',
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          color: '#94A3B8',
+                                                          flexShrink: 0
+                                                        }}
+                                                        title="드래그하여 순서 변경"
+                                                      >
+                                                        <GripVertical size={15} />
+                                                      </span>
+                                                    )}
+                                                    <button
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleChecklist(checkItem.id);
+                                                      }}
+                                                      style={styles.checkboxBtn}
+                                                      title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                                    >
+                                                      {checkItem.completed ? (
+                                                        <CheckSquare size={18} color="#2563EB" />
+                                                      ) : (
+                                                        <Square size={18} color="#94A3B8" />
+                                                      )}
+                                                    </button>
+                                                    <span
+                                                      style={{
+                                                        ...styles.checkitemText,
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                                        color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
+                                                        fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
+                                                      }}
+                                                    >
+                                                      {renderWithLinks(checkItem.text)}
+                                                    </span>
+                                                  </div>
 
-                                              {/* Context Dropdown Card */}
-                                              <div
-                                                style={{
-                                                  ...styles.checklistDropdownMenu,
-                                                  top: openChecklistMenuPos?.top ?? 0,
-                                                  right: openChecklistMenuPos?.right ?? 0
-                                                }}
-                                                onClick={(e) => e.stopPropagation()}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setOpenChecklistMenuId(null);
-                                                    setEditingCheckId(checkItem.id);
-                                                    setEditingCheckText(checkItem.text);
-                                                    setEditingCheckTag(checkItem.tag || '');
-                                                  }}
-                                                  style={styles.checklistDropdownItem}
-                                                >
-                                                  <Edit2 size={14} color="#475569" />
-                                                  <span>수정</span>
-                                                </button>
+                                                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
+                                                      style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: '28px',
+                                                        height: '28px',
+                                                        borderRadius: '6px',
+                                                        border: 'none',
+                                                        backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                                        color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
+                                                        cursor: 'pointer'
+                                                      }}
+                                                      title="메뉴"
+                                                    >
+                                                      <MoreVertical size={16} />
+                                                    </button>
 
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setOpenChecklistMenuId(null);
-                                                    const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                                    openDeleteModal(
-                                                      '체크리스트 항목 삭제',
-                                                      `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                      () => handleDeleteChecklist(checkItem.id)
-                                                    );
-                                                  }}
-                                                  style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
-                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                  <Trash2 size={14} color="#DC2626" />
-                                                  <span>삭제</span>
-                                                </button>
-
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setOpenChecklistMenuId(null)}
-                                                  style={styles.checklistDropdownItem}
-                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                  <X size={14} color="#64748B" />
-                                                  <span>취소</span>
-                                                </button>
-                                              </div>
-                                            </>
-                                          )}
-                                        </div>
+                                                    {openChecklistMenuId === checkItem.id && (
+                                                      <>
+                                                        <div
+                                                          style={{
+                                                            position: 'fixed',
+                                                            top: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            bottom: 0,
+                                                            zIndex: 9999,
+                                                            backgroundColor: 'transparent'
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setOpenChecklistMenuId(null);
+                                                          }}
+                                                        />
+                                                        <div
+                                                          style={{
+                                                            ...styles.checklistDropdownMenu,
+                                                            top: openChecklistMenuPos?.top ?? 0,
+                                                            right: openChecklistMenuPos?.right ?? 0
+                                                          }}
+                                                          onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                              setOpenChecklistMenuId(null);
+                                                              setEditingCheckId(checkItem.id);
+                                                              setEditingCheckText(checkItem.text);
+                                                              setEditingCheckTag(checkItem.tag || '');
+                                                            }}
+                                                            style={styles.checklistDropdownItem}
+                                                          >
+                                                            <Edit2 size={14} color="#475569" />
+                                                            <span>수정</span>
+                                                          </button>
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                              setOpenChecklistMenuId(null);
+                                                              const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                              openDeleteModal(
+                                                                '체크리스트 항목 삭제',
+                                                                `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                                () => handleDeleteChecklist(checkItem.id)
+                                                              );
+                                                            }}
+                                                            style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                          >
+                                                            <Trash2 size={14} color="#DC2626" />
+                                                            <span>삭제</span>
+                                                          </button>
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => setOpenChecklistMenuId(null)}
+                                                            style={styles.checklistDropdownItem}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                          >
+                                                            <X size={14} color="#64748B" />
+                                                            <span>취소</span>
+                                                          </button>
+                                                        </div>
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     )}
                                   </div>
@@ -4508,7 +4798,7 @@ export default function NotebookExplorer() {
 
 
 
-                        {/* Input Form for new multiline checklist item */}
+                        {/* Input Form for new multiline checklist item or section */}
                         <div style={styles.checklistInputContainer} className="no-print">
                           <div style={styles.checklistInputGroup}>
                             <textarea
@@ -4521,265 +4811,493 @@ export default function NotebookExplorer() {
                                   handleAddChecklist();
                                 }
                               }}
-                              placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
+                              placeholder="새 체크리스트 항목 또는 그룹명 입력... (Ctrl+Enter 항목 추가)"
                               style={styles.checklistTextarea}
                             />
-                            <button
-                              onClick={handleAddChecklist}
-                              style={{
-                                ...styles.checklistAddBtn,
-                                opacity: newChecklistText.trim() ? 1 : 0.6,
-                                cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed'
-                              }}
-                              disabled={!newChecklistText.trim()}
-                              title="체크리스트 추가 (Ctrl+Enter)"
-                            >
-                              <Plus size={15} />
-                              <span>추가</span>
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
+                              <button
+                                onClick={handleAddChecklist}
+                                style={{
+                                  ...styles.checklistAddBtn,
+                                  opacity: newChecklistText.trim() ? 1 : 0.6,
+                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
+                                  flex: 1,
+                                  height: 'auto',
+                                  padding: '5px 12px'
+                                }}
+                                disabled={!newChecklistText.trim()}
+                                title="체크리스트 추가 (Ctrl+Enter)"
+                              >
+                                <Plus size={14} />
+                                <span>항목 추가</span>
+                              </button>
+                              <button
+                                onClick={handleAddChecklistSection}
+                                style={{
+                                  ...styles.btnSecondary,
+                                  opacity: newChecklistText.trim() ? 1 : 0.6,
+                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: '#1D4ED8',
+                                  backgroundColor: '#EFF6FF',
+                                  borderColor: '#BFDBFE',
+                                  padding: '4px 8px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '3px'
+                                }}
+                                disabled={!newChecklistText.trim()}
+                                title="새 그룹(섹션 헤더) 추가"
+                              >
+                                <FolderPlus size={13} />
+                                <span>+ 그룹</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Checklist Items List */}
+                        {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                         <div style={styles.checklistListContainer}>
                           {currentChecklists.length === 0 ? (
                             <div style={styles.checklistEmptyText}>
-                              등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목을 추가해보세요!
+                              등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
                             </div>
                           ) : (
-                            currentChecklists.map((checkItem) => {
-                              const isEditing = editingCheckId === checkItem.id;
-                              const isSelected = selectedChecklistId === checkItem.id;
-                              const isDragged = draggedNoteChecklistId === checkItem.id;
-                              const isDragOver = dragOverNoteChecklistId === checkItem.id;
-                              const canDrag = !isEditing && checkItem.id !== '__main__';
+                            checklistGroups.map((group, groupIdx) => {
+                              const isSecEditing = group.section && editingCheckId === group.section.id;
+                              const isSecDragged = group.section && draggedNoteChecklistId === group.section.id;
+                              const isSecDragOver = group.section && dragOverNoteChecklistId === group.section.id;
+                              const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
 
                               return (
-                                <div
-                                  key={checkItem.id}
-                                  draggable={canDrag}
-                                  onDragStart={(e) => {
-                                    if (!canDrag) return;
-                                    setDraggedNoteChecklistId(checkItem.id);
-                                    e.dataTransfer.effectAllowed = 'move';
-                                    e.dataTransfer.setData('text/plain', checkItem.id);
-                                  }}
-                                  onDragOver={(e) => {
-                                    if (!canDrag) return;
-                                    e.preventDefault();
-                                    e.dataTransfer.dropEffect = 'move';
-                                    if (dragOverNoteChecklistId !== checkItem.id) {
-                                      setDragOverNoteChecklistId(checkItem.id);
-                                    }
-                                  }}
-                                  onDrop={(e) => {
-                                    if (!canDrag) return;
-                                    handleNoteChecklistDrop(e, checkItem.id);
-                                  }}
-                                  onDragEnd={() => {
-                                    setDraggedNoteChecklistId(null);
-                                    setDragOverNoteChecklistId(null);
-                                  }}
-                                  onClick={() => {
-                                    if (!isEditing) {
-                                      setSelectedChecklistId(checkItem.id);
-                                      if (isMobile) setMobileSubTab('sub');
-                                    }
-                                  }}
-                                  style={{
-                                    ...styles.checklistItemRow,
-                                    backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                    border: isDragOver
-                                      ? '1.5px solid #2563EB'
-                                      : isSelected
-                                        ? '1.5px solid #2563EB'
-                                        : isEditing
-                                          ? '1.5px solid #3B82F6'
-                                          : checkItem.completed
-                                            ? '1px solid #E2E8F0'
-                                            : '1px solid #CBD5E1',
-                                    boxShadow: isDragOver
-                                      ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
-                                      : isSelected
-                                        ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
-                                        : '0 1px 2px rgba(0, 0, 0, 0.03)',
-                                    opacity: isDragged ? 0.4 : 1,
-                                    cursor: canDrag ? 'grab' : 'pointer'
-                                  }}
-                                >
-                                  {isEditing ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-                                      <textarea
-                                        rows={2}
-                                        value={editingCheckText}
-                                        onChange={(e) => setEditingCheckText(e.target.value)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                            e.preventDefault();
-                                            handleSaveEditChecklist(checkItem.id);
-                                          }
-                                        }}
-                                        style={styles.checklistEditTextarea}
-                                        autoFocus
-                                      />
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingCheckId(null)}
-                                          style={styles.btnSmallCancel}
+                                <div key={group.section ? group.section.id : `group_${groupIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
+                                  {group.section && (
+                                    <div
+                                      draggable={!isSecEditing}
+                                      onDragStart={(e) => {
+                                        if (isSecEditing) return;
+                                        setDraggedNoteChecklistId(group.section.id);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                        e.dataTransfer.setData('text/plain', group.section.id);
+                                      }}
+                                      onDragOver={(e) => {
+                                        if (isSecEditing) return;
+                                        e.preventDefault();
+                                        e.dataTransfer.dropEffect = 'move';
+                                        if (dragOverNoteChecklistId !== group.section.id) {
+                                          setDragOverNoteChecklistId(group.section.id);
+                                        }
+                                      }}
+                                      onDrop={(e) => {
+                                        if (isSecEditing) return;
+                                        handleNoteChecklistDrop(e, group.section.id);
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedNoteChecklistId(null);
+                                        setDragOverNoteChecklistId(null);
+                                      }}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
+                                        padding: '7px 10px',
+                                        marginTop: groupIdx === 0 ? '2px' : '10px',
+                                        marginBottom: '2px',
+                                        backgroundColor: '#F1F5F9',
+                                        border: isSecDragOver ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                        opacity: isSecDragged ? 0.4 : 1,
+                                        cursor: isSecEditing ? 'default' : 'pointer',
+                                        userSelect: 'none'
+                                      }}
+                                      onClick={() => {
+                                        if (!isSecEditing) {
+                                          toggleSectionCollapse(group.section.id);
+                                        }
+                                      }}
+                                    >
+                                      {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
+                                      {isSecEditing ? (
+                                        <div
+                                          style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                          onClick={(e) => e.stopPropagation()}
                                         >
-                                          <X size={13} /> 취소
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleSaveEditChecklist(checkItem.id)}
-                                          style={styles.btnSmallSave}
-                                        >
-                                          <Check size={13} /> 저장
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      width: '100%',
-                                      gap: '8px',
-                                      minHeight: '26px'
-                                    }}>
-                                      {/* Left Row: Drag Handle + Checkbox + Pure Text */}
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                                        {canDrag && (
-                                          <span
-                                            style={{
-                                              cursor: 'grab',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              color: '#94A3B8',
-                                              flexShrink: 0
+                                          <Folder size={14} color="#2563EB" />
+                                          <input
+                                            type="text"
+                                            value={editingCheckText}
+                                            onChange={(e) => setEditingCheckText(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSaveEditChecklist(group.section.id);
+                                              } else if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setEditingCheckId(null);
+                                              }
                                             }}
-                                            title="드래그하여 순서 변경"
+                                            style={{
+                                              fontSize: '13px',
+                                              fontWeight: 700,
+                                              color: '#1E293B',
+                                              padding: '2px 6px',
+                                              borderRadius: '4px',
+                                              border: '1px solid #2563EB',
+                                              outline: 'none',
+                                              flex: 1
+                                            }}
+                                            autoFocus
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSaveEditChecklist(group.section.id)}
+                                            style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
                                           >
-                                            <GripVertical size={15} />
+                                            저장
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditingCheckId(null)}
+                                            style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                          >
+                                            취소
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                          <span
+                                            style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                                            title={isSecCollapsed ? '펼치기' : '접기'}
+                                          >
+                                            {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                           </span>
-                                        )}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleToggleChecklist(checkItem.id);
-                                          }}
-                                          style={styles.checkboxBtn}
-                                          title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
-                                        >
-                                          {checkItem.completed ? (
-                                            <CheckSquare size={18} color="#2563EB" />
-                                          ) : (
-                                            <Square size={18} color="#94A3B8" />
+                                          <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
+                                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {group.section.text}
+                                          </span>
+                                          {isSecCollapsed && (
+                                            <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                              (접힘)
+                                            </span>
                                           )}
-                                        </button>
-                                        <span
-                                          style={{
-                                            ...styles.checkitemText,
-                                            flex: 1,
-                                            minWidth: 0,
-                                            textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                            color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
-                                            fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
-                                          }}
-                                        >
-                                          {renderWithLinks(checkItem.text)}
-                                        </span>
-                                      </div>
+                                        </div>
+                                      )}
 
-                                      {/* Right End: 3-dot Menu */}
-                                      <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
-                                          style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            width: '28px',
-                                            height: '28px',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
-                                            color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
-                                            cursor: 'pointer'
-                                          }}
-                                          title="메뉴"
+                                      {/* 우측: 완료 배지 & 수정/삭제 & 드래그 핸들 */}
+                                      {!isSecEditing && (
+                                        <div
+                                          style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                                          onClick={(e) => e.stopPropagation()}
                                         >
-                                          <MoreVertical size={16} />
-                                        </button>
+                                          {group.groupTotalCount > 0 && (
+                                            <span style={{
+                                              fontSize: '11px',
+                                              fontWeight: 700,
+                                              color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
+                                              backgroundColor: '#FFFFFF',
+                                              padding: '1px 7px',
+                                              borderRadius: '10px',
+                                              border: '1px solid #E2E8F0'
+                                            }}>
+                                              {group.groupCompletedCount}/{group.groupTotalCount} 완료
+                                            </span>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingCheckId(group.section.id);
+                                              setEditingCheckText(group.section.text);
+                                            }}
+                                            style={{
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: '2px 4px',
+                                              color: '#64748B',
+                                              borderRadius: '3px'
+                                            }}
+                                            title="그룹 이름 수정"
+                                          >
+                                            <Edit2 size={13} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              openDeleteModal(
+                                                '그룹 삭제',
+                                                `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
+                                                () => handleDeleteChecklist(group.section.id)
+                                              );
+                                            }}
+                                            style={{
+                                              border: 'none',
+                                              background: 'transparent',
+                                              cursor: 'pointer',
+                                              padding: '2px 4px',
+                                              color: '#EF4444',
+                                              borderRadius: '3px'
+                                            }}
+                                            title="그룹 삭제"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                          <div
+                                            title="드래그하여 그룹 순서 이동"
+                                            style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 2px' }}
+                                          >
+                                            <GripVertical size={14} />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
 
-                                        {openChecklistMenuId === checkItem.id && (
-                                          <>
-                                            <div
-                                              style={{
-                                                position: 'fixed',
-                                                top: 0,
-                                                left: 0,
-                                                right: 0,
-                                                bottom: 0,
-                                                zIndex: 9999,
-                                                backgroundColor: 'transparent'
-                                              }}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setOpenChecklistMenuId(null);
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                ...styles.checklistDropdownMenu,
-                                                top: openChecklistMenuPos?.top ?? 0,
-                                                right: openChecklistMenuPos?.right ?? 0
-                                              }}
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setOpenChecklistMenuId(null);
-                                                  setEditingCheckId(checkItem.id);
-                                                  setEditingCheckText(checkItem.text);
-                                                  setEditingCheckTag(checkItem.tag || '');
-                                                }}
-                                                style={styles.checklistDropdownItem}
-                                              >
-                                                <Edit2 size={14} color="#475569" />
-                                                <span>수정</span>
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  setOpenChecklistMenuId(null);
-                                                  const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
-                                                  openDeleteModal(
-                                                    '체크리스트 항목 삭제',
-                                                    `'${preview}' 항목을 정말 삭제하시겠습니까?`,
-                                                    () => handleDeleteChecklist(checkItem.id)
-                                                  );
-                                                }}
-                                                style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
-                                              >
-                                                <Trash2 size={14} color="#DC2626" />
-                                                <span>삭제</span>
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => setOpenChecklistMenuId(null)}
-                                                style={styles.checklistDropdownItem}
-                                              >
-                                                <X size={14} color="#64748B" />
-                                                <span>취소</span>
-                                              </button>
-                                            </div>
-                                          </>
-                                        )}
-                                      </div>
+                                  {/* 그룹 하위 체크리스트 항목들 (접혀있지 않을 때만 렌더링) */}
+                                  {!isSecCollapsed && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {group.sortedItems.map((checkItem) => {
+                                        const isEditing = editingCheckId === checkItem.id;
+                                        const isSelected = selectedChecklistId === checkItem.id;
+                                        const isDragged = draggedNoteChecklistId === checkItem.id;
+                                        const isDragOver = dragOverNoteChecklistId === checkItem.id;
+                                        const canDrag = !isEditing && checkItem.id !== '__main__';
+
+                                        return (
+                                          <div
+                                            key={checkItem.id}
+                                            draggable={canDrag}
+                                            onDragStart={(e) => {
+                                              if (!canDrag) return;
+                                              setDraggedNoteChecklistId(checkItem.id);
+                                              e.dataTransfer.effectAllowed = 'move';
+                                              e.dataTransfer.setData('text/plain', checkItem.id);
+                                            }}
+                                            onDragOver={(e) => {
+                                              if (!canDrag) return;
+                                              e.preventDefault();
+                                              e.dataTransfer.dropEffect = 'move';
+                                              if (dragOverNoteChecklistId !== checkItem.id) {
+                                                setDragOverNoteChecklistId(checkItem.id);
+                                              }
+                                            }}
+                                            onDrop={(e) => {
+                                              if (!canDrag) return;
+                                              handleNoteChecklistDrop(e, checkItem.id);
+                                            }}
+                                            onDragEnd={() => {
+                                              setDraggedNoteChecklistId(null);
+                                              setDragOverNoteChecklistId(null);
+                                            }}
+                                            onClick={() => {
+                                              if (!isEditing) {
+                                                setSelectedChecklistId(checkItem.id);
+                                                if (isMobile) setMobileSubTab('sub');
+                                              }
+                                            }}
+                                            style={{
+                                              ...styles.checklistItemRow,
+                                              backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
+                                              border: isDragOver
+                                                ? '1.5px solid #2563EB'
+                                                : isSelected
+                                                  ? '1.5px solid #2563EB'
+                                                  : isEditing
+                                                    ? '1.5px solid #3B82F6'
+                                                    : checkItem.completed
+                                                      ? '1px solid #E2E8F0'
+                                                      : '1px solid #CBD5E1',
+                                              boxShadow: isDragOver
+                                                ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
+                                                : isSelected
+                                                  ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
+                                                  : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                                              opacity: isDragged ? 0.4 : 1,
+                                              cursor: canDrag ? 'grab' : 'pointer'
+                                            }}
+                                          >
+                                            {isEditing ? (
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                                                <textarea
+                                                  rows={2}
+                                                  value={editingCheckText}
+                                                  onChange={(e) => setEditingCheckText(e.target.value)}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                      e.preventDefault();
+                                                      handleSaveEditChecklist(checkItem.id);
+                                                    }
+                                                  }}
+                                                  style={styles.checklistEditTextarea}
+                                                  autoFocus
+                                                />
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setEditingCheckId(null)}
+                                                    style={styles.btnSmallCancel}
+                                                  >
+                                                    <X size={13} /> 취소
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleSaveEditChecklist(checkItem.id)}
+                                                    style={styles.btnSmallSave}
+                                                  >
+                                                    <Check size={13} /> 저장
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                width: '100%',
+                                                gap: '8px',
+                                                minHeight: '26px'
+                                              }}>
+                                                {/* Left Row: Drag Handle + Checkbox + Pure Text */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                                  {canDrag && (
+                                                    <span
+                                                      style={{
+                                                        cursor: 'grab',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        color: '#94A3B8',
+                                                        flexShrink: 0
+                                                      }}
+                                                      title="드래그하여 순서 변경"
+                                                    >
+                                                      <GripVertical size={15} />
+                                                    </span>
+                                                  )}
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleToggleChecklist(checkItem.id);
+                                                    }}
+                                                    style={styles.checkboxBtn}
+                                                    title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                                  >
+                                                    {checkItem.completed ? (
+                                                      <CheckSquare size={18} color="#2563EB" />
+                                                    ) : (
+                                                      <Square size={18} color="#94A3B8" />
+                                                    )}
+                                                  </button>
+                                                  <span
+                                                    style={{
+                                                      ...styles.checkitemText,
+                                                      flex: 1,
+                                                      minWidth: 0,
+                                                      textDecoration: checkItem.completed ? 'line-through' : 'none',
+                                                      color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
+                                                      fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
+                                                    }}
+                                                  >
+                                                    {renderWithLinks(checkItem.text)}
+                                                  </span>
+                                                </div>
+
+                                                {/* Right End: 3-dot Menu */}
+                                                <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
+                                                    style={{
+                                                      display: 'inline-flex',
+                                                      alignItems: 'center',
+                                                      justifyContent: 'center',
+                                                      width: '28px',
+                                                      height: '28px',
+                                                      borderRadius: '6px',
+                                                      border: 'none',
+                                                      backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
+                                                      color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
+                                                      cursor: 'pointer'
+                                                    }}
+                                                    title="메뉴"
+                                                  >
+                                                    <MoreVertical size={16} />
+                                                  </button>
+
+                                                  {openChecklistMenuId === checkItem.id && (
+                                                    <>
+                                                      <div
+                                                        style={{
+                                                          position: 'fixed',
+                                                          top: 0,
+                                                          left: 0,
+                                                          right: 0,
+                                                          bottom: 0,
+                                                          zIndex: 9999,
+                                                          backgroundColor: 'transparent'
+                                                        }}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setOpenChecklistMenuId(null);
+                                                        }}
+                                                      />
+                                                      <div
+                                                        style={{
+                                                          ...styles.checklistDropdownMenu,
+                                                          top: openChecklistMenuPos?.top ?? 0,
+                                                          right: openChecklistMenuPos?.right ?? 0
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                      >
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            setOpenChecklistMenuId(null);
+                                                            setEditingCheckId(checkItem.id);
+                                                            setEditingCheckText(checkItem.text);
+                                                            setEditingCheckTag(checkItem.tag || '');
+                                                          }}
+                                                          style={styles.checklistDropdownItem}
+                                                        >
+                                                          <Edit2 size={14} color="#475569" />
+                                                          <span>수정</span>
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            setOpenChecklistMenuId(null);
+                                                            const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
+                                                            openDeleteModal(
+                                                              '체크리스트 항목 삭제',
+                                                              `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+                                                              () => handleDeleteChecklist(checkItem.id)
+                                                            );
+                                                          }}
+                                                          style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                        >
+                                                          <Trash2 size={14} color="#DC2626" />
+                                                          <span>삭제</span>
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => setOpenChecklistMenuId(null)}
+                                                          style={styles.checklistDropdownItem}
+                                                        >
+                                                          <X size={14} color="#64748B" />
+                                                          <span>취소</span>
+                                                        </button>
+                                                      </div>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                 </div>
@@ -5185,7 +5703,7 @@ export default function NotebookExplorer() {
                 type="button"
                 onClick={() => {
                   const allObj = {};
-                  currentChecklists.forEach(c => { allObj[c.id] = true; });
+                  currentChecklists.filter(c => !c.isSection).forEach(c => { allObj[c.id] = true; });
                   setSelectedPrintChecklistIds(allObj);
                 }}
                 style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
@@ -5196,7 +5714,7 @@ export default function NotebookExplorer() {
                 type="button"
                 onClick={() => {
                   const noneObj = {};
-                  currentChecklists.forEach(c => { noneObj[c.id] = false; });
+                  currentChecklists.filter(c => !c.isSection).forEach(c => { noneObj[c.id] = false; });
                   setSelectedPrintChecklistIds(noneObj);
                 }}
                 style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
@@ -5207,7 +5725,7 @@ export default function NotebookExplorer() {
                 type="button"
                 onClick={() => {
                   const uncompObj = {};
-                  currentChecklists.forEach(c => { uncompObj[c.id] = !c.completed; });
+                  currentChecklists.filter(c => !c.isSection).forEach(c => { uncompObj[c.id] = !c.completed; });
                   setSelectedPrintChecklistIds(uncompObj);
                 }}
                 style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #BFDBFE', backgroundColor: '#EFF6FF', color: '#1E40AF', cursor: 'pointer', fontWeight: 600 }}
@@ -5218,22 +5736,44 @@ export default function NotebookExplorer() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
               {currentChecklists.map((checkItem) => (
-                <label key={checkItem.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedPrintChecklistIds[checkItem.id] !== false}
-                    onChange={(e) => setSelectedPrintChecklistIds({ ...selectedPrintChecklistIds, [checkItem.id]: e.target.checked })}
-                    style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer' }}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: '13px', color: checkItem.completed ? '#10B981' : '#CBD5E1', fontWeight: 700 }}>
-                      {checkItem.completed ? '☑' : '☐'}
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: 500, color: checkItem.completed ? '#64748B' : '#1E293B', textDecoration: checkItem.completed ? 'line-through' : 'none' }}>
-                      {checkItem.text}
-                    </span>
+                checkItem.isSection ? (
+                  <div
+                    key={checkItem.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 10px',
+                      marginTop: '4px',
+                      backgroundColor: '#F1F5F9',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#1E293B'
+                    }}
+                  >
+                    <Folder size={13} color="#2563EB" />
+                    <span>{checkItem.text}</span>
                   </div>
-                </label>
+                ) : (
+                  <label key={checkItem.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPrintChecklistIds[checkItem.id] !== false}
+                      onChange={(e) => setSelectedPrintChecklistIds({ ...selectedPrintChecklistIds, [checkItem.id]: e.target.checked })}
+                      style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '13px', color: checkItem.completed ? '#10B981' : '#CBD5E1', fontWeight: 700 }}>
+                        {checkItem.completed ? '☑' : '☐'}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: 500, color: checkItem.completed ? '#64748B' : '#1E293B', textDecoration: checkItem.completed ? 'line-through' : 'none' }}>
+                        {checkItem.text}
+                      </span>
+                    </div>
+                  </label>
+                )
               ))}
             </div>
 
