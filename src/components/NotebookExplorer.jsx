@@ -428,6 +428,8 @@ export default function NotebookExplorer() {
   const [draftTemplateId, setDraftTemplateId] = useState(null); // null = 기본 텍스트 박스
   const [draftTemplateValues, setDraftTemplateValues] = useState({}); // { [fieldId]: val }
   const [draftChecklists, setDraftChecklists] = useState(null); // template applied or edited checklists
+  const [draggedNoteChecklistId, setDraggedNoteChecklistId] = useState(null);
+  const [dragOverNoteChecklistId, setDragOverNoteChecklistId] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -841,15 +843,17 @@ export default function NotebookExplorer() {
   const hasLegacyBody = Boolean(activeItem?.body && activeItem.body.trim().length > 0);
 
   // Compute active item checklists (with legacy subBody fallback)
-  const baseChecklists = activeItem?.checklists
-    ? activeItem.checklists
-    : activeItem?.subBody
-      ? activeItem.subBody.split('\n').filter((l) => l.trim().length > 0).map((line, idx) => ({
-          id: `legacy_${idx}`,
-          text: line,
-          completed: false
-        }))
-      : [];
+  const baseChecklists = (isEditMode && draftChecklists !== null)
+    ? draftChecklists
+    : (activeItem?.checklists
+      ? activeItem.checklists
+      : activeItem?.subBody
+        ? activeItem.subBody.split('\n').filter((l) => l.trim().length > 0).map((line, idx) => ({
+            id: `legacy_${idx}`,
+            text: line,
+            completed: false
+          }))
+        : []);
 
   const rawChecklists = [];
   if (hasTpl) {
@@ -989,6 +993,48 @@ export default function NotebookExplorer() {
       });
     } catch (err) {
       console.error('Error adding checklist:', err);
+    }
+  };
+
+  const handleNoteChecklistDrop = async (e, targetId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedNoteChecklistId || draggedNoteChecklistId === targetId) {
+      setDraggedNoteChecklistId(null);
+      setDragOverNoteChecklistId(null);
+      return;
+    }
+    if (draggedNoteChecklistId === '__main__' || targetId === '__main__') {
+      setDraggedNoteChecklistId(null);
+      setDragOverNoteChecklistId(null);
+      return;
+    }
+    const fromIdx = baseChecklists.findIndex((c) => c.id === draggedNoteChecklistId);
+    const toIdx = baseChecklists.findIndex((c) => c.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) {
+      setDraggedNoteChecklistId(null);
+      setDragOverNoteChecklistId(null);
+      return;
+    }
+    const updated = [...baseChecklists];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+
+    setDraggedNoteChecklistId(null);
+    setDragOverNoteChecklistId(null);
+
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    if (activeItem) {
+      try {
+        await updateDoc(doc(db, 'items', activeItem.id), {
+          checklists: updated,
+          updatedAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Error reordering note checklists:', err);
+      }
     }
   };
 
@@ -3360,10 +3406,36 @@ export default function NotebookExplorer() {
                               currentChecklists.map((checkItem) => {
                                 const isEditing = editingCheckId === checkItem.id;
                                 const isSelected = selectedChecklistId === checkItem.id;
+                                const isDragged = draggedNoteChecklistId === checkItem.id;
+                                const isDragOver = dragOverNoteChecklistId === checkItem.id;
+                                const canDrag = !isEditing && checkItem.id !== '__main__';
 
                                 return (
                                   <div
                                     key={checkItem.id}
+                                    draggable={canDrag}
+                                    onDragStart={(e) => {
+                                      if (!canDrag) return;
+                                      setDraggedNoteChecklistId(checkItem.id);
+                                      e.dataTransfer.effectAllowed = 'move';
+                                      e.dataTransfer.setData('text/plain', checkItem.id);
+                                    }}
+                                    onDragOver={(e) => {
+                                      if (!canDrag) return;
+                                      e.preventDefault();
+                                      e.dataTransfer.dropEffect = 'move';
+                                      if (dragOverNoteChecklistId !== checkItem.id) {
+                                        setDragOverNoteChecklistId(checkItem.id);
+                                      }
+                                    }}
+                                    onDrop={(e) => {
+                                      if (!canDrag) return;
+                                      handleNoteChecklistDrop(e, checkItem.id);
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedNoteChecklistId(null);
+                                      setDragOverNoteChecklistId(null);
+                                    }}
                                     onClick={() => {
                                       if (!isEditing) {
                                         setSelectedChecklistId(checkItem.id);
@@ -3373,10 +3445,13 @@ export default function NotebookExplorer() {
                                     style={{
                                       ...styles.checklistItemRow,
                                       backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                      borderColor: isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')),
-                                      borderWidth: isSelected ? '2px' : '1px',
-                                      boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none',
-                                      cursor: 'pointer'
+                                      borderColor: isDragOver ? '#2563EB' : (isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1'))),
+                                      borderWidth: (isDragOver || isSelected) ? '2px' : '1px',
+                                      borderTop: isDragOver ? '3px solid #2563EB' : undefined,
+                                      boxShadow: isDragOver ? '0 4px 12px rgba(37, 99, 235, 0.25)' : (isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'),
+                                      opacity: isDragged ? 0.4 : 1,
+                                      transition: 'all 0.15s ease',
+                                      cursor: canDrag ? 'grab' : 'pointer'
                                     }}
                                   >
                                     {isEditing ? (
@@ -3426,8 +3501,22 @@ export default function NotebookExplorer() {
                                         gap: '8px',
                                         minHeight: '26px'
                                       }}>
-                                        {/* Left Row: Checkbox + Pure Text + Tag */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                        {/* Left Row: Drag Handle + Checkbox + Pure Text */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                          {canDrag && (
+                                            <span
+                                              style={{
+                                                cursor: 'grab',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                color: '#94A3B8',
+                                                flexShrink: 0
+                                              }}
+                                              title="드래그하여 순서 변경"
+                                            >
+                                              <GripVertical size={15} />
+                                            </span>
+                                          )}
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -3932,10 +4021,36 @@ export default function NotebookExplorer() {
                             currentChecklists.map((checkItem) => {
                               const isEditing = editingCheckId === checkItem.id;
                               const isSelected = selectedChecklistId === checkItem.id;
+                              const isDragged = draggedNoteChecklistId === checkItem.id;
+                              const isDragOver = dragOverNoteChecklistId === checkItem.id;
+                              const canDrag = !isEditing && checkItem.id !== '__main__';
 
                               return (
                                 <div
                                   key={checkItem.id}
+                                  draggable={canDrag}
+                                  onDragStart={(e) => {
+                                    if (!canDrag) return;
+                                    setDraggedNoteChecklistId(checkItem.id);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    e.dataTransfer.setData('text/plain', checkItem.id);
+                                  }}
+                                  onDragOver={(e) => {
+                                    if (!canDrag) return;
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'move';
+                                    if (dragOverNoteChecklistId !== checkItem.id) {
+                                      setDragOverNoteChecklistId(checkItem.id);
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    if (!canDrag) return;
+                                    handleNoteChecklistDrop(e, checkItem.id);
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedNoteChecklistId(null);
+                                    setDragOverNoteChecklistId(null);
+                                  }}
                                   onClick={() => {
                                     if (!isEditing) {
                                       setSelectedChecklistId(checkItem.id);
@@ -3945,10 +4060,13 @@ export default function NotebookExplorer() {
                                   style={{
                                     ...styles.checklistItemRow,
                                     backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                    borderColor: isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')),
-                                    borderWidth: isSelected ? '2px' : '1px',
-                                    boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none',
-                                    cursor: 'pointer'
+                                    borderColor: isDragOver ? '#2563EB' : (isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1'))),
+                                    borderWidth: (isDragOver || isSelected) ? '2px' : '1px',
+                                    borderTop: isDragOver ? '3px solid #2563EB' : undefined,
+                                    boxShadow: isDragOver ? '0 4px 12px rgba(37, 99, 235, 0.25)' : (isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'),
+                                    opacity: isDragged ? 0.4 : 1,
+                                    transition: 'all 0.15s ease',
+                                    cursor: canDrag ? 'grab' : 'pointer'
                                   }}
                                 >
                                   {isEditing ? (
@@ -3992,8 +4110,22 @@ export default function NotebookExplorer() {
                                       gap: '8px',
                                       minHeight: '26px'
                                     }}>
-                                      {/* Left Row: Checkbox + Pure Text + Detail Badge + Tag */}
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                      {/* Left Row: Drag Handle + Checkbox + Pure Text */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                        {canDrag && (
+                                          <span
+                                            style={{
+                                              cursor: 'grab',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              color: '#94A3B8',
+                                              flexShrink: 0
+                                            }}
+                                            title="드래그하여 순서 변경"
+                                          >
+                                            <GripVertical size={15} />
+                                          </span>
+                                        )}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
