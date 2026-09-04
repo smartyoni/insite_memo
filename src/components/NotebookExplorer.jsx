@@ -50,6 +50,7 @@ import {
   Search
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
+import { DetailBlocksViewer, DetailBlocksEditor, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
 
 export const autoFormatPhoneNumber = (val) => {
   if (!val) return '';
@@ -615,6 +616,7 @@ export default function NotebookExplorer() {
   const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState('__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
+  const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
 
 
 
@@ -987,7 +989,8 @@ export default function NotebookExplorer() {
 
   const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
   const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
-  const hasLegacyBody = Boolean(activeItem?.body && activeItem.body.trim().length > 0);
+  const hasBlocks = Boolean(Array.isArray(activeItem?.detailBlocks) && activeItem.detailBlocks.length > 0);
+  const hasLegacyBody = Boolean((activeItem?.body && activeItem.body.trim().length > 0) || hasBlocks);
 
   // Compute active item checklists (with legacy subBody fallback)
   const baseChecklists = (isEditMode && draftChecklists !== null)
@@ -1010,6 +1013,7 @@ export default function NotebookExplorer() {
       completed: Boolean(activeItem?.completed),
       tag: null,
       detail: activeItem.body || '',
+      detailBlocks: activeItem.detailBlocks || [],
       isTemplate: true
     });
   } else if (hasLegacyBody) {
@@ -1018,7 +1022,8 @@ export default function NotebookExplorer() {
       text: '기본 내용',
       completed: Boolean(activeItem?.completed),
       tag: null,
-      detail: activeItem.body || ''
+      detail: activeItem.body || '',
+      detailBlocks: activeItem.detailBlocks || []
     });
   }
   rawChecklists.push(...baseChecklists);
@@ -1222,10 +1227,13 @@ export default function NotebookExplorer() {
       try {
         await updateDoc(doc(db, 'items', activeItem.id), {
           body: '',
+          detailBlocks: [],
           templateId: null,
           templateValues: {},
           updatedAt: serverTimestamp()
         });
+        setChecklistDetailDraft('');
+        setChecklistDetailBlocks([]);
         setSelectedChecklistId(baseChecklists[0]?.id || null);
       } catch (err) {
         console.error('Error deleting main body:', err);
@@ -1261,14 +1269,18 @@ export default function NotebookExplorer() {
     }
   };
 
-  const handleSaveChecklistDetail = async (checkId, text) => {
-    const targetText = text !== undefined ? text : checklistDetailDraft;
+  const handleSaveChecklistDetail = async (checkId, blocksToSave) => {
+    const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
+    const plainText = blocksToPlainText(targetBlocks);
     if (checkId === '__main__') {
       try {
         await updateDoc(doc(db, 'items', activeItem.id), {
-          body: targetText,
+          body: plainText,
+          detailBlocks: targetBlocks,
           updatedAt: serverTimestamp()
         });
+        setChecklistDetailDraft(plainText);
+        setChecklistDetailBlocks(targetBlocks);
         setIsEditingChecklistDetail(false);
         setIsEditMode(false);
         setShowSavedToast(true);
@@ -1280,13 +1292,15 @@ export default function NotebookExplorer() {
       return;
     }
     const updated = baseChecklists.map((c) =>
-      c.id === checkId ? { ...c, detail: targetText } : c
+      c.id === checkId ? { ...c, detail: plainText, detailBlocks: targetBlocks } : c
     );
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
         updatedAt: serverTimestamp()
       });
+      setChecklistDetailDraft(plainText);
+      setChecklistDetailBlocks(targetBlocks);
       setIsEditingChecklistDetail(false);
       setIsEditMode(false);
       setShowSavedToast(true);
@@ -1308,10 +1322,13 @@ export default function NotebookExplorer() {
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
       const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
-      const hasLegacyBody = Boolean(activeItem.body && activeItem.body.trim());
+      const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || (Array.isArray(activeItem.detailBlocks) && activeItem.detailBlocks.length > 0));
       const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
       setSelectedChecklistId(firstId);
-      setChecklistDetailDraft(firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || ''));
+      const initialText = firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || '');
+      const initialBlocksData = firstId === '__main__' ? activeItem.detailBlocks : baseChecklists[0]?.detailBlocks;
+      setChecklistDetailDraft(initialText);
+      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
     } else {
       setDraftTitle('');
       setDraftBody('');
@@ -1322,6 +1339,7 @@ export default function NotebookExplorer() {
       setDraftChecklists(null);
       setSelectedChecklistId(null);
       setChecklistDetailDraft('');
+      setChecklistDetailBlocks([]);
     }
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
@@ -1331,13 +1349,19 @@ export default function NotebookExplorer() {
   useEffect(() => {
     if (!activeItem) return;
     if (selectedChecklistId === '__main__') {
-      setChecklistDetailDraft(activeItem.body || '');
+      const initialText = activeItem.body || '';
+      const initialBlocksData = activeItem.detailBlocks;
+      setChecklistDetailDraft(initialText);
+      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
     } else {
       const found = currentChecklists.find((c) => c.id === selectedChecklistId);
-      setChecklistDetailDraft(found?.detail || '');
+      const initialText = found?.detail || '';
+      const initialBlocksData = found?.detailBlocks;
+      setChecklistDetailDraft(initialText);
+      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
     }
     setIsEditingChecklistDetail(false);
-  }, [selectedChecklistId, activeItem?.id, activeItem?.body]);
+  }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
 
   // ESC key handler for cancelling delete modal & detail edit mode
   useEffect(() => {
@@ -1351,10 +1375,16 @@ export default function NotebookExplorer() {
           closeDeleteModal();
         } else if (isEditingChecklistDetail) {
           if (selectedChecklistId === '__main__') {
-            setChecklistDetailDraft(activeItem?.body || '');
+            const initialText = activeItem?.body || '';
+            const initialBlocksData = activeItem?.detailBlocks;
+            setChecklistDetailDraft(initialText);
+            setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
           } else {
             const found = currentChecklists.find((c) => c.id === selectedChecklistId);
-            setChecklistDetailDraft(found?.detail || '');
+            const initialText = found?.detail || '';
+            const initialBlocksData = found?.detailBlocks;
+            setChecklistDetailDraft(initialText);
+            setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
           }
           setIsEditingChecklistDetail(false);
         } else if (isEditMode) {
@@ -1972,7 +2002,8 @@ export default function NotebookExplorer() {
   const handleSaveDetail = async () => {
     if (!selectedItemId) return;
     try {
-      const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : draftBody;
+      const blocksPlainText = blocksToPlainText(checklistDetailBlocks);
+      const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : (blocksPlainText || draftBody);
 
       const updatePayload = {
         title: draftTitle,
@@ -1983,6 +2014,10 @@ export default function NotebookExplorer() {
         templateValues: draftTemplateValues || {},
         updatedAt: serverTimestamp()
       };
+
+      if (!draftTemplateId && checklistDetailBlocks.length > 0) {
+        updatePayload.detailBlocks = checklistDetailBlocks;
+      }
 
       if (draftChecklists !== null) {
         updatePayload.checklists = draftChecklists;
@@ -2013,6 +2048,10 @@ export default function NotebookExplorer() {
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
+      const initialText = activeItem.body || '';
+      const initialBlocks = activeItem.detailBlocks;
+      setChecklistDetailDraft(initialText);
+      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
     }
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
@@ -4116,12 +4155,16 @@ export default function NotebookExplorer() {
                         <div style={styles.editPaneSubCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
                           {selectedChecklistId === '__main__' ? (
                             draftTemplateId === null ? (
-                              <textarea
-                                value={draftBody}
-                                onChange={(e) => setDraftBody(e.target.value)}
-                                placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
-                                style={styles.editBodyTextarea}
-                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                <DetailBlocksEditor
+                                  blocks={checklistDetailBlocks}
+                                  onChange={(newBlocks) => {
+                                    setChecklistDetailBlocks(newBlocks);
+                                    setDraftBody(blocksToPlainText(newBlocks));
+                                  }}
+                                  onSave={() => handleSaveDetail()}
+                                />
+                              </div>
                             ) : (
                               (() => {
                                 const activeTpl = templates.find(t => t.id === draftTemplateId);
@@ -4313,21 +4356,10 @@ export default function NotebookExplorer() {
                                       ☑️ {selectedCheckItem.text} 상세내용
                                     </span>
                                   </div>
-                                  <textarea
-                                    value={checklistDetailDraft}
-                                    onChange={(e) => setChecklistDetailDraft(e.target.value)}
-                                    onBlur={() => handleSaveChecklistDetail(selectedCheckItem.id)}
-                                    onKeyDown={(e) => {
-                                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                                        e.preventDefault();
-                                        handleSaveChecklistDetail(selectedCheckItem.id);
-                                      }
-                                    }}
-                                    placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (자동 저장 / Ctrl+S)"
-                                    style={{
-                                      ...styles.editBodyTextarea,
-                                      boxSizing: 'border-box'
-                                    }}
+                                  <DetailBlocksEditor
+                                    blocks={checklistDetailBlocks}
+                                    onChange={setChecklistDetailBlocks}
+                                    onSave={() => handleSaveChecklistDetail(selectedCheckItem.id)}
                                   />
                                 </div>
                               );
@@ -4973,10 +5005,16 @@ export default function NotebookExplorer() {
                                         <button
                                           onClick={() => {
                                             if (selectedCheckItem.id === '__main__') {
-                                              setChecklistDetailDraft(activeItem?.body || '');
+                                              const initialText = activeItem?.body || '';
+                                              const initialBlocks = activeItem?.detailBlocks;
+                                              setChecklistDetailDraft(initialText);
+                                              setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
                                             } else {
                                               const found = currentChecklists.find(c => c.id === selectedCheckItem.id);
-                                              setChecklistDetailDraft(found?.detail || '');
+                                              const initialText = found?.detail || '';
+                                              const initialBlocks = found?.detailBlocks;
+                                              setChecklistDetailDraft(initialText);
+                                              setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
                                             }
                                             setIsEditingChecklistDetail(false);
                                           }}
@@ -5018,53 +5056,21 @@ export default function NotebookExplorer() {
                                   </div>
                                 </div>
 
-                                {/* Detail Content: Edit Mode (Textarea) or Read Mode (Active Hyperlinks for Tel & Web) */}
+                                {/* Detail Content: Edit Mode (Blocks Editor) or Read Mode (Blocks Viewer) */}
                                 {isEditingChecklistDetail ? (
                                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                    <textarea
-                                      autoFocus
-                                      value={checklistDetailDraft}
-                                      onChange={(e) => setChecklistDetailDraft(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                                          e.preventDefault();
-                                          handleSaveChecklistDetail(selectedCheckItem.id);
-                                        }
-                                      }}
-                                      placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (저장 버튼 클릭 또는 Ctrl+S로 저장 시 읽기모드로 전환되며 링크가 활성화됩니다)"
-                                      style={{
-                                        ...styles.editBodyTextarea,
-                                        boxSizing: 'border-box'
-                                      }}
+                                    <DetailBlocksEditor
+                                      blocks={checklistDetailBlocks}
+                                      onChange={setChecklistDetailBlocks}
+                                      onSave={() => handleSaveChecklistDetail(selectedCheckItem.id)}
                                     />
                                   </div>
                                 ) : (
-                                  <div
+                                  <DetailBlocksViewer
+                                    blocks={checklistDetailBlocks}
+                                    searchQuery={searchQuery}
                                     onDoubleClick={() => setIsEditingChecklistDetail(true)}
-                                    title="더블클릭하여 수정 가능"
-                                    style={{
-                                      flex: 1,
-                                      minHeight: 0,
-                                      padding: '14px 16px',
-                                      backgroundColor: '#FFFFFF',
-                                      borderRadius: '10px',
-                                      border: '1px solid #E2E8F0',
-                                      fontSize: '14px',
-                                      lineHeight: 1.65,
-                                      color: '#1E293B',
-                                      whiteSpace: 'pre-wrap',
-                                      wordBreak: 'break-word',
-                                      overflowY: 'auto'
-                                    }}
-                                  >
-                                    {checklistDetailDraft && checklistDetailDraft.trim() ? (
-                                      renderWithLinks(checklistDetailDraft, searchQuery)
-                                    ) : (
-                                      <div style={{ color: '#94A3B8', padding: '16px 0', fontSize: '13px' }}>
-                                        등록된 상세내용이 없습니다. 우측 상단 <strong>[수정]</strong> 버튼을 누르거나 본문을 더블클릭하여 내용을 입력해 보세요.
-                                      </div>
-                                    )}
-                                  </div>
+                                  />
                                 )}
                               </>
                             );
