@@ -639,6 +639,44 @@ export default function NotebookExplorer() {
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const [newGroupNameInput, setNewGroupNameInput] = useState('');
+  const [groupModalPos, setGroupModalPos] = useState(null);
+
+  const handleOpenAddGroupModal = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const modalWidth = 260;
+    let right = window.innerWidth - rect.right;
+    if (right < 10) right = 10;
+    if (rect.right - modalWidth < 10) right = Math.max(10, window.innerWidth - 270);
+    setGroupModalPos({ top: rect.bottom + 6, right });
+    setNewGroupNameInput('');
+    setShowAddGroupModal(true);
+  };
+
+  const handleCreateGroupFromModal = async () => {
+    if (!activeItem || !newGroupNameInput.trim()) return;
+    const newSection = {
+      id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      isSection: true,
+      type: 'section',
+      text: newGroupNameInput.trim()
+    };
+    const updated = [...baseChecklists, newSection];
+    setShowAddGroupModal(false);
+    setNewGroupNameInput('');
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error adding checklist section:', err);
+    }
+  };
 
 
 
@@ -4135,7 +4173,8 @@ export default function NotebookExplorer() {
                               <span>진행 체크리스트 ({completedCount}/{totalCount})</span>
                             </div>
                             <button
-                              onClick={handleOpenChecklistPrint}
+                              type="button"
+                              onClick={handleOpenAddGroupModal}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -4143,16 +4182,16 @@ export default function NotebookExplorer() {
                                 padding: '3px 8px',
                                 fontSize: '11px',
                                 fontWeight: 600,
-                                color: '#334155',
-                                backgroundColor: '#F1F5F9',
-                                border: '1px solid #CBD5E1',
+                                color: '#1D4ED8',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #BFDBFE',
                                 borderRadius: '4px',
                                 cursor: 'pointer'
                               }}
-                              title="체크리스트 인쇄"
+                              title="새 그룹 추가"
                             >
-                              <Printer size={13} color="#334155" />
-                              <span>인쇄</span>
+                              <FolderPlus size={13} />
+                              <span>그룹</span>
                             </button>
                           </div>
 
@@ -4169,7 +4208,7 @@ export default function NotebookExplorer() {
                                     handleAddChecklist();
                                   }
                                 }}
-                                placeholder="새 체크리스트 항목 또는 그룹명 입력... (Ctrl+Enter 항목 추가)"
+                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                                 style={styles.checklistTextarea}
                               />
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
@@ -4189,29 +4228,7 @@ export default function NotebookExplorer() {
                                   <Plus size={14} />
                                   <span>항목 추가</span>
                                 </button>
-                                <button
-                                  onClick={handleAddChecklistSection}
-                                  style={{
-                                    ...styles.btnSecondary,
-                                    opacity: newChecklistText.trim() ? 1 : 0.6,
-                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    color: '#1D4ED8',
-                                    backgroundColor: '#EFF6FF',
-                                    borderColor: '#BFDBFE',
-                                    padding: '4px 8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '3px'
-                                  }}
-                                  disabled={!newChecklistText.trim()}
-                                  title="새 그룹(섹션 헤더) 추가"
-                                >
-                                  <FolderPlus size={13} />
-                                  <span>+ 그룹</span>
-                                </button>
+                                
                               </div>
                             </div>
                           </div>
@@ -4976,13 +4993,19 @@ onClick={() => {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
                             <button
-                              onClick={handleOpenChecklistPrint}
-                              style={styles.btnSecondary}
+                              type="button"
+                              onClick={handleOpenAddGroupModal}
+                              style={{
+                                ...styles.btnSecondary,
+                                color: '#1D4ED8',
+                                backgroundColor: '#EFF6FF',
+                                borderColor: '#BFDBFE'
+                              }}
                               className="no-print"
-                              title="체크리스트 인쇄"
+                              title="새 그룹 추가"
                             >
-                              <Printer size={13} color="#334155" />
-                              <span>인쇄</span>
+                              <FolderPlus size={13} />
+                              <span>그룹</span>
                             </button>
                             {showSavedToast && (
                               <span style={styles.toastBadge}>
@@ -5018,7 +5041,7 @@ onClick={() => {
                                   handleAddChecklist();
                                 }
                               }}
-                              placeholder="새 체크리스트 항목 또는 그룹명 입력... (Ctrl+Enter 항목 추가)"
+                              placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
                               style={styles.checklistTextarea}
                             />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
@@ -5038,29 +5061,7 @@ onClick={() => {
                                 <Plus size={14} />
                                 <span>항목 추가</span>
                               </button>
-                              <button
-                                onClick={handleAddChecklistSection}
-                                style={{
-                                  ...styles.btnSecondary,
-                                  opacity: newChecklistText.trim() ? 1 : 0.6,
-                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  color: '#1D4ED8',
-                                  backgroundColor: '#EFF6FF',
-                                  borderColor: '#BFDBFE',
-                                  padding: '4px 8px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '3px'
-                                }}
-                                disabled={!newChecklistText.trim()}
-                                title="새 그룹(섹션 헤더) 추가"
-                              >
-                                <FolderPlus size={13} />
-                                <span>+ 그룹</span>
-                              </button>
+                              
                             </div>
                           </div>
                         </div>
@@ -6256,6 +6257,117 @@ onClick={() => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Group Popover Modal */}
+      {showAddGroupModal && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+              backgroundColor: 'transparent'
+            }}
+            onClick={() => setShowAddGroupModal(false)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: groupModalPos?.top ?? 100,
+              right: groupModalPos?.right ?? 20,
+              width: '260px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '8px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #CBD5E1',
+              padding: '12px',
+              zIndex: 10000,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
+                <FolderPlus size={15} color="#2563EB" />
+                <span>새 그룹 추가</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddGroupModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px' }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div>
+              <input
+                type="text"
+                autoFocus
+                value={newGroupNameInput}
+                onChange={(e) => setNewGroupNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreateGroupFromModal();
+                  } else if (e.key === 'Escape') {
+                    setShowAddGroupModal(false);
+                  }
+                }}
+                placeholder="그룹명을 입력하세요"
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setShowAddGroupModal(false)}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '12px',
+                  borderRadius: '5px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateGroupFromModal}
+                disabled={!newGroupNameInput.trim()}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '5px',
+                  border: 'none',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  cursor: newGroupNameInput.trim() ? 'pointer' : 'not-allowed',
+                  opacity: newGroupNameInput.trim() ? 1 : 0.6
+                }}
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Copy Toast Notification */}
