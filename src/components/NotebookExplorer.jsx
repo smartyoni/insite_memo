@@ -463,6 +463,8 @@ export default function NotebookExplorer() {
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
   const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
+  const [selectedChecklistId, setSelectedChecklistId] = useState('__main__'); // '__main__' (부모 메모/템플릿) | checklistId
+  const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
 
 
 
@@ -936,10 +938,13 @@ export default function NotebookExplorer() {
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
-      completed: false
+      completed: false,
+      detail: ''
     };
     const updated = [...currentChecklists, newItem];
     setNewChecklistText('');
+    setSelectedChecklistId(newItem.id);
+    setChecklistDetailDraft('');
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -979,6 +984,9 @@ export default function NotebookExplorer() {
   const handleDeleteChecklist = async (checkId) => {
     if (!activeItem) return;
     const updated = currentChecklists.filter((c) => c.id !== checkId);
+    if (selectedChecklistId === checkId) {
+      setSelectedChecklistId('__main__');
+    }
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -986,6 +994,25 @@ export default function NotebookExplorer() {
       });
     } catch (err) {
       console.error('Error deleting checklist:', err);
+    }
+  };
+
+  const handleSaveChecklistDetail = async (checkId, text) => {
+    if (!activeItem) return;
+    const targetText = text !== undefined ? text : checklistDetailDraft;
+    const updated = currentChecklists.map((c) =>
+      c.id === checkId ? { ...c, detail: targetText } : c
+    );
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+      setShowSavedToast(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+    } catch (err) {
+      console.error('Error saving checklist detail:', err);
     }
   };
 
@@ -999,6 +1026,8 @@ export default function NotebookExplorer() {
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
+      setSelectedChecklistId('__main__');
+      setChecklistDetailDraft('');
     } else {
       setDraftTitle('');
       setDraftBody('');
@@ -1007,9 +1036,19 @@ export default function NotebookExplorer() {
       setDraftTemplateId(null);
       setDraftTemplateValues({});
       setDraftChecklists(null);
+      setSelectedChecklistId('__main__');
+      setChecklistDetailDraft('');
     }
     setIsEditMode(false);
   }, [selectedItemId]);
+
+  // Sync checklist detail draft when selectedChecklistId changes
+  useEffect(() => {
+    if (selectedChecklistId !== '__main__' && activeItem) {
+      const found = currentChecklists.find((c) => c.id === selectedChecklistId);
+      setChecklistDetailDraft(found?.detail || '');
+    }
+  }, [selectedChecklistId, activeItem?.id]);
 
   // ESC key handler for cancelling delete modal & detail edit mode
   useEffect(() => {
@@ -3024,7 +3063,7 @@ export default function NotebookExplorer() {
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
-                        <div style={styles.editPaneMainCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
+                        <div style={styles.editPaneMainCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
                           {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
@@ -3151,276 +3190,44 @@ export default function NotebookExplorer() {
                             style={{ ...styles.editTitleInput, width: '100%', marginBottom: '10px' }}
                           />
 
-                          {/* Dynamic Body Content: Default Textarea OR Selected Template Form */}
-                          {draftTemplateId === null ? (
-                            <textarea
-                              value={draftBody}
-                              onChange={(e) => setDraftBody(e.target.value)}
-                              placeholder="메모 기본 내용을 입력하세요... (URL 및 전화번호는 자동 링크로 변환됩니다)"
-                              style={styles.editBodyTextarea}
-                            />
-                          ) : (
-                            (() => {
-                              const activeTpl = templates.find(t => t.id === draftTemplateId);
-                              if (!activeTpl || !activeTpl.fields || activeTpl.fields.length === 0) {
-                                return (
-                                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', backgroundColor: '#F8FAFC', borderRadius: '10px' }}>
-                                    선택한 템플릿 항목이 없습니다. 상단 [템플릿 설정]에서 구성 요소를 추가해 주세요.
-                                  </div>
-                                );
-                              }
+                          {/* Parent info button in edit mode */}
+                          <div
+                            onClick={() => {
+                              setSelectedChecklistId('__main__');
+                              if (isMobile) setMobileSubTab('sub');
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: selectedChecklistId === '__main__' ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                              backgroundColor: selectedChecklistId === '__main__' ? '#EFF6FF' : '#FFFFFF',
+                              cursor: 'pointer',
+                              marginBottom: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              boxShadow: selectedChecklistId === '__main__' ? '0 2px 6px rgba(37, 99, 235, 0.15)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: selectedChecklistId === '__main__' ? '#1E40AF' : '#1E293B' }}>
+                              {draftTemplateId ? '📋 [양식 본문] 우측 화면에서 필드 입력' : '📌 [메모 본문] 우측 화면에서 본문 입력'}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600 }}>우측 카드 편집 ➔</span>
+                          </div>
 
-                              return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-                                  <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span>📋 <strong>{activeTpl.title}</strong> 템플릿 양식 편집 중</span>
-                                    <button
-                                      onClick={() => setDraftTemplateId(null)}
-                                      style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
-                                    >
-                                      기본 텍스트박스로 변경
-                                    </button>
-                                  </div>
-
-                                  {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
-                                    const renderedFields = grp.fields.map((field) => {
-                                      const fieldVal = draftTemplateValues[field.id];
-
-                                      if (field.type === 'phone') {
-                                        return (
-                                          <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
-                                              <Phone size={14} color="#10B981" />
-                                              {field.label}
-                                            </label>
-                                            <input
-                                              type="tel"
-                                              value={fieldVal || ''}
-                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: autoFormatPhoneNumber(e.target.value) })}
-                                              placeholder={field.placeholder || '010-0000-0000'}
-                                              style={{ flex: 1, minWidth: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box' }}
-                                            />
-                                            {fieldVal && (
-                                              <a
-                                                href={`sms:${fieldVal.replace(/[^0-9]/g, '')}`}
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
-                                              >
-                                                <MessageSquare size={12} />
-                                                SMS 전송
-                                              </a>
-                                            )}
-                                          </div>
-                                        );
-                                      }
-
-                                      if (field.type === 'datetime') {
-                                        return (
-                                          <div key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#FFFFFF', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
-                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', flexShrink: 0 }}>
-                                              <CalendarIcon size={14} color="#8B5CF6" />
-                                              {field.label}
-                                            </label>
-                                            <input
-                                              type="datetime-local"
-                                              value={fieldVal || ''}
-                                              onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                              style={{ flex: 1, minWidth: '160px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', boxSizing: 'border-box', color: '#0F172A', fontFamily: 'inherit' }}
-                                            />
-                                          </div>
-                                        );
-                                      }
-
-                                      return (
-                                        <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <label style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                              {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
-                                              {field.label}
-                                            </label>
-                                          </div>
-
-                                          {field.type === 'text' && (() => {
-                                            const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
-                                            const currentTextVal = fieldVal !== undefined ? fieldVal : defaultTextVal;
-                                            const lineCount = currentTextVal.split('\n').length;
-                                            return (
-                                              <textarea
-                                                value={currentTextVal}
-                                                onChange={(e) => setDraftTemplateValues({ ...draftTemplateValues, [field.id]: e.target.value })}
-                                                placeholder="내용을 입력하세요"
-                                                rows={Math.max(3, lineCount)}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5 }}
-                                              />
-                                            );
-                                          })()}
-
-                                          {field.type === 'checklist' && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                                              {getSortedChecklistItems(fieldVal, field.defaultItems).map((chkItem) => (
-                                                <div key={chkItem.originalIndex} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={Boolean(chkItem.completed)}
-                                                    onChange={(e) => {
-                                                      const currentArr = Array.isArray(fieldVal)
-                                                        ? [...fieldVal]
-                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                      currentArr[chkItem.originalIndex] = {
-                                                        ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
-                                                        completed: e.target.checked
-                                                      };
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
-                                                    }}
-                                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
-                                                  />
-                                                  <textarea
-                                                    rows={Math.max(1, (chkItem.text || '').split('\n').length)}
-                                                    value={chkItem.text || ''}
-                                                    onChange={(e) => {
-                                                      const currentArr = Array.isArray(fieldVal)
-                                                        ? [...fieldVal]
-                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                      currentArr[chkItem.originalIndex] = {
-                                                        ...(typeof currentArr[chkItem.originalIndex] === 'object' ? currentArr[chkItem.originalIndex] : { text: currentArr[chkItem.originalIndex] }),
-                                                        text: e.target.value
-                                                      };
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                                        e.preventDefault();
-                                                        const currentArr = Array.isArray(fieldVal)
-                                                          ? [...fieldVal]
-                                                          : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                        currentArr.splice(chkItem.originalIndex + 1, 0, { text: '', completed: false });
-                                                        setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
-                                                      }
-                                                    }}
-                                                    placeholder="체크리스트 항목 내용..."
-                                                    style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', lineHeight: 1.5, whiteSpace: 'pre-wrap', textDecoration: chkItem.completed ? 'line-through' : 'none', color: chkItem.completed ? '#94A3B8' : '#1E293B', backgroundColor: chkItem.completed ? '#F8FAFC' : '#FFFFFF', fontFamily: 'inherit', resize: 'vertical' }}
-                                                  />
-                                                  <button
-                                                    onClick={() => {
-                                                      const currentArr = Array.isArray(fieldVal)
-                                                        ? [...fieldVal]
-                                                        : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                      currentArr.splice(chkItem.originalIndex, 1);
-                                                      setDraftTemplateValues({ ...draftTemplateValues, [field.id]: currentArr });
-                                                    }}
-                                                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                                                  >
-                                                    <Trash2 size={13} />
-                                                  </button>
-                                                </div>
-                                              ))}
-
-                                              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                                                <button
-                                                  onClick={() => {
-                                                    const currentArr = Array.isArray(fieldVal)
-                                                      ? [...fieldVal]
-                                                      : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                    const updatedArr = [...currentArr, { text: `항목 ${currentArr.length + 1}`, completed: false }];
-                                                    setDraftTemplateValues({ ...draftTemplateValues, [field.id]: updatedArr });
-                                                  }}
-                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', fontSize: '12px', color: '#334155', cursor: 'pointer' }}
-                                                >
-                                                  <Plus size={13} /> 항목 추가
-                                                </button>
-                                                <button
-                                                  onClick={() => {
-                                                    setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: !prev[field.id] }));
-                                                  }}
-                                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', backgroundColor: noteBulkChecklistInputs[field.id] ? '#EDE9FE' : '#F1F5F9', border: `1px solid ${noteBulkChecklistInputs[field.id] ? '#8B5CF6' : '#CBD5E1'}`, fontSize: '12px', color: noteBulkChecklistInputs[field.id] ? '#7C3AED' : '#334155', fontWeight: 600, cursor: 'pointer' }}
-                                                >
-                                                  📝 줄바꿈 일괄 추가
-                                                </button>
-                                              </div>
-
-                                              {noteBulkChecklistInputs[field.id] && (
-                                                <div style={{ marginTop: '6px', padding: '8px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                  <textarea
-                                                    rows={3}
-                                                    value={noteBulkChecklistTexts[field.id] || ''}
-                                                    onChange={(e) => setNoteBulkChecklistTexts(prev => ({ ...prev, [field.id]: e.target.value }))}
-                                                    placeholder={`추가할 항목들을 줄바꿈(Enter)하여 입력하세요.\n예:\n서류 검토\n현장 점검\n계약 체결`}
-                                                    style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', boxSizing: 'border-box' }}
-                                                  />
-                                                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                                                    <button
-                                                      onClick={() => setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: false }))}
-                                                      style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', backgroundColor: '#FFF', fontSize: '11px', cursor: 'pointer' }}
-                                                    >
-                                                      취소
-                                                    </button>
-                                                    <button
-                                                      onClick={() => {
-                                                        const textVal = noteBulkChecklistTexts[field.id] || '';
-                                                        if (!textVal.trim()) return;
-                                                        const lines = textVal.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                                                        if (lines.length > 0) {
-                                                          const currentArr = Array.isArray(fieldVal)
-                                                            ? [...fieldVal]
-                                                            : (field.defaultItems || []).map(t => (typeof t === 'object' ? { ...t } : { text: t, completed: false }));
-                                                          const newItems = lines.map(l => ({ text: l, completed: false }));
-                                                          setDraftTemplateValues({ ...draftTemplateValues, [field.id]: [...currentArr, ...newItems] });
-                                                        }
-                                                        setNoteBulkChecklistTexts(prev => ({ ...prev, [field.id]: '' }));
-                                                        setNoteBulkChecklistInputs(prev => ({ ...prev, [field.id]: false }));
-                                                      }}
-                                                      style={{ padding: '3px 10px', borderRadius: '4px', border: 'none', backgroundColor: '#10B981', color: '#FFF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                                                    >
-                                                      일괄 추가
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    });
-
-                                    if (grp.title) {
-                                      return (
-                                        <div key={`edit_grp_${gIdx}`} style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #BFDBFE', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #DBEAFE', paddingBottom: '6px' }}>
-                                            <Folder size={15} color="#2563EB" /> {grp.title}
-                                          </div>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {renderedFields}
-                                          </div>
-                                        </div>
-                                      );
-                                    }
-
-                                    return <React.Fragment key={`edit_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
-                                  })}
-                                </div>
-                              );
-                            })()
-                          )}
-                        </div>
-                      )}
-
-                      {(!isMobile || mobileSubTab === 'sub') && (
-                                                <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
                           {/* Checklist Header Bar & Print Button */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            paddingBottom: '10px',
-                            marginBottom: '12px',
+                            paddingBottom: '8px',
+                            marginBottom: '10px',
                             borderBottom: '1px solid #E2E8F0'
                           }} className="no-print">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
-                              <ListChecks size={18} color="#2563EB" />
-                              <span>체크리스트</span>
-                              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                                ({completedCount}/{totalCount})
-                              </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
+                              <ListChecks size={16} color="#2563EB" />
+                              <span>진행 체크리스트 ({completedCount}/{totalCount})</span>
                             </div>
                             <button
                               onClick={handleOpenChecklistPrint}
@@ -3428,28 +3235,23 @@ export default function NotebookExplorer() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                padding: '4px 10px',
-                                fontSize: '12px',
+                                padding: '3px 8px',
+                                fontSize: '11px',
                                 fontWeight: 600,
                                 color: '#334155',
                                 backgroundColor: '#F1F5F9',
                                 border: '1px solid #CBD5E1',
-                                borderRadius: '6px',
+                                borderRadius: '4px',
                                 cursor: 'pointer'
                               }}
                               title="체크리스트 인쇄"
                             >
-                              <Printer size={14} color="#334155" />
+                              <Printer size={13} color="#334155" />
                               <span>인쇄</span>
                             </button>
                           </div>
 
-                          {/* Print-Only Title Header */}
-                          <div className="print-only-title" style={{ display: 'none', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #333' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#000', margin: 0 }}>{activeItem?.title || '체크리스트'}</h2>
-                            <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>체크리스트 목록 (완료 {completedCount} / 전체 {totalCount})</div>
-                          </div>
-                          {/* Input Form for new multiline checklist item */}
+                          {/* Input Form for new checklist item */}
                           <div style={styles.checklistInputContainer} className="no-print">
                             <div style={styles.checklistInputGroup}>
                               <textarea
@@ -3489,18 +3291,28 @@ export default function NotebookExplorer() {
                             ) : (
                               currentChecklists.map((checkItem) => {
                                 const isEditing = editingCheckId === checkItem.id;
+                                const isSelected = selectedChecklistId === checkItem.id;
 
                                 return (
                                   <div
                                     key={checkItem.id}
+                                    onClick={() => {
+                                      if (!isEditing) {
+                                        setSelectedChecklistId(checkItem.id);
+                                        if (isMobile) setMobileSubTab('sub');
+                                      }
+                                    }}
                                     style={{
                                       ...styles.checklistItemRow,
-                                      backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
-                                      borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
+                                      backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
+                                      borderColor: isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')),
+                                      borderWidth: isSelected ? '2px' : '1px',
+                                      boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none',
+                                      cursor: 'pointer'
                                     }}
                                   >
                                     {isEditing ? (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
                                         <textarea
                                           rows={2}
                                           value={editingCheckText}
@@ -3514,8 +3326,6 @@ export default function NotebookExplorer() {
                                           style={styles.checklistEditTextarea}
                                           autoFocus
                                         />
-
-                                        {/* Simplified Edit Controls: Cancel / Save */}
                                         <div style={{
                                           display: 'flex',
                                           alignItems: 'center',
@@ -3551,7 +3361,10 @@ export default function NotebookExplorer() {
                                         {/* Left Row: Checkbox + Pure Text + Tag */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                           <button
-                                            onClick={() => handleToggleChecklist(checkItem.id)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleToggleChecklist(checkItem.id);
+                                            }}
                                             style={styles.checkboxBtn}
                                             title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
                                           >
@@ -3567,12 +3380,18 @@ export default function NotebookExplorer() {
                                               flex: 1,
                                               minWidth: 0,
                                               textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                              color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                              fontWeight: checkItem.completed ? 400 : 500
+                                              color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
+                                              fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
                                             }}
                                           >
                                             {renderWithLinks(checkItem.text)}
                                           </span>
+
+                                          {checkItem.detail && checkItem.detail.trim().length > 0 && (
+                                            <span style={{ fontSize: '11px', color: '#2563EB', backgroundColor: '#DBEAFE', padding: '1px 5px', borderRadius: '4px', fontWeight: 700, flexShrink: 0 }}>
+                                              📝 상세
+                                            </span>
+                                          )}
 
                                           {checkItem.tag && (() => {
                                             const tagStyle = getTagStyle(checkItem.tag);
@@ -3598,7 +3417,7 @@ export default function NotebookExplorer() {
                                         </div>
 
                                         {/* Right End: 3-dot Menu with Floating Dropdown */}
-                                        <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
+                                        <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                           <button
                                             type="button"
                                             onClick={(e) => {
@@ -3655,8 +3474,6 @@ export default function NotebookExplorer() {
                                                     setEditingCheckTag(checkItem.tag || '');
                                                   }}
                                                   style={styles.checklistDropdownItem}
-                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                 >
                                                   <Edit2 size={14} color="#475569" />
                                                   <span>수정</span>
@@ -3708,16 +3525,16 @@ export default function NotebookExplorer() {
                   </div>
                 ) : (
                   <div style={styles.splitReadContainer}>
-                    {/* Left Card: Primary Note Content */}
+                    {/* Left Card: Standalone Checklist Master Card */}
                     {(!isMobile || mobileSubTab === 'main') && (
-                      <div style={styles.leftPaneCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
-                        {/* Title Header Line with Right-aligned Edit Button */}
+                      <div style={styles.leftPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
+                        {/* Title Header Line with Right-aligned Controls */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           gap: '12px',
-                          marginBottom: '14px',
+                          marginBottom: '10px',
                           paddingBottom: '10px',
                           borderBottom: '1px solid #F1F5F9'
                         }}>
@@ -3739,10 +3556,10 @@ export default function NotebookExplorer() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
                             <button
-                              onClick={handleOpenDetailPrint}
+                              onClick={handleOpenChecklistPrint}
                               style={styles.btnSecondary}
                               className="no-print"
-                              title="상세내용 인쇄"
+                              title="체크리스트 인쇄"
                             >
                               <Printer size={13} color="#334155" />
                               <span>인쇄</span>
@@ -3753,8 +3570,12 @@ export default function NotebookExplorer() {
                               </span>
                             )}
                             <button
-                              onClick={() => setIsEditMode(true)}
+                              onClick={() => {
+                                setSelectedChecklistId('__main__');
+                                setIsEditMode(true);
+                              }}
                               style={styles.btnPrimary}
+                              title="메모 기본정보 및 템플릿 수정"
                             >
                               <Edit2 size={13} />
                               수정
@@ -3762,203 +3583,112 @@ export default function NotebookExplorer() {
                           </div>
                         </div>
 
-                        <div style={styles.readBody}>
-                          {activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
-                            (() => {
-                              const activeTpl = templates.find(t => t.id === activeItem.templateId);
-                              const values = activeItem.templateValues || {};
-                              return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                  <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span>📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨</span>
-                                  </div>
-                                  {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
-                                    const renderedFields = grp.fields.map((field) => {
-                                      const val = values[field.id];
-                                      const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
-                                      const currentVal = val !== undefined ? val : defaultTextVal;
+                        {/* Category Badge */}
+                        <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px' }}>
+                            📂 {getCategoryBadgeName(activeItem.categoryId)}
+                          </span>
+                        </div>
 
-                                      if (field.type === 'phone') {
-                                        return (
-                                          <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                <Phone size={14} color="#10B981" />
-                                                {field.label}
-                                              </span>
-                                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {currentVal || '(전화번호 없음)'}
-                                              </span>
-                                            </div>
-                                            {currentVal && (
-                                              <a
-                                                href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
-                                                style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
-                                              >
-                                                <MessageSquare size={12} /> SMS 전송
-                                              </a>
-                                            )}
-                                          </div>
-                                        );
-                                      }
+                        {/* Top Parent Item Card (Overview or Template info) */}
+                        {(() => {
+                          const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
+                          const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
+                          const isSelected = selectedChecklistId === '__main__';
 
-                                      if (field.type === 'datetime') {
-                                        const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
-                                        return (
-                                          <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                              <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                <CalendarIcon size={14} color="#8B5CF6" />
-                                                {field.label}
-                                              </span>
-                                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {formattedDt || '(날짜/시간 미선택)'}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-
-                                      return (
-                                        <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              {field.type === 'text' && <Type size={14} color="#2563EB" />}
-                                              {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
-                                              {field.label}
-                                            </span>
-                                          </div>
-
-                                          {field.type === 'text' && (
-                                            <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
-                                              {renderWithLinks(currentVal || '(내용 없음)', searchQuery)}
-                                            </div>
-                                          )}
-
-                                          {field.type === 'checklist' && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
-                                              {getSortedChecklistItems(currentVal, field.defaultItems).map((chk) => (
-                                                <div
-                                                  key={chk.originalIndex}
-                                                  onClick={() => handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, !chk.completed)}
-                                                  style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '6px',
-                                                    cursor: 'pointer',
-                                                    backgroundColor: chk.completed ? '#F8FAFC' : '#FFFFFF',
-                                                    border: `1px solid ${chk.completed ? '#E2E8F0' : '#E2E8F0'}`,
-                                                    transition: 'all 0.15s ease'
-                                                  }}
-                                                >
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={Boolean(chk.completed)}
-                                                    onChange={(e) => {
-                                                      e.stopPropagation();
-                                                      handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, e.target.checked);
-                                                    }}
-                                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
-                                                  />
-                                                  <span
-                                                    style={{
-                                                      fontSize: '13px',
-                                                      textDecoration: chk.completed ? 'line-through' : 'none',
-                                                      color: chk.completed ? '#94A3B8' : '#1E293B',
-                                                      fontWeight: chk.completed ? 400 : 500,
-                                                      whiteSpace: 'pre-wrap',
-                                                      lineHeight: 1.5,
-                                                      flex: 1
-                                                    }}
-                                                  >
-                                                    {highlightText(chk.text, searchQuery)}
-                                                  </span>
-                                                  {chk.completed && (
-                                                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, backgroundColor: '#D1FAE5', padding: '1px 6px', borderRadius: '4px' }}>
-                                                      ✓ 완료
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    });
-
-                                    if (grp.title) {
-                                      return (
-                                        <div key={`read_grp_${gIdx}`} style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #BFDBFE', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #DBEAFE', paddingBottom: '6px' }}>
-                                            <Folder size={15} color="#2563EB" /> {grp.title}
-                                          </div>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            {renderedFields}
-                                          </div>
-                                        </div>
-                                      );
-                                    }
-
-                                    return <React.Fragment key={`read_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
-                                  })}
+                          return (
+                            <div
+                              onClick={() => {
+                                setSelectedChecklistId('__main__');
+                                if (isMobile) setMobileSubTab('sub');
+                              }}
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: isSelected ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                                cursor: 'pointer',
+                                marginBottom: '12px',
+                                boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.15)' : 'none',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                  {hasTpl ? <Folder size={16} color="#2563EB" /> : <FileText size={16} color="#2563EB" />}
+                                  <span style={{
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    color: isSelected ? '#1E40AF' : '#1E293B',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {hasTpl ? `📋 [기본 정보] ${activeTpl.title}` : '📌 [기본 정보] 메모 전체 개요'}
+                                  </span>
                                 </div>
-                              );
-                            })()
-                          ) : (
-                            renderWithLinks(activeItem.body, searchQuery)
+                                <span style={{
+                                  fontSize: '11px',
+                                  color: isSelected ? '#1D4ED8' : '#64748B',
+                                  backgroundColor: isSelected ? '#DBEAFE' : '#F1F5F9',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontWeight: 600,
+                                  flexShrink: 0
+                                }}>
+                                  {hasTpl ? '양식 필드' : '본문 내용'}
+                                </span>
+                              </div>
+                              <div style={{
+                                fontSize: '12px',
+                                color: isSelected ? '#2563EB' : '#64748B',
+                                marginTop: '4px',
+                                paddingLeft: '24px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {hasTpl ? '계약/양식 상세 필드 및 설정 내용' : (activeItem.body?.trim() ? activeItem.body.slice(0, 45) + (activeItem.body.length > 45 ? '...' : '') : '(작성된 메모 개요가 없습니다)')}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Checklist Section Divider & Progress Bar */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingBottom: '8px',
+                          marginBottom: '8px',
+                          borderBottom: '1px solid #E2E8F0'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
+                            <ListChecks size={16} color="#2563EB" />
+                            <span>진행 체크리스트</span>
+                            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                              ({completedCount}/{totalCount})
+                            </span>
+                          </div>
+                          {totalCount > 0 && (
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: progressPercent === 100 ? '#10B981' : '#2563EB' }}>
+                              {progressPercent}% 완료
+                            </span>
                           )}
                         </div>
-                      </div>
-                    )}
 
-                    {/* Right Card: Standalone Checklist Card */}
-                    {(!isMobile || mobileSubTab === 'sub') && (
-                                              <div style={styles.rightPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
-                          {/* Checklist Header Bar & Print Button */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            paddingBottom: '10px',
-                            marginBottom: '12px',
-                            borderBottom: '1px solid #E2E8F0'
-                          }} className="no-print">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
-                              <ListChecks size={18} color="#2563EB" />
-                              <span>체크리스트</span>
-                              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                                ({completedCount}/{totalCount})
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => window.print()}
+                        {totalCount > 0 && (
+                          <div style={styles.progressBarTrack}>
+                            <div
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                color: '#334155',
-                                backgroundColor: '#F1F5F9',
-                                border: '1px solid #CBD5E1',
-                                borderRadius: '6px',
-                                cursor: 'pointer'
+                                ...styles.progressBarFill,
+                                width: `${progressPercent}%`,
+                                backgroundColor: progressPercent === 100 ? '#10B981' : '#2563EB'
                               }}
-                              title="체크리스트 인쇄"
-                            >
-                              <Printer size={14} color="#334155" />
-                              <span>인쇄</span>
-                            </button>
+                            />
                           </div>
+                        )}
 
-                          {/* Print-Only Title Header */}
-                          <div className="print-only-title" style={{ display: 'none', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #333' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#000', margin: 0 }}>{activeItem?.title || '체크리스트'}</h2>
-                            <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>체크리스트 목록 (완료 {completedCount} / 전체 {totalCount})</div>
-                          </div>
                         {/* Input Form for new multiline checklist item */}
                         <div style={styles.checklistInputContainer} className="no-print">
                           <div style={styles.checklistInputGroup}>
@@ -4000,18 +3730,28 @@ export default function NotebookExplorer() {
                           ) : (
                             currentChecklists.map((checkItem) => {
                               const isEditing = editingCheckId === checkItem.id;
+                              const isSelected = selectedChecklistId === checkItem.id;
 
                               return (
                                 <div
                                   key={checkItem.id}
+                                  onClick={() => {
+                                    if (!isEditing) {
+                                      setSelectedChecklistId(checkItem.id);
+                                      if (isMobile) setMobileSubTab('sub');
+                                    }
+                                  }}
                                   style={{
                                     ...styles.checklistItemRow,
-                                    backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF',
-                                    borderColor: isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')
+                                    backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
+                                    borderColor: isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1')),
+                                    borderWidth: isSelected ? '2px' : '1px',
+                                    boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none',
+                                    cursor: 'pointer'
                                   }}
                                 >
                                   {isEditing ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
                                       <textarea
                                         rows={2}
                                         value={editingCheckText}
@@ -4025,15 +3765,7 @@ export default function NotebookExplorer() {
                                         style={styles.checklistEditTextarea}
                                         autoFocus
                                       />
-
-                                      {/* Simplified Edit Controls: Cancel / Save */}
-                                      <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'flex-end',
-                                        gap: '6px',
-                                        marginTop: '6px'
-                                      }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
                                         <button
                                           type="button"
                                           onClick={() => setEditingCheckId(null)}
@@ -4059,10 +3791,13 @@ export default function NotebookExplorer() {
                                       gap: '8px',
                                       minHeight: '26px'
                                     }}>
-                                      {/* Left Row: Checkbox + Pure Text + Tag */}
+                                      {/* Left Row: Checkbox + Pure Text + Detail Badge + Tag */}
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                         <button
-                                          onClick={() => handleToggleChecklist(checkItem.id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleChecklist(checkItem.id);
+                                          }}
                                           style={styles.checkboxBtn}
                                           title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
                                         >
@@ -4078,12 +3813,32 @@ export default function NotebookExplorer() {
                                             flex: 1,
                                             minWidth: 0,
                                             textDecoration: checkItem.completed ? 'line-through' : 'none',
-                                            color: checkItem.completed ? '#94A3B8' : '#1E293B',
-                                            fontWeight: checkItem.completed ? 400 : 500
+                                            color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
+                                            fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
                                           }}
                                         >
                                           {renderWithLinks(checkItem.text)}
                                         </span>
+
+                                        {checkItem.detail && checkItem.detail.trim().length > 0 && (
+                                          <span
+                                            style={{
+                                              fontSize: '11px',
+                                              color: '#2563EB',
+                                              backgroundColor: '#DBEAFE',
+                                              padding: '1px 6px',
+                                              borderRadius: '4px',
+                                              fontWeight: 700,
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              flexShrink: 0
+                                            }}
+                                            title="상세내용 작성됨"
+                                          >
+                                            📝 상세
+                                          </span>
+                                        )}
 
                                         {checkItem.tag && (() => {
                                           const tagStyle = getTagStyle(checkItem.tag);
@@ -4108,8 +3863,8 @@ export default function NotebookExplorer() {
                                         })()}
                                       </div>
 
-                                      {/* Right End: 3-dot Menu with Floating Dropdown */}
-                                      <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
+                                      {/* Right End: 3-dot Menu */}
+                                      <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                         <button
                                           type="button"
                                           onClick={(e) => {
@@ -4135,7 +3890,6 @@ export default function NotebookExplorer() {
 
                                         {openChecklistMenuId === checkItem.id && (
                                           <>
-                                            {/* Invisible backdrop to close dropdown on click outside */}
                                             <div
                                               style={{
                                                 position: 'fixed',
@@ -4151,8 +3905,6 @@ export default function NotebookExplorer() {
                                                 setOpenChecklistMenuId(null);
                                               }}
                                             />
-
-                                            {/* Context Dropdown Card */}
                                             <div
                                               style={styles.checklistDropdownMenu}
                                               onClick={(e) => e.stopPropagation()}
@@ -4166,13 +3918,10 @@ export default function NotebookExplorer() {
                                                   setEditingCheckTag(checkItem.tag || '');
                                                 }}
                                                 style={styles.checklistDropdownItem}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                               >
                                                 <Edit2 size={14} color="#475569" />
                                                 <span>수정</span>
                                               </button>
-
                                               <button
                                                 type="button"
                                                 onClick={() => {
@@ -4185,19 +3934,14 @@ export default function NotebookExplorer() {
                                                   );
                                                 }}
                                                 style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                               >
                                                 <Trash2 size={14} color="#DC2626" />
                                                 <span>삭제</span>
                                               </button>
-
                                               <button
                                                 type="button"
                                                 onClick={() => setOpenChecklistMenuId(null)}
                                                 style={styles.checklistDropdownItem}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                               >
                                                 <X size={14} color="#64748B" />
                                                 <span>취소</span>
@@ -4213,6 +3957,326 @@ export default function NotebookExplorer() {
                             })
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Right Card: Detail for Selected Checklist or Parent Item */}
+                    {(!isMobile || mobileSubTab === 'sub') && (
+                      <div style={styles.rightPaneCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
+                        {selectedChecklistId === '__main__' ? (
+                          // Case 1: Parent Item Selected (Template or Main Note Overview)
+                          <>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingBottom: '10px',
+                              marginBottom: '12px',
+                              borderBottom: '1px solid #E2E8F0'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText size={18} color="#2563EB" />
+                                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>
+                                  {activeItem.templateId && templates.find(t => t.id === activeItem.templateId)
+                                    ? `📋 [템플릿] ${templates.find(t => t.id === activeItem.templateId).title}`
+                                    : '📌 메모 전체 개요'}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="no-print">
+                                <button
+                                  onClick={handleOpenDetailPrint}
+                                  style={styles.btnSecondary}
+                                  title="상세내용 인쇄"
+                                >
+                                  <Printer size={13} color="#334155" />
+                                  <span>인쇄</span>
+                                </button>
+                                <button
+                                  onClick={() => setIsEditMode(true)}
+                                  style={styles.btnPrimary}
+                                >
+                                  <Edit2 size={13} />
+                                  수정
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={styles.readBody}>
+                              {activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
+                                (() => {
+                                  const activeTpl = templates.find(t => t.id === activeItem.templateId);
+                                  const values = activeItem.templateValues || {};
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                      <div style={{ padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>
+                                        📋 <strong>{activeTpl.title}</strong> 템플릿 적용됨
+                                      </div>
+                                      {groupFieldsList(activeTpl.fields).map((grp, gIdx) => {
+                                        const renderedFields = grp.fields.map((field) => {
+                                          const val = values[field.id];
+                                          const defaultTextVal = field.placeholder ? field.placeholder.replace(/\//g, '\n') : '';
+                                          const currentVal = val !== undefined ? val : defaultTextVal;
+
+                                          if (field.type === 'phone') {
+                                            return (
+                                              <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                    <Phone size={14} color="#10B981" />
+                                                    {field.label}
+                                                  </span>
+                                                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {currentVal || '(전화번호 없음)'}
+                                                  </span>
+                                                </div>
+                                                {currentVal && (
+                                                  <a
+                                                    href={`sms:${currentVal.replace(/[^0-9]/g, '')}`}
+                                                    style={{ color: '#2563EB', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                                  >
+                                                    <MessageSquare size={12} /> SMS 전송
+                                                  </a>
+                                                )}
+                                              </div>
+                                            );
+                                          }
+
+                                          if (field.type === 'datetime') {
+                                            const formattedDt = currentVal ? currentVal.replace('T', ' ') : '';
+                                            return (
+                                              <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                    <CalendarIcon size={14} color="#8B5CF6" />
+                                                    {field.label}
+                                                  </span>
+                                                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {formattedDt || '(날짜/시간 미선택)'}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+
+                                          return (
+                                            <div key={field.id} className={isPrintFieldSelected(field.id) ? "" : "no-print"} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                  {field.type === 'text' && <Type size={14} color="#2563EB" />}
+                                                  {field.type === 'checklist' && <CheckSquare size={14} color="#F59E0B" />}
+                                                  {field.label}
+                                                </span>
+                                              </div>
+
+                                              {field.type === 'text' && (
+                                                <div style={{ padding: '10px 12px', backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#0F172A', minHeight: '38px' }}>
+                                                  {renderWithLinks(currentVal || '(내용 없음)', searchQuery)}
+                                                </div>
+                                              )}
+
+                                              {field.type === 'checklist' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px', backgroundColor: '#FFFFFF', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                                                  {getSortedChecklistItems(currentVal, field.defaultItems).map((chk) => (
+                                                    <div
+                                                      key={chk.originalIndex}
+                                                      onClick={() => handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, !chk.completed)}
+                                                      style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        padding: '6px 10px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        backgroundColor: chk.completed ? '#F8FAFC' : '#FFFFFF',
+                                                        border: '1px solid #E2E8F0',
+                                                        transition: 'all 0.15s ease'
+                                                      }}
+                                                    >
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={Boolean(chk.completed)}
+                                                        onChange={(e) => {
+                                                          e.stopPropagation();
+                                                          handleToggleInlineChecklistInReadMode(field.id, chk.originalIndex, e.target.checked);
+                                                        }}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
+                                                      />
+                                                      <span
+                                                        style={{
+                                                          fontSize: '13px',
+                                                          textDecoration: chk.completed ? 'line-through' : 'none',
+                                                          color: chk.completed ? '#94A3B8' : '#1E293B',
+                                                          fontWeight: chk.completed ? 400 : 500,
+                                                          whiteSpace: 'pre-wrap',
+                                                          lineHeight: 1.5,
+                                                          flex: 1
+                                                        }}
+                                                      >
+                                                        {highlightText(chk.text, searchQuery)}
+                                                      </span>
+                                                      {chk.completed && (
+                                                        <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, backgroundColor: '#D1FAE5', padding: '1px 6px', borderRadius: '4px' }}>
+                                                          ✓ 완료
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        });
+
+                                        if (grp.title) {
+                                          return (
+                                            <div key={`read_grp_${gIdx}`} style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #BFDBFE', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #DBEAFE', paddingBottom: '6px' }}>
+                                                <Folder size={15} color="#2563EB" /> {grp.title}
+                                              </div>
+                                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                {renderedFields}
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        return <React.Fragment key={`read_ungrp_${gIdx}`}>{renderedFields}</React.Fragment>;
+                                      })}
+                                    </div>
+                                  );
+                                })()
+                              ) : (
+                                renderWithLinks(activeItem.body || '(기본 메모 본문 내용이 없습니다)', searchQuery)
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          // Case 2: Individual Checklist Item Selected
+                          (() => {
+                            const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId);
+                            if (!selectedCheckItem) {
+                              return (
+                                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8' }}>
+                                  좌측에서 체크리스트 항목을 선택하거나 추가해 주세요.
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <>
+                                {/* Header: Selected Checklist Item Title & Status */}
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  paddingBottom: '10px',
+                                  marginBottom: '12px',
+                                  borderBottom: '1px solid #E2E8F0',
+                                  gap: '8px',
+                                  flexWrap: 'wrap'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                    <button
+                                      onClick={() => handleToggleChecklist(selectedCheckItem.id)}
+                                      style={styles.checkboxBtn}
+                                      title={selectedCheckItem.completed ? '미완료로 변경' : '완료로 변경'}
+                                    >
+                                      {selectedCheckItem.completed ? (
+                                        <CheckSquare size={20} color="#2563EB" />
+                                      ) : (
+                                        <Square size={20} color="#94A3B8" />
+                                      )}
+                                    </button>
+                                    <span style={{
+                                      fontSize: '15px',
+                                      fontWeight: 700,
+                                      color: selectedCheckItem.completed ? '#94A3B8' : '#1E293B',
+                                      textDecoration: selectedCheckItem.completed ? 'line-through' : 'none',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {selectedCheckItem.text}
+                                    </span>
+                                    {selectedCheckItem.completed && (
+                                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, backgroundColor: '#D1FAE5', padding: '2px 6px', borderRadius: '4px' }}>
+                                        ✓ 완료됨
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="no-print">
+                                    {showSavedToast && (
+                                      <span style={styles.toastBadge}>
+                                        ✓ 저장됨
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => handleSaveChecklistDetail(selectedCheckItem.id)}
+                                      style={styles.btnPrimary}
+                                      title="저장 (Ctrl+S)"
+                                    >
+                                      <Save size={13} />
+                                      저장
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Textarea for Checklist Item Detail */}
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                  <textarea
+                                    value={checklistDetailDraft}
+                                    onChange={(e) => setChecklistDetailDraft(e.target.value)}
+                                    onBlur={() => handleSaveChecklistDetail(selectedCheckItem.id)}
+                                    onKeyDown={(e) => {
+                                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                        e.preventDefault();
+                                        handleSaveChecklistDetail(selectedCheckItem.id);
+                                      }
+                                    }}
+                                    placeholder="이 체크리스트 항목에 대한 상세내용, 진행상황, 메모를 작성하세요... (Ctrl+S 저장 또는 다른 곳 클릭 시 자동저장)"
+                                    style={{
+                                      width: '100%',
+                                      minHeight: '220px',
+                                      padding: '12px 14px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #CBD5E1',
+                                      fontSize: '14px',
+                                      lineHeight: 1.6,
+                                      fontFamily: 'inherit',
+                                      resize: 'vertical',
+                                      backgroundColor: '#FFFFFF',
+                                      color: '#1E293B',
+                                      outline: 'none',
+                                      boxSizing: 'border-box'
+                                    }}
+                                  />
+
+                                  {/* Link & Preview box if content exists */}
+                                  {checklistDetailDraft && checklistDetailDraft.trim().length > 0 && (
+                                    <div style={{
+                                      marginTop: '12px',
+                                      padding: '12px 14px',
+                                      backgroundColor: '#F8FAFC',
+                                      borderRadius: '8px',
+                                      border: '1px solid #E2E8F0',
+                                      overflowY: 'auto',
+                                      maxHeight: '200px'
+                                    }}>
+                                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        🔗 스마트 링크 미리보기 (URL / 전화번호 자동 연결)
+                                      </div>
+                                      <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', whiteSpace: 'pre-wrap' }}>
+                                        {renderWithLinks(checklistDetailDraft, searchQuery)}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()
+                        )}
                       </div>
                     )}
                   </div>
@@ -4235,7 +4299,7 @@ export default function NotebookExplorer() {
                       borderColor: mobileSubTab === 'main' ? '#2563EB' : '#CBD5E1'
                     }}
                   >
-                    📄 상세내용
+                    ☑️ 체크리스트
                   </button>
                   <button
                     onClick={() => setMobileSubTab('sub')}
@@ -4246,7 +4310,7 @@ export default function NotebookExplorer() {
                       borderColor: mobileSubTab === 'sub' ? '#2563EB' : '#CBD5E1'
                     }}
                   >
-                    ☑️ 체크리스트 {activeItem.subBody ? '•' : ''}
+                    📝 항목 상세내용
                   </button>
                 </div>
               )}
