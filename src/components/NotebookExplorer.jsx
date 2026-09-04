@@ -4425,6 +4425,14 @@ export default function NotebookExplorer() {
                                       <Save size={13} />
                                       저장
                                     </button>
+                                    <button
+                                      onClick={() => setIsEditMode(true)}
+                                      style={styles.btnSecondary}
+                                      title="수정 모드로 전환"
+                                    >
+                                      <Edit2 size={13} />
+                                      수정
+                                    </button>
                                   </div>
                                 </div>
 
