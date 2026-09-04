@@ -360,6 +360,7 @@ export default function NotebookExplorer() {
 
   // Detail View (Pane 3) states - Split 2-pane Layout
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditingChecklistDetail, setIsEditingChecklistDetail] = useState(false);
   const [printTarget, setPrintTarget] = useState('detail');
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [selectedPrintFieldIds, setSelectedPrintFieldIds] = useState({});
@@ -1061,6 +1062,8 @@ export default function NotebookExplorer() {
           body: targetText,
           updatedAt: serverTimestamp()
         });
+        setIsEditingChecklistDetail(false);
+        setIsEditMode(false);
         setShowSavedToast(true);
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
@@ -1077,6 +1080,8 @@ export default function NotebookExplorer() {
         checklists: updated,
         updatedAt: serverTimestamp()
       });
+      setIsEditingChecklistDetail(false);
+      setIsEditMode(false);
       setShowSavedToast(true);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
@@ -1095,6 +1100,8 @@ export default function NotebookExplorer() {
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
+      const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
+      const hasLegacyBody = Boolean(activeItem.body && activeItem.body.trim());
       const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
       setSelectedChecklistId(firstId);
       setChecklistDetailDraft(firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || ''));
@@ -1110,6 +1117,7 @@ export default function NotebookExplorer() {
       setChecklistDetailDraft('');
     }
     setIsEditMode(false);
+    setIsEditingChecklistDetail(false);
   }, [selectedItemId]);
 
   // Sync checklist detail draft when selectedChecklistId changes
@@ -1121,6 +1129,7 @@ export default function NotebookExplorer() {
       const found = currentChecklists.find((c) => c.id === selectedChecklistId);
       setChecklistDetailDraft(found?.detail || '');
     }
+    setIsEditingChecklistDetail(false);
   }, [selectedChecklistId, activeItem?.id, activeItem?.body]);
 
   // ESC key handler for cancelling delete modal & detail edit mode
@@ -1131,6 +1140,14 @@ export default function NotebookExplorer() {
           setOpenChecklistMenuId(null);
         } else if (deleteModalState.isOpen) {
           closeDeleteModal();
+        } else if (isEditingChecklistDetail) {
+          if (selectedChecklistId === '__main__') {
+            setChecklistDetailDraft(activeItem?.body || '');
+          } else {
+            const found = currentChecklists.find((c) => c.id === selectedChecklistId);
+            setChecklistDetailDraft(found?.detail || '');
+          }
+          setIsEditingChecklistDetail(false);
         } else if (isEditMode) {
           handleCancelDetailEdit();
         }
@@ -1709,6 +1726,7 @@ export default function NotebookExplorer() {
         setSelectedCategoryId(draftCategoryId);
       }
       setIsEditMode(false);
+      setIsEditingChecklistDetail(false);
       setShowSavedToast(true);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => {
@@ -1730,6 +1748,7 @@ export default function NotebookExplorer() {
       setDraftChecklists(null);
     }
     setIsEditMode(false);
+    setIsEditingChecklistDetail(false);
   };
 
   const handleTabSwitch = (targetTab) => {
@@ -4417,44 +4436,104 @@ export default function NotebookExplorer() {
                                         ✓ 저장됨
                                       </span>
                                     )}
-                                    <button
-                                      onClick={() => handleSaveChecklistDetail(selectedCheckItem.id)}
-                                      style={styles.btnPrimary}
-                                      title="저장 (Ctrl+S)"
-                                    >
-                                      <Save size={13} />
-                                      저장
-                                    </button>
-                                    <button
-                                      onClick={() => setIsEditMode(true)}
-                                      style={styles.btnSecondary}
-                                      title="수정 모드로 전환"
-                                    >
-                                      <Edit2 size={13} />
-                                      수정
-                                    </button>
+                                    {isEditingChecklistDetail ? (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            if (selectedCheckItem.id === '__main__') {
+                                              setChecklistDetailDraft(activeItem?.body || '');
+                                            } else {
+                                              const found = currentChecklists.find(c => c.id === selectedCheckItem.id);
+                                              setChecklistDetailDraft(found?.detail || '');
+                                            }
+                                            setIsEditingChecklistDetail(false);
+                                          }}
+                                          style={styles.btnSecondary}
+                                          title="편집 취소 (Esc)"
+                                        >
+                                          <RotateCcw size={13} />
+                                          취소
+                                        </button>
+                                        <button
+                                          onClick={() => handleSaveChecklistDetail(selectedCheckItem.id)}
+                                          style={styles.btnPrimary}
+                                          title="저장 후 읽기모드로 전환 (Ctrl+S)"
+                                        >
+                                          <Save size={13} />
+                                          저장
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          onClick={handleOpenDetailPrint}
+                                          style={styles.btnSecondary}
+                                          title="상세내용 인쇄"
+                                        >
+                                          <Printer size={13} color="#334155" />
+                                          <span>인쇄</span>
+                                        </button>
+                                        <button
+                                          onClick={() => setIsEditingChecklistDetail(true)}
+                                          style={styles.btnPrimary}
+                                          title="상세내용 수정"
+                                        >
+                                          <Edit2 size={13} />
+                                          수정
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 
-                                {/* Textarea for Checklist Item Detail */}
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                  <textarea
-                                    value={checklistDetailDraft}
-                                    onChange={(e) => setChecklistDetailDraft(e.target.value)}
-                                    onBlur={() => handleSaveChecklistDetail(selectedCheckItem.id)}
-                                    onKeyDown={(e) => {
-                                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                                        e.preventDefault();
-                                        handleSaveChecklistDetail(selectedCheckItem.id);
-                                      }
-                                    }}
-                                    placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (자동 저장 / Ctrl+S)"
+                                {/* Detail Content: Edit Mode (Textarea) or Read Mode (Active Hyperlinks for Tel & Web) */}
+                                {isEditingChecklistDetail ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                    <textarea
+                                      autoFocus
+                                      value={checklistDetailDraft}
+                                      onChange={(e) => setChecklistDetailDraft(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                          e.preventDefault();
+                                          handleSaveChecklistDetail(selectedCheckItem.id);
+                                        }
+                                      }}
+                                      placeholder="이 체크리스트 항목에 대한 상세내용을 입력하세요... (저장 버튼 클릭 또는 Ctrl+S로 저장 시 읽기모드로 전환되며 링크가 활성화됩니다)"
+                                      style={{
+                                        ...styles.editBodyTextarea,
+                                        boxSizing: 'border-box'
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    onDoubleClick={() => setIsEditingChecklistDetail(true)}
+                                    title="더블클릭하여 수정 가능"
                                     style={{
-                                      ...styles.editBodyTextarea,
-                                      boxSizing: 'border-box'
+                                      flex: 1,
+                                      minHeight: 0,
+                                      padding: '14px 16px',
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: '10px',
+                                      border: '1px solid #E2E8F0',
+                                      fontSize: '14px',
+                                      lineHeight: 1.65,
+                                      color: '#1E293B',
+                                      whiteSpace: 'pre-wrap',
+                                      wordBreak: 'break-word',
+                                      overflowY: 'auto'
                                     }}
-                                  />
-                                </div>
+                                  >
+                                    {checklistDetailDraft && checklistDetailDraft.trim() ? (
+                                      renderWithLinks(checklistDetailDraft, searchQuery)
+                                    ) : (
+                                      <div style={{ color: '#94A3B8', padding: '16px 0', fontSize: '13px' }}>
+                                        등록된 상세내용이 없습니다. 우측 상단 <strong>[수정]</strong> 버튼을 누르거나 본문을 더블클릭하여 내용을 입력해 보세요.
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </>
                             );
                           })()

@@ -1,7 +1,7 @@
 import React from 'react';
 
-// URL & Korean phone number matching regex
-export const LINKIFY_RE = /(https?:\/\/[^\s]+|www\.[^\s]+|0\d{1,2}-?\d{3,4}-?\d{4})/gi;
+// URL & Korean phone number matching regex (supporting hyphen, dot, space, or continuous digits)
+export const LINKIFY_RE = /(https?:\/\/[^\s]+|www\.[^\s]+|0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4})/gi;
 
 export function renderWithLinks(text, searchQuery = '') {
   if (!text) return null;
@@ -56,7 +56,7 @@ export function renderWithLinks(text, searchQuery = '') {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: '#3F7A63', textDecoration: 'underline', wordBreak: 'break-all' }}
+          style={{ color: '#2563EB', textDecoration: 'underline', textUnderlineOffset: '3px', fontWeight: 600, wordBreak: 'break-all', cursor: 'pointer' }}
           onClick={(e) => e.stopPropagation()}
         >
           {renderHighlightedSegment(matchedText, `link_${matchIndex}`)}
@@ -68,7 +68,7 @@ export function renderWithLinks(text, searchQuery = '') {
         <a
           key={matchIndex}
           href={`tel:${tel}`}
-          style={{ color: '#3F7A63', textDecoration: 'underline', fontWeight: 500 }}
+          style={{ color: '#059669', textDecoration: 'underline', textUnderlineOffset: '3px', fontWeight: 600, cursor: 'pointer' }}
           onClick={(e) => e.stopPropagation()}
         >
           {renderHighlightedSegment(matchedText, `tel_${matchIndex}`)}
