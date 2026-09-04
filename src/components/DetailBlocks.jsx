@@ -57,7 +57,7 @@ export const blocksToPlainText = (blocks) => {
 
 /**
  * 상세내용 상시 블록 관리 컴포넌트
- * 텍스트 박스 이름(제목) 편집 및 본문 개별 수정/저장, 구분선 개별 삭제/이동 지원
+ * 보기 모드와 1:1로 일치하는 Seamless 인라인 에디터 및 자동 높이 조절 지원
  */
 export const DetailBlocksManager = ({
   blocks = [],
@@ -70,6 +70,13 @@ export const DetailBlocksManager = ({
   const [draftContent, setDraftContent] = useState('');
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // 텍스트에어리어 높이 자동 조절 (보기 모드 크기와 1:1 일치)
+  const adjustTextareaHeight = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+  };
 
   // 편집 시작
   const handleStartEdit = (block) => {
@@ -146,11 +153,15 @@ export const DetailBlocksManager = ({
 
   useEffect(() => {
     if (editingBlockId) {
-      // 이름이 비어있으면 이름 입력창으로 포커스, 이름이 있으면 본문으로 포커스
+      if (textareaRef.current) {
+        adjustTextareaHeight(textareaRef.current);
+      }
       if (!draftTitle && titleInputRef.current) {
         titleInputRef.current.focus();
       } else if (textareaRef.current) {
         textareaRef.current.focus();
+        const len = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(len, len);
       }
     }
   }, [editingBlockId]);
@@ -281,12 +292,12 @@ export const DetailBlocksManager = ({
               flexDirection: 'column',
               backgroundColor: isEditingThisBlock ? '#FFFFFF' : '#F8FAFC',
               borderRadius: '10px',
-              border: isEditingThisBlock ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+              border: isEditingThisBlock ? '1px solid #3B82F6' : '1px solid #E2E8F0',
               boxShadow: isEditingThisBlock
-                ? '0 0 0 3px rgba(37, 99, 235, 0.1)'
+                ? '0 0 0 2px rgba(59, 130, 246, 0.15)'
                 : '0 1px 2px rgba(0,0,0,0.02)',
               overflow: 'hidden',
-              transition: 'all 0.15s ease'
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
             }}
           >
             {/* 카드 상단 헤더 바 (텍스트박스 이름 영역 + 컨트롤) */}
@@ -496,13 +507,16 @@ export const DetailBlocksManager = ({
               </div>
             </div>
 
-            {/* 카드 본문: 수정 중일 때는 Textarea, 아닐 때는 읽기 뷰어 */}
+            {/* 카드 본문: 보기 모드와 1:1 완벽 일치하는 seamless 인라인 textarea */}
             {isEditingThisBlock ? (
-              <div style={{ padding: '8px 10px', backgroundColor: '#FFFFFF' }}>
+              <div style={{ padding: '12px 14px', backgroundColor: '#FFFFFF' }}>
                 <textarea
                   ref={textareaRef}
                   value={draftContent}
-                  onChange={(e) => setDraftContent(e.target.value)}
+                  onChange={(e) => {
+                    setDraftContent(e.target.value);
+                    adjustTextareaHeight(e.target);
+                  }}
                   onKeyDown={(e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                       e.preventDefault();
@@ -513,21 +527,23 @@ export const DetailBlocksManager = ({
                     }
                   }}
                   placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 지원 / Ctrl+S 저장)"
-                  rows={4}
                   style={{
                     width: '100%',
-                    minHeight: '85px',
-                    padding: '8px 10px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '6px',
+                    height: 'auto',
+                    minHeight: '46px',
+                    padding: '0',
+                    border: 'none',
                     outline: 'none',
-                    resize: 'vertical',
+                    resize: 'none',
                     fontSize: '14px',
-                    lineHeight: 1.6,
+                    lineHeight: 1.65,
                     color: '#1E293B',
                     fontFamily: 'inherit',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
                     boxSizing: 'border-box',
-                    backgroundColor: '#FFFFFF'
+                    backgroundColor: 'transparent',
+                    display: 'block'
                   }}
                 />
               </div>
