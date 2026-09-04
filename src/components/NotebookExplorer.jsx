@@ -629,6 +629,8 @@ export default function NotebookExplorer() {
     message: '',
     onConfirm: null
   });
+  const deleteConfirmBtnRef = useRef(null);
+  const isDeletingRef = useRef(false);
 
   const openDeleteModal = (title, message, onConfirm) => {
     setDeleteModalState({
@@ -649,15 +651,32 @@ export default function NotebookExplorer() {
   };
 
   const handleConfirmDelete = async () => {
+    if (isDeletingRef.current) return;
     if (deleteModalState.onConfirm) {
+      isDeletingRef.current = true;
+      const confirmFn = deleteModalState.onConfirm;
+      closeDeleteModal();
       try {
-        await deleteModalState.onConfirm();
+        await confirmFn();
       } catch (err) {
         console.error('Delete execution error:', err);
+      } finally {
+        isDeletingRef.current = false;
       }
+    } else {
+      closeDeleteModal();
     }
-    closeDeleteModal();
   };
+
+  // 모달 오픈 시 기본 선택(삭제 버튼)에 포커스
+  useEffect(() => {
+    if (deleteModalState.isOpen) {
+      const timer = setTimeout(() => {
+        deleteConfirmBtnRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [deleteModalState.isOpen]);
 
   const toastTimerRef = useRef(null);
 
@@ -1393,16 +1412,33 @@ export default function NotebookExplorer() {
     setIsEditingChecklistDetail(false);
   }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
 
-  // ESC key handler for cancelling delete modal & detail edit mode
+  // ESC & Enter key handler for modals & detail edit mode
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // 1. 확인 모달(삭제 등)이 열려있을 때의 키보드 동작
+      if (deleteModalState.isOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          closeDeleteModal();
+          return;
+        }
+        if (e.key === 'Enter') {
+          if (e.isComposing) return;
+          e.preventDefault();
+          e.stopPropagation();
+          handleConfirmDelete();
+          return;
+        }
+        return;
+      }
+
+      // 2. 일반 ESC 동작
       if (e.key === 'Escape') {
         if (movingCategory) {
           setMovingCategory(null);
         } else if (openChecklistMenuId) {
           setOpenChecklistMenuId(null);
-        } else if (deleteModalState.isOpen) {
-          closeDeleteModal();
         } else if (isEditingChecklistDetail) {
           if (selectedChecklistId === '__main__') {
             const initialText = activeItem?.body || '';
@@ -1424,7 +1460,7 @@ export default function NotebookExplorer() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openChecklistMenuId, deleteModalState.isOpen, isEditMode, activeItem, movingCategory]);
+  }, [openChecklistMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
 
   useEffect(() => {
     if (!openChecklistMenuId) return;
@@ -2013,20 +2049,25 @@ export default function NotebookExplorer() {
     }
   };
 
-  const handleDeleteTemplateInTab = async (id) => {
-    if (!window.confirm('정말 이 템플릿을 삭제하시겠습니까?')) return;
-    try {
-      await deleteDoc(doc(db, 'templates', id));
-      if (selectedTemplateIdInTab === id) {
-        setSelectedTemplateIdInTab(null);
-        setTplDraftTitle('');
-        setTplDraftFields([]);
-        setTplDraftChecklists([]);
+  const handleDeleteTemplateInTab = (id) => {
+    openDeleteModal(
+      '템플릿 삭제',
+      '정말 이 템플릿을 삭제하시겠습니까?',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'templates', id));
+          if (selectedTemplateIdInTab === id) {
+            setSelectedTemplateIdInTab(null);
+            setTplDraftTitle('');
+            setTplDraftFields([]);
+            setTplDraftChecklists([]);
+          }
+        } catch (err) {
+          console.error('템플릿 삭제 오류:', err);
+          alert('템플릿 삭제에 실패했습니다.');
+        }
       }
-    } catch (err) {
-      console.error('템플릿 삭제 오류:', err);
-      alert('템플릿 삭제에 실패했습니다.');
-    }
+    );
   };
 
   const handleSaveDetail = async () => {
@@ -5308,10 +5349,16 @@ export default function NotebookExplorer() {
             </div>
 
             <div style={styles.modalFooter}>
-              <button onClick={closeDeleteModal} style={styles.btnModalCancel}>
+              <button type="button" onClick={closeDeleteModal} style={styles.btnModalCancel}>
                 취소
               </button>
-              <button onClick={handleConfirmDelete} style={styles.btnModalDelete}>
+              <button
+                ref={deleteConfirmBtnRef}
+                type="button"
+                autoFocus
+                onClick={handleConfirmDelete}
+                style={styles.btnModalDelete}
+              >
                 삭제하기
               </button>
             </div>
@@ -6280,7 +6327,9 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'background-color 0.15s',
-    boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3)'
+    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)',
+    outline: '2px solid #EF4444',
+    outlineOffset: '2px'
   },
 
   // Main Mode Bar Styles
