@@ -50,7 +50,7 @@ import {
   Search
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
-import { DetailBlocksViewer, DetailBlocksEditor, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
+import { DetailBlocksManager, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
 
 export const autoFormatPhoneNumber = (val) => {
   if (!val) return '';
@@ -617,6 +617,7 @@ export default function NotebookExplorer() {
   const [selectedChecklistId, setSelectedChecklistId] = useState('__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
+  const [editingBlockId, setEditingBlockId] = useState(null);
 
 
 
@@ -1311,6 +1312,31 @@ export default function NotebookExplorer() {
     }
   };
 
+  const handleAddNewTextBlock = () => {
+    if (!selectedChecklistId) return;
+    const newBlockId = `b_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newBlock = {
+      id: newBlockId,
+      type: 'text',
+      content: ''
+    };
+    const updated = [...checklistDetailBlocks, newBlock];
+    setChecklistDetailBlocks(updated);
+    setEditingBlockId(newBlockId);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
+  };
+
+  const handleAddNewDividerBlock = () => {
+    if (!selectedChecklistId) return;
+    const newBlock = {
+      id: `div_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      type: 'divider'
+    };
+    const updated = [...checklistDetailBlocks, newBlock];
+    setChecklistDetailBlocks(updated);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
+  };
+
   // Sync draft state when active item changes
   useEffect(() => {
     if (activeItem) {
@@ -1341,6 +1367,7 @@ export default function NotebookExplorer() {
       setChecklistDetailDraft('');
       setChecklistDetailBlocks([]);
     }
+    setEditingBlockId(null);
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
   }, [selectedItemId]);
@@ -1360,6 +1387,7 @@ export default function NotebookExplorer() {
       setChecklistDetailDraft(initialText);
       setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
     }
+    setEditingBlockId(null);
     setIsEditingChecklistDetail(false);
   }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
 
@@ -4156,13 +4184,15 @@ export default function NotebookExplorer() {
                           {selectedChecklistId === '__main__' ? (
                             draftTemplateId === null ? (
                               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                <DetailBlocksEditor
+                                <DetailBlocksManager
                                   blocks={checklistDetailBlocks}
-                                  onChange={(newBlocks) => {
+                                  onChangeAndSave={(newBlocks) => {
                                     setChecklistDetailBlocks(newBlocks);
                                     setDraftBody(blocksToPlainText(newBlocks));
                                   }}
-                                  onSave={() => handleSaveDetail()}
+                                  searchQuery={searchQuery}
+                                  editingBlockId={editingBlockId}
+                                  setEditingBlockId={setEditingBlockId}
                                 />
                               </div>
                             ) : (
@@ -4356,10 +4386,12 @@ export default function NotebookExplorer() {
                                       ☑️ {selectedCheckItem.text} 상세내용
                                     </span>
                                   </div>
-                                  <DetailBlocksEditor
+                                  <DetailBlocksManager
                                     blocks={checklistDetailBlocks}
-                                    onChange={setChecklistDetailBlocks}
-                                    onSave={() => handleSaveChecklistDetail(selectedCheckItem.id)}
+                                    onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
+                                    searchQuery={searchQuery}
+                                    editingBlockId={editingBlockId}
+                                    setEditingBlockId={setEditingBlockId}
                                   />
                                 </div>
                               );
@@ -5000,78 +5032,57 @@ export default function NotebookExplorer() {
                                         ✓ 저장됨
                                       </span>
                                     )}
-                                    {isEditingChecklistDetail ? (
-                                      <>
-                                        <button
-                                          onClick={() => {
-                                            if (selectedCheckItem.id === '__main__') {
-                                              const initialText = activeItem?.body || '';
-                                              const initialBlocks = activeItem?.detailBlocks;
-                                              setChecklistDetailDraft(initialText);
-                                              setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
-                                            } else {
-                                              const found = currentChecklists.find(c => c.id === selectedCheckItem.id);
-                                              const initialText = found?.detail || '';
-                                              const initialBlocks = found?.detailBlocks;
-                                              setChecklistDetailDraft(initialText);
-                                              setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
-                                            }
-                                            setIsEditingChecklistDetail(false);
-                                          }}
-                                          style={styles.btnSecondary}
-                                          title="편집 취소 (Esc)"
-                                        >
-                                          <RotateCcw size={13} />
-                                          취소
-                                        </button>
-                                        <button
-                                          onClick={() => handleSaveChecklistDetail(selectedCheckItem.id)}
-                                          style={styles.btnPrimary}
-                                          title="저장 후 읽기모드로 전환 (Ctrl+S)"
-                                        >
-                                          <Save size={13} />
-                                          저장
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <button
-                                          onClick={handleOpenDetailPrint}
-                                          style={styles.btnSecondary}
-                                          title="상세내용 인쇄"
-                                        >
-                                          <Printer size={13} color="#334155" />
-                                          <span>인쇄</span>
-                                        </button>
-                                        <button
-                                          onClick={() => setIsEditingChecklistDetail(true)}
-                                          style={styles.btnPrimary}
-                                          title="상세내용 수정"
-                                        >
-                                          <Edit2 size={13} />
-                                          수정
-                                        </button>
-                                      </>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={handleAddNewTextBlock}
+                                      style={{
+                                        ...styles.btnSecondary,
+                                        color: '#1D4ED8',
+                                        backgroundColor: '#EFF6FF',
+                                        borderColor: '#BFDBFE',
+                                        fontWeight: 600
+                                      }}
+                                      title="새 텍스트 박스 추가"
+                                    >
+                                      <Plus size={13} />
+                                      <span>텍스트박스</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={handleAddNewDividerBlock}
+                                      style={{
+                                        ...styles.btnSecondary,
+                                        color: '#475569',
+                                        backgroundColor: '#F8FAFC',
+                                        borderColor: '#E2E8F0',
+                                        fontWeight: 600
+                                      }}
+                                      title="새 구분선 추가"
+                                    >
+                                      <Minus size={13} />
+                                      <span>구분선</span>
+                                    </button>
+
+                                    <button
+                                      onClick={handleOpenDetailPrint}
+                                      style={styles.btnSecondary}
+                                      title="상세내용 인쇄"
+                                    >
+                                      <Printer size={13} color="#334155" />
+                                      <span>인쇄</span>
+                                    </button>
                                   </div>
                                 </div>
 
-                                {/* Detail Content: Edit Mode (Blocks Editor) or Read Mode (Blocks Viewer) */}
-                                {isEditingChecklistDetail ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                    <DetailBlocksEditor
-                                      blocks={checklistDetailBlocks}
-                                      onChange={setChecklistDetailBlocks}
-                                      onSave={() => handleSaveChecklistDetail(selectedCheckItem.id)}
-                                    />
-                                  </div>
-                                ) : (
-                                  <DetailBlocksViewer
-                                    blocks={checklistDetailBlocks}
-                                    searchQuery={searchQuery}
-                                    onDoubleClick={() => setIsEditingChecklistDetail(true)}
-                                  />
-                                )}
+                                {/* Detail Content: Always interactive DetailBlocksManager */}
+                                <DetailBlocksManager
+                                  blocks={checklistDetailBlocks}
+                                  onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
+                                  searchQuery={searchQuery}
+                                  editingBlockId={editingBlockId}
+                                  setEditingBlockId={setEditingBlockId}
+                                />
                               </>
                             );
                           })()

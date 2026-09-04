@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Plus, Minus, Type } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowUp, ArrowDown, Trash2, Plus, Minus, Type, Edit2, Check, X, RotateCcw } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
 /**
@@ -47,158 +47,72 @@ export const blocksToPlainText = (blocks) => {
 };
 
 /**
- * 읽기 모드 뷰어 컴포넌트
+ * 상세내용 상시 블록 관리 컴포넌트
+ * 개별 텍스트 박스 수정/저장, 구분선 개별 삭제/이동 지원
  */
-export const DetailBlocksViewer = ({
+export const DetailBlocksManager = ({
   blocks = [],
+  onChangeAndSave,
   searchQuery = '',
-  onDoubleClick,
-  emptyPlaceholder
+  editingBlockId,
+  setEditingBlockId
 }) => {
-  const hasContent = blocks.some(
-    (b) => b.type === 'divider' || (b.type === 'text' && b.content && b.content.trim().length > 0)
-  );
+  const [draftContent, setDraftContent] = useState('');
+  const textareaRef = useRef(null);
 
-  if (!hasContent) {
-    return (
-      <div
-        onDoubleClick={onDoubleClick}
-        title="더블클릭하여 수정 가능"
-        style={{
-          flex: 1,
-          minHeight: 0,
-          padding: '24px 16px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '10px',
-          border: '1px solid #E2E8F0',
-          color: '#94A3B8',
-          fontSize: '13px',
-          textAlign: 'center',
-          cursor: 'pointer'
-        }}
-      >
-        {emptyPlaceholder || (
-          <span>
-            등록된 상세내용이 없습니다. 우측 상단 <strong>[수정]</strong> 버튼을 누르거나 본문을 더블클릭하여 내용을 입력해 보세요.
-          </span>
-        )}
-      </div>
+  // 편집 시작
+  const handleStartEdit = (block) => {
+    setEditingBlockId(block.id);
+    setDraftContent(block.content || '');
+  };
+
+  // 편집 취소
+  const handleCancelEdit = () => {
+    setEditingBlockId(null);
+    setDraftContent('');
+  };
+
+  // 편집 저장
+  const handleSaveBlock = (blockId) => {
+    const nextBlocks = blocks.map((b) =>
+      b.id === blockId ? { ...b, content: draftContent } : b
     );
-  }
-
-  return (
-    <div
-      onDoubleClick={onDoubleClick}
-      title="더블클릭하여 수정 가능"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        flex: 1,
-        minHeight: 0,
-        overflowY: 'auto',
-        paddingRight: '4px'
-      }}
-    >
-      {blocks.map((block, idx) => {
-        if (block.type === 'divider') {
-          return (
-            <div
-              key={block.id || `divider_${idx}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                margin: '6px 0',
-                userSelect: 'none'
-              }}
-            >
-              <div
-                style={{
-                  flex: 1,
-                  height: '1px',
-                  backgroundColor: '#CBD5E1',
-                  borderTop: '1px dashed #94A3B8'
-                }}
-              />
-            </div>
-          );
-        }
-
-        // 텍스트 박스: 연한 회색 배경과 깔끔한 테두리를 가진 카드 형태 (Note Box)
-        return (
-          <div
-            key={block.id || `text_${idx}`}
-            style={{
-              backgroundColor: '#F8FAFC',
-              borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              padding: '14px 16px',
-              fontSize: '14px',
-              lineHeight: 1.65,
-              color: '#1E293B',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-            }}
-          >
-            {block.content && block.content.trim() ? (
-              renderWithLinks(block.content, searchQuery)
-            ) : (
-              <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
-                (빈 텍스트 박스)
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-/**
- * 편집 모드 에디터 컴포넌트
- */
-export const DetailBlocksEditor = ({
-  blocks = [],
-  onChange,
-  onSave
-}) => {
-  const textareaRefs = useRef({});
-
-  const handleAddText = () => {
-    const newBlock = {
-      id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      type: 'text',
-      content: ''
-    };
-    onChange([...blocks, newBlock]);
+    setEditingBlockId(null);
+    setDraftContent('');
+    if (onChangeAndSave) {
+      onChangeAndSave(nextBlocks);
+    }
   };
 
-  const handleAddDivider = () => {
-    const newBlock = {
-      id: `div_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      type: 'divider'
-    };
-    onChange([...blocks, newBlock]);
-  };
-
+  // 위로 이동
   const handleMoveUp = (index) => {
     if (index <= 0) return;
     const next = [...blocks];
     const [moved] = next.splice(index, 1);
     next.splice(index - 1, 0, moved);
-    onChange(next);
+    if (onChangeAndSave) {
+      onChangeAndSave(next);
+    }
   };
 
+  // 아래로 이동
   const handleMoveDown = (index) => {
     if (index >= blocks.length - 1) return;
     const next = [...blocks];
     const [moved] = next.splice(index, 1);
     next.splice(index + 1, 0, moved);
-    onChange(next);
+    if (onChangeAndSave) {
+      onChangeAndSave(next);
+    }
   };
 
+  // 삭제
   const handleDelete = (index) => {
+    const targetBlock = blocks[index];
+    if (editingBlockId === targetBlock?.id) {
+      setEditingBlockId(null);
+      setDraftContent('');
+    }
     const next = blocks.filter((_, i) => i !== index);
     if (next.length === 0) {
       next.push({
@@ -207,13 +121,16 @@ export const DetailBlocksEditor = ({
         content: ''
       });
     }
-    onChange(next);
+    if (onChangeAndSave) {
+      onChangeAndSave(next);
+    }
   };
 
-  const handleContentChange = (id, val) => {
-    const next = blocks.map((b) => (b.id === id ? { ...b, content: val } : b));
-    onChange(next);
-  };
+  useEffect(() => {
+    if (editingBlockId && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [editingBlockId]);
 
   let textCounter = 0;
 
@@ -233,36 +150,48 @@ export const DetailBlocksEditor = ({
         if (block.type === 'divider') {
           return (
             <div
-              key={block.id || `div_edit_${idx}`}
+              key={block.id || `divider_${idx}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '6px 10px',
-                backgroundColor: '#F1F5F9',
-                borderRadius: '8px',
-                border: '1px dashed #CBD5E1'
+                margin: '8px 0',
+                userSelect: 'none'
               }}
             >
-              <span
+              {/* 구분선 실선/대시 */}
+              <div
                 style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#64748B',
-                  backgroundColor: '#E2E8F0',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
+                  flex: 1,
+                  height: '1px',
+                  backgroundColor: '#CBD5E1',
+                  borderTop: '1px dashed #94A3B8'
+                }}
+              />
+
+              {/* 구분선 우측 끝 컨트롤: 순서 이동 & 삭제 버튼 */}
+              <div
+                className="no-print"
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '2px',
+                  backgroundColor: '#F1F5F9',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  border: '1px solid #E2E8F0'
                 }}
               >
-                <Minus size={12} /> 구분선
-              </span>
-
-              <div style={{ flex: 1, height: '1px', backgroundColor: '#CBD5E1' }} />
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    color: '#64748B',
+                    marginRight: '4px'
+                  }}
+                >
+                  구분선
+                </span>
                 <button
                   type="button"
                   onClick={() => handleMoveUp(idx)}
@@ -273,13 +202,13 @@ export const DetailBlocksEditor = ({
                     background: 'transparent',
                     cursor: idx === 0 ? 'not-allowed' : 'pointer',
                     color: idx === 0 ? '#CBD5E1' : '#64748B',
-                    padding: '3px',
+                    padding: '2px',
                     display: 'flex',
                     alignItems: 'center',
-                    borderRadius: '4px'
+                    borderRadius: '3px'
                   }}
                 >
-                  <ArrowUp size={14} />
+                  <ArrowUp size={13} />
                 </button>
                 <button
                   type="button"
@@ -291,13 +220,13 @@ export const DetailBlocksEditor = ({
                     background: 'transparent',
                     cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
                     color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
-                    padding: '3px',
+                    padding: '2px',
                     display: 'flex',
                     alignItems: 'center',
-                    borderRadius: '4px'
+                    borderRadius: '3px'
                   }}
                 >
-                  <ArrowDown size={14} />
+                  <ArrowDown size={13} />
                 </button>
                 <button
                   type="button"
@@ -308,13 +237,13 @@ export const DetailBlocksEditor = ({
                     background: 'transparent',
                     cursor: 'pointer',
                     color: '#EF4444',
-                    padding: '3px',
+                    padding: '2px',
                     display: 'flex',
                     alignItems: 'center',
-                    borderRadius: '4px'
+                    borderRadius: '3px'
                   }}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
@@ -323,181 +252,243 @@ export const DetailBlocksEditor = ({
 
         textCounter += 1;
         const currentTextNumber = textCounter;
+        const isEditingThisBlock = editingBlockId === block.id;
 
         return (
           <div
-            key={block.id || `text_edit_${idx}`}
+            key={block.id || `text_${idx}`}
             style={{
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: '#FFFFFF',
+              backgroundColor: isEditingThisBlock ? '#FFFFFF' : '#F8FAFC',
               borderRadius: '10px',
-              border: '1px solid #CBD5E1',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              overflow: 'hidden'
+              border: isEditingThisBlock ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+              boxShadow: isEditingThisBlock
+                ? '0 0 0 3px rgba(37, 99, 235, 0.1)'
+                : '0 1px 2px rgba(0,0,0,0.02)',
+              overflow: 'hidden',
+              transition: 'all 0.15s ease'
             }}
           >
+            {/* 카드 상단 헤더 바 */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '6px 12px',
-                backgroundColor: '#F8FAFC',
-                borderBottom: '1px solid #E2E8F0'
+                backgroundColor: isEditingThisBlock ? '#EFF6FF' : '#F1F5F9',
+                borderBottom: isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #E2E8F0'
               }}
             >
               <span
                 style={{
                   fontSize: '12px',
                   fontWeight: 700,
-                  color: '#334155',
+                  color: isEditingThisBlock ? '#1D4ED8' : '#475569',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px'
                 }}
               >
-                <Type size={13} color="#2563EB" /> 텍스트 박스 {currentTextNumber}
+                <Type size={13} color={isEditingThisBlock ? '#2563EB' : '#64748B'} />
+                텍스트 박스 {currentTextNumber}
               </span>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleMoveUp(idx)}
-                  disabled={idx === 0}
-                  title="위로 이동"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                    color: idx === 0 ? '#CBD5E1' : '#64748B',
-                    padding: '3px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                  }}
-                >
-                  <ArrowUp size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMoveDown(idx)}
-                  disabled={idx === blocks.length - 1}
-                  title="아래로 이동"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
-                    color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
-                    padding: '3px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                  }}
-                >
-                  <ArrowDown size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(idx)}
-                  title="텍스트 박스 삭제"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: '#EF4444',
-                    padding: '3px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+              {/* 우측 개별 컨트롤 */}
+              <div
+                className="no-print"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                {isEditingThisBlock ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      title="편집 취소 (Esc)"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '3px 8px',
+                        borderRadius: '5px',
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#64748B',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <RotateCcw size={12} />
+                      <span>취소</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveBlock(block.id)}
+                      title="저장 (Ctrl+S)"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '3px 9px',
+                        borderRadius: '5px',
+                        border: '1px solid #2563EB',
+                        backgroundColor: '#2563EB',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Check size={12} />
+                      <span>저장</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveUp(idx)}
+                      disabled={idx === 0}
+                      title="위로 이동"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                        color: idx === 0 ? '#CBD5E1' : '#64748B',
+                        padding: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <ArrowUp size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveDown(idx)}
+                      disabled={idx === blocks.length - 1}
+                      title="아래로 이동"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
+                        color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
+                        padding: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <ArrowDown size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(block)}
+                      title="텍스트 박스 수정 (더블클릭 가능)"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#2563EB',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        marginLeft: '2px'
+                      }}
+                    >
+                      <Edit2 size={11} />
+                      <span>수정</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(idx)}
+                      title="텍스트 박스 삭제"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        color: '#EF4444',
+                        padding: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        marginLeft: '2px'
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <textarea
-              ref={(el) => {
-                if (el) textareaRefs.current[block.id] = el;
-              }}
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                  e.preventDefault();
-                  if (onSave) onSave();
-                }
-              }}
-              placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 및 Ctrl+S 저장 지원)"
-              rows={4}
-              style={{
-                width: '100%',
-                minHeight: '90px',
-                padding: '10px 12px',
-                border: 'none',
-                outline: 'none',
-                resize: 'vertical',
-                fontSize: '14px',
-                lineHeight: 1.6,
-                color: '#1E293B',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box',
-                backgroundColor: '#FFFFFF'
-              }}
-            />
+            {/* 카드 본문: 수정 중일 때는 Textarea, 아닐 때는 읽기 뷰어 */}
+            {isEditingThisBlock ? (
+              <div style={{ padding: '8px 10px', backgroundColor: '#FFFFFF' }}>
+                <textarea
+                  ref={textareaRef}
+                  value={draftContent}
+                  onChange={(e) => setDraftContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                      e.preventDefault();
+                      handleSaveBlock(block.id);
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      handleCancelEdit();
+                    }
+                  }}
+                  placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 지원 / Ctrl+S 저장)"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    minHeight: '85px',
+                    padding: '8px 10px',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    outline: 'none',
+                    resize: 'vertical',
+                    fontSize: '14px',
+                    lineHeight: 1.6,
+                    color: '#1E293B',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    backgroundColor: '#FFFFFF'
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                onDoubleClick={() => handleStartEdit(block)}
+                title="더블클릭하여 수정 가능"
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '14px',
+                  lineHeight: 1.65,
+                  color: '#1E293B',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  cursor: 'text'
+                }}
+              >
+                {block.content && block.content.trim() ? (
+                  renderWithLinks(block.content, searchQuery)
+                ) : (
+                  <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
+                    (비어 있는 텍스트 박스입니다. 상단 [수정]을 누르거나 더블클릭하여 내용을 입력하세요)
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '6px 0',
-          marginTop: '2px'
-        }}
-      >
-        <button
-          type="button"
-          onClick={handleAddText}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '7px 14px',
-            backgroundColor: '#EFF6FF',
-            border: '1px solid #BFDBFE',
-            borderRadius: '8px',
-            color: '#1D4ED8',
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          <Plus size={14} /> 텍스트 박스 추가
-        </button>
-        <button
-          type="button"
-          onClick={handleAddDivider}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '7px 14px',
-            backgroundColor: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: '8px',
-            color: '#475569',
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
-        >
-          <Minus size={14} /> 구분선 추가
-        </button>
-      </div>
     </div>
   );
 };
