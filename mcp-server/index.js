@@ -55,10 +55,39 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
+const scopeNameMap = {
+  explorer: "노트",
+  blog: "블로그",
+  clipboard: "계약",
+  balance: "앱개발",
+  clip: "클립",
+  office: "사무실",
+  ad: "광고"
+};
+
+function computeCategoryPath(cat, allCategories) {
+  if (FIXED_INBOX_IDS.includes(cat.id)) {
+    const sName = scopeNameMap[cat.scope || "explorer"] || "노트";
+    return `${sName} > In-box`;
+  }
+  const segments = [cat.name];
+  let curr = cat;
+  const visited = new Set([cat.id]);
+  while (curr && curr.parentId) {
+    const parent = allCategories.find((c) => c.id === curr.parentId);
+    if (!parent || visited.has(parent.id)) break;
+    visited.add(parent.id);
+    segments.unshift(parent.name);
+    curr = parent;
+  }
+  const sName = scopeNameMap[cat.scope || "explorer"] || "노트";
+  return `${sName} > ${segments.join(" > ")}`;
+}
+
 // 1. memo_list_categories
 server.tool(
   "memo_list_categories",
-  "메모 앱의 모든 카테고리/폴더 목록을 조회합니다.",
+  "메모 앱의 모든 카테고리/폴더 목록을 계층 경로 및 parentId와 함께 조회합니다.",
   {
     scope: z
       .string()
@@ -68,15 +97,31 @@ server.tool(
   async ({ scope }) => {
     try {
       const snap = await getDocs(query(collection(db, "categories"), orderBy("order", "asc")));
-      let list = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: formatTimestamp(d.data().createdAt)
-      }));
+      let list = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name,
+          order: data.order,
+          scope: data.scope || "explorer",
+          parentId: data.parentId || null,
+          createdAt: formatTimestamp(data.createdAt)
+        };
+      });
 
       // Include fixed inboxes
-      const combined = [...FIXED_INBOXES, ...list];
-      const filtered = scope ? combined.filter((c) => (c.scope || "explorer") === scope) : combined;
+      const combined = [
+        ...FIXED_INBOXES.map((b) => ({ ...b, parentId: null })),
+        ...list
+      ];
+
+      // Add hierarchical path
+      const withPaths = combined.map((c) => ({
+        ...c,
+        path: computeCategoryPath(c, combined)
+      }));
+
+      const filtered = scope ? withPaths.filter((c) => (c.scope || "explorer") === scope) : withPaths;
 
       return {
         content: [
@@ -98,16 +143,21 @@ server.tool(
 // 2. memo_create_category
 server.tool(
   "memo_create_category",
-  "메모 앱에 새로운 카테고리(폴더)를 생성합니다.",
+  "메모 앱에 새로운 카테고리(폴더 또는 하위 폴더)를 생성합니다.",
   {
     name: z.string().describe("생성할 카테고리 이름"),
     scope: z
       .string()
       .optional()
       .default("explorer")
-      .describe("카테고리 스코프 (기본값: 'explorer')")
+      .describe("카테고리 스코프 (기본값: 'explorer')"),
+    parentId: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("상위 카테고리 ID (최상위(루트)는 null 또는 생략)")
   },
-  async ({ name, scope }) => {
+  async ({ name, scope, parentId }) => {
     try {
       const countSnap = await getDocs(collection(db, "categories"));
       const newRef = doc(collection(db, "categories"));
@@ -115,6 +165,7 @@ server.tool(
         name: name.trim(),
         order: countSnap.docs.length,
         scope: scope || "explorer",
+        parentId: parentId || null,
         createdAt: serverTimestamp()
       };
       await setDoc(newRef, newCat);
@@ -127,7 +178,8 @@ server.tool(
               success: true,
               categoryId: newRef.id,
               name: newCat.name,
-              scope: newCat.scope
+              scope: newCat.scope,
+              parentId: newCat.parentId
             }, null, 2)
           }
         ]
@@ -141,7 +193,7 @@ server.tool(
   }
 );
 
-// 3. memo_rename_category
+// 3. memo_rename_category (기존 호환성 유지)
 server.tool(
   "memo_rename_category",
   "기존 카테고리의 이름을 변경합니다 (고정 In-box는 변경 불가).",
@@ -177,13 +229,62 @@ server.tool(
   }
 );
 
-// 4. memo_delete_category
+// 4. memo_update_category (이름 및 parentId 이동 지원)
+server.tool(
+  "memo_update_category",
+  "카테고리의 이름 변경 및 상위 폴더 이동(위계 변경)을 처리합니다.",
+  {
+    categoryId: z.string().describe("수정할 카테고리 ID"),
+    name: z.string().optional().describe("새 카테고리 이름 (선택)"),
+    parentId: z.string().nullable().optional().describe("새 상위 카테고리 ID (최상위는 null, 선택)")
+  },
+  async ({ categoryId, name, parentId }) => {
+    if (FIXED_INBOX_IDS.includes(categoryId)) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: "고정 In-box 카테고리는 수정할 수 없습니다." }]
+      };
+    }
+    try {
+      const updates = {};
+      if (typeof name === "string" && name.trim().length > 0) {
+        updates.name = name.trim();
+      }
+      if (parentId !== undefined) {
+        updates.parentId = parentId || null;
+      }
+      if (Object.keys(updates).length === 0) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "수정할 항목(name 또는 parentId)을 입력해주세요." }]
+        };
+      }
+
+      await updateDoc(doc(db, "categories", categoryId), updates);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: true, categoryId, ...updates }, null, 2)
+          }
+        ]
+      };
+    } catch (err) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: `카테고리 정보 수정 실패: ${err.message}` }]
+      };
+    }
+  }
+);
+
+// 5. memo_delete_category
 server.tool(
   "memo_delete_category",
-  "카테고리를 삭제합니다. deleteMemos=true일 경우 하위 메모도 함께 삭제됩니다.",
+  "카테고리를 삭제합니다. 하위 폴더 및 메모도 옵시디언 방식으로 함께 일괄 삭제되거나 In-box로 이동됩니다.",
   {
     categoryId: z.string().describe("삭제할 카테고리 ID"),
-    deleteMemos: z.boolean().optional().default(false).describe("하위 메모 함께 삭제 여부 (false 시 기본 In-box로 이동)")
+    deleteMemos: z.boolean().optional().default(true).describe("하위 메모 함께 삭제 여부 (기본값 true: 일괄 삭제, false: In-box로 이동)")
   },
   async ({ categoryId, deleteMemos }) => {
     if (FIXED_INBOX_IDS.includes(categoryId)) {
@@ -193,19 +294,41 @@ server.tool(
       };
     }
     try {
-      const itemsSnap = await getDocs(query(collection(db, "items"), where("categoryId", "==", categoryId)));
-      const batch = writeBatch(db);
-      batch.delete(doc(db, "categories", categoryId));
+      const allCatSnap = await getDocs(collection(db, "categories"));
+      const allCats = allCatSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      let affectedCount = 0;
-      itemsSnap.docs.forEach((itemDoc) => {
-        if (deleteMemos) {
-          batch.delete(itemDoc.ref);
-        } else {
-          batch.update(itemDoc.ref, { categoryId: "inbox" });
-        }
-        affectedCount++;
+      // Recursively collect all descendant category IDs
+      const targetCategoryIds = [categoryId];
+      const collectDescendants = (pid) => {
+        allCats
+          .filter((c) => c.parentId === pid)
+          .forEach((child) => {
+            targetCategoryIds.push(child.id);
+            collectDescendants(child.id);
+          });
+      };
+      collectDescendants(categoryId);
+
+      const batch = writeBatch(db);
+
+      // Delete all target categories
+      targetCategoryIds.forEach((id) => {
+        batch.delete(doc(db, "categories", id));
       });
+
+      // Find all memos in target categories
+      let totalMemosHandled = 0;
+      for (const catId of targetCategoryIds) {
+        const itemsSnap = await getDocs(query(collection(db, "items"), where("categoryId", "==", catId)));
+        itemsSnap.docs.forEach((itemDoc) => {
+          if (deleteMemos) {
+            batch.delete(itemDoc.ref);
+          } else {
+            batch.update(itemDoc.ref, { categoryId: "inbox" });
+          }
+          totalMemosHandled++;
+        });
+      }
 
       await batch.commit();
       return {
@@ -214,8 +337,9 @@ server.tool(
             type: "text",
             text: JSON.stringify({
               success: true,
-              categoryId,
-              memosHandled: affectedCount,
+              deletedCategoriesCount: targetCategoryIds.length,
+              deletedCategoryIds: targetCategoryIds,
+              memosHandled: totalMemosHandled,
               action: deleteMemos ? "deleted" : "moved_to_inbox"
             }, null, 2)
           }
