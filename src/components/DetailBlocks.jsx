@@ -11,6 +11,7 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
     return detailBlocks.map((b, idx) => ({
       id: b.id || `b_${Date.now()}_${idx}`,
       type: b.type === 'divider' ? 'divider' : 'text',
+      title: typeof b.title === 'string' ? b.title : '',
       content: typeof b.content === 'string' ? b.content : ''
     }));
   }
@@ -20,6 +21,7 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
       {
         id: `b_init_${Date.now()}`,
         type: 'text',
+        title: '',
         content: detailValue
       }
     ];
@@ -30,6 +32,7 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
     {
       id: `b_init_${Date.now()}`,
       type: 'text',
+      title: '',
       content: ''
     }
   ];
@@ -41,14 +44,20 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
 export const blocksToPlainText = (blocks) => {
   if (!Array.isArray(blocks)) return '';
   return blocks
-    .map((b) => (b.type === 'divider' ? '────────────────────' : (b.content || '').trim()))
+    .map((b) => {
+      if (b.type === 'divider') return '────────────────────';
+      const parts = [];
+      if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
+      if (b.content && b.content.trim()) parts.push(b.content.trim());
+      return parts.join('\n');
+    })
     .filter((s) => s.length > 0)
     .join('\n\n');
 };
 
 /**
  * 상세내용 상시 블록 관리 컴포넌트
- * 개별 텍스트 박스 수정/저장, 구분선 개별 삭제/이동 지원
+ * 텍스트 박스 이름(제목) 편집 및 본문 개별 수정/저장, 구분선 개별 삭제/이동 지원
  */
 export const DetailBlocksManager = ({
   blocks = [],
@@ -57,27 +66,34 @@ export const DetailBlocksManager = ({
   editingBlockId,
   setEditingBlockId
 }) => {
+  const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
 
   // 편집 시작
   const handleStartEdit = (block) => {
     setEditingBlockId(block.id);
+    setDraftTitle(block.title || '');
     setDraftContent(block.content || '');
   };
 
   // 편집 취소
   const handleCancelEdit = () => {
     setEditingBlockId(null);
+    setDraftTitle('');
     setDraftContent('');
   };
 
   // 편집 저장
   const handleSaveBlock = (blockId) => {
     const nextBlocks = blocks.map((b) =>
-      b.id === blockId ? { ...b, content: draftContent } : b
+      b.id === blockId
+        ? { ...b, title: draftTitle.trim(), content: draftContent }
+        : b
     );
     setEditingBlockId(null);
+    setDraftTitle('');
     setDraftContent('');
     if (onChangeAndSave) {
       onChangeAndSave(nextBlocks);
@@ -111,6 +127,7 @@ export const DetailBlocksManager = ({
     const targetBlock = blocks[index];
     if (editingBlockId === targetBlock?.id) {
       setEditingBlockId(null);
+      setDraftTitle('');
       setDraftContent('');
     }
     const next = blocks.filter((_, i) => i !== index);
@@ -118,6 +135,7 @@ export const DetailBlocksManager = ({
       next.push({
         id: `b_${Date.now()}`,
         type: 'text',
+        title: '',
         content: ''
       });
     }
@@ -127,12 +145,15 @@ export const DetailBlocksManager = ({
   };
 
   useEffect(() => {
-    if (editingBlockId && textareaRef.current) {
-      textareaRef.current.focus();
+    if (editingBlockId) {
+      // 이름이 비어있으면 이름 입력창으로 포커스, 이름이 있으면 본문으로 포커스
+      if (!draftTitle && titleInputRef.current) {
+        titleInputRef.current.focus();
+      } else if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   }, [editingBlockId]);
-
-  let textCounter = 0;
 
   return (
     <div
@@ -250,8 +271,6 @@ export const DetailBlocksManager = ({
           );
         }
 
-        textCounter += 1;
-        const currentTextNumber = textCounter;
         const isEditingThisBlock = editingBlockId === block.id;
 
         return (
@@ -270,7 +289,7 @@ export const DetailBlocksManager = ({
               transition: 'all 0.15s ease'
             }}
           >
-            {/* 카드 상단 헤더 바 */}
+            {/* 카드 상단 헤더 바 (텍스트박스 이름 영역 + 컨트롤) */}
             <div
               style={{
                 display: 'flex',
@@ -281,24 +300,73 @@ export const DetailBlocksManager = ({
                 borderBottom: isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #E2E8F0'
               }}
             >
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: isEditingThisBlock ? '#1D4ED8' : '#475569',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                <Type size={13} color={isEditingThisBlock ? '#2563EB' : '#64748B'} />
-                텍스트 박스 {currentTextNumber}
-              </span>
+              {/* 좌측: 텍스트 박스 이름 (수정 시 input, 평상시 표시) */}
+              {isEditingThisBlock ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}>
+                  <Type size={13} color="#2563EB" style={{ flexShrink: 0 }} />
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        handleSaveBlock(block.id);
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        handleCancelEdit();
+                      }
+                    }}
+                    placeholder="텍스트박스 이름 입력... (예: 계약조건, 전달사항)"
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#1E293B',
+                      padding: '3px 8px',
+                      borderRadius: '5px',
+                      border: '1px solid #93C5FD',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      width: '100%',
+                      maxWidth: '280px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  onDoubleClick={() => handleStartEdit(block)}
+                  title="더블클릭하여 이름 및 내용 수정"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    flex: 1,
+                    minWidth: 0
+                  }}
+                >
+                  <Type size={13} color={block.title ? '#2563EB' : '#94A3B8'} style={{ flexShrink: 0 }} />
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: block.title ? '#1E293B' : '#94A3B8',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {block.title ? block.title : '(텍스트박스 이름 없음 - 우측 수정 클릭)'}
+                  </span>
+                </div>
+              )}
 
               {/* 우측 개별 컨트롤 */}
               <div
                 className="no-print"
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
               >
                 {isEditingThisBlock ? (
                   <>
@@ -386,7 +454,7 @@ export const DetailBlocksManager = ({
                     <button
                       type="button"
                       onClick={() => handleStartEdit(block)}
-                      title="텍스트 박스 수정 (더블클릭 가능)"
+                      title="이름 및 본문 수정 (더블클릭 가능)"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -481,7 +549,7 @@ export const DetailBlocksManager = ({
                   renderWithLinks(block.content, searchQuery)
                 ) : (
                   <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
-                    (비어 있는 텍스트 박스입니다. 상단 [수정]을 누르거나 더블클릭하여 내용을 입력하세요)
+                    (비어 있는 텍스트 박스입니다. 우측 [수정]을 누르거나 본문을 더블클릭하여 내용을 입력하세요)
                   </span>
                 )}
               </div>

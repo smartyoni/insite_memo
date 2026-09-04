@@ -1319,6 +1319,7 @@ export default function NotebookExplorer() {
     const newBlock = {
       id: newBlockId,
       type: 'text',
+      title: '',
       content: ''
     };
     const updated = [...checklistDetailBlocks, newBlock];
