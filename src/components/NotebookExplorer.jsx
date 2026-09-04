@@ -4084,7 +4084,7 @@ export default function NotebookExplorer() {
                                       padding: '8px',
                                       backgroundColor: '#F8FAFC',
                                       borderRadius: '10px',
-                                      border: isSecDragOver ? '1.5px solid #2563EB' : '1.5px solid #CBD5E1',
+                                      border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
                                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                                       marginTop: groupIdx === 0 ? '0' : '8px'
                                     } : {
@@ -4898,7 +4898,7 @@ export default function NotebookExplorer() {
                                     padding: '8px',
                                     backgroundColor: '#F8FAFC',
                                     borderRadius: '10px',
-                                    border: isSecDragOver ? '1.5px solid #2563EB' : '1.5px solid #CBD5E1',
+                                    border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
                                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                                     marginTop: groupIdx === 0 ? '0' : '8px'
                                   } : {
