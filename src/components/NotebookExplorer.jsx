@@ -3445,12 +3445,21 @@ export default function NotebookExplorer() {
                                     style={{
                                       ...styles.checklistItemRow,
                                       backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                      borderColor: isDragOver ? '#2563EB' : (isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1'))),
-                                      borderWidth: (isDragOver || isSelected) ? '2px' : '1px',
-                                      borderTop: isDragOver ? '3px solid #2563EB' : undefined,
-                                      boxShadow: isDragOver ? '0 4px 12px rgba(37, 99, 235, 0.25)' : (isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'),
+                                      border: isDragOver
+                                        ? '1.5px solid #2563EB'
+                                        : isSelected
+                                          ? '1.5px solid #2563EB'
+                                          : isEditing
+                                            ? '1.5px solid #3B82F6'
+                                            : checkItem.completed
+                                              ? '1px solid #E2E8F0'
+                                              : '1px solid #CBD5E1',
+                                      boxShadow: isDragOver
+                                        ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
+                                        : isSelected
+                                          ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
+                                          : '0 1px 2px rgba(0, 0, 0, 0.03)',
                                       opacity: isDragged ? 0.4 : 1,
-                                      transition: 'all 0.15s ease',
                                       cursor: canDrag ? 'grab' : 'pointer'
                                     }}
                                   >
@@ -4060,12 +4069,21 @@ export default function NotebookExplorer() {
                                   style={{
                                     ...styles.checklistItemRow,
                                     backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
-                                    borderColor: isDragOver ? '#2563EB' : (isSelected ? '#2563EB' : (isEditing ? '#3B82F6' : (checkItem.completed ? '#E2E8F0' : '#CBD5E1'))),
-                                    borderWidth: (isDragOver || isSelected) ? '2px' : '1px',
-                                    borderTop: isDragOver ? '3px solid #2563EB' : undefined,
-                                    boxShadow: isDragOver ? '0 4px 12px rgba(37, 99, 235, 0.25)' : (isSelected ? '0 2px 6px rgba(37, 99, 235, 0.12)' : 'none'),
+                                    border: isDragOver
+                                      ? '1.5px solid #2563EB'
+                                      : isSelected
+                                        ? '1.5px solid #2563EB'
+                                        : isEditing
+                                          ? '1.5px solid #3B82F6'
+                                          : checkItem.completed
+                                            ? '1px solid #E2E8F0'
+                                            : '1px solid #CBD5E1',
+                                    boxShadow: isDragOver
+                                      ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
+                                      : isSelected
+                                        ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.1)'
+                                        : '0 1px 2px rgba(0, 0, 0, 0.03)',
                                     opacity: isDragged ? 0.4 : 1,
-                                    transition: 'all 0.15s ease',
                                     cursor: canDrag ? 'grab' : 'pointer'
                                   }}
                                 >
@@ -5521,20 +5539,21 @@ const styles = {
   checklistListContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
     overflowY: 'auto',
     flex: 1,
-    paddingRight: '2px'
+    padding: '4px 6px 8px 4px'
   },
   checklistItemRow: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'stretch',
     gap: '6px',
-    padding: '8px 10px',
-    borderRadius: '6px',
-    border: '1px solid',
-    transition: 'background-color 0.15s ease, border-color 0.15s ease'
+    padding: '9px 12px',
+    borderRadius: '8px',
+    backgroundColor: '#FFFFFF',
+    boxSizing: 'border-box',
+    transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
   },
   checkitemStatusBar: {
     display: 'flex',
