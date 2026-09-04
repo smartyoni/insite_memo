@@ -513,13 +513,13 @@ export const DetailBlocksManager = ({
               </div>
             </div>
 
-            {/* 카드 본문: 내용이 많을 경우 최대 높이(maxHeight: 450px) 및 내부 스크롤 지원 */}
+            {/* 카드 본문: 내용이 많을 경우 브라우저 하단까지 시원하게 표시 후 내부 스크롤 지원 */}
             {isEditingThisBlock ? (
               <div
                 style={{
                   padding: '12px 14px',
                   backgroundColor: '#FFFFFF',
-                  maxHeight: '450px',
+                  maxHeight: 'max(300px, calc(100vh - 230px))',
                   overflowY: 'auto'
                 }}
               >
@@ -572,7 +572,7 @@ export const DetailBlocksManager = ({
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   cursor: 'text',
-                  maxHeight: '450px',
+                  maxHeight: 'max(300px, calc(100vh - 230px))',
                   overflowY: 'auto'
                 }}
               >
