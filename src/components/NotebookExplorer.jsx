@@ -3455,12 +3455,6 @@ export default function NotebookExplorer() {
                                             {renderWithLinks(checkItem.text)}
                                           </span>
 
-                                          {checkItem.detail && checkItem.detail.trim().length > 0 && (
-                                            <span style={{ fontSize: '11px', color: '#2563EB', backgroundColor: '#DBEAFE', padding: '1px 5px', borderRadius: '4px', fontWeight: 700, flexShrink: 0 }}>
-                                              📝 상세
-                                            </span>
-                                          )}
-
                                           {checkItem.tag && (() => {
                                             const tagStyle = getTagStyle(checkItem.tag);
                                             return (
@@ -4048,26 +4042,6 @@ export default function NotebookExplorer() {
                                         >
                                           {renderWithLinks(checkItem.text)}
                                         </span>
-
-                                        {checkItem.detail && checkItem.detail.trim().length > 0 && (
-                                          <span
-                                            style={{
-                                              fontSize: '11px',
-                                              color: '#2563EB',
-                                              backgroundColor: '#DBEAFE',
-                                              padding: '1px 6px',
-                                              borderRadius: '4px',
-                                              fontWeight: 700,
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '3px',
-                                              flexShrink: 0
-                                            }}
-                                            title="상세내용 작성됨"
-                                          >
-                                            📝 상세
-                                          </span>
-                                        )}
 
                                         {checkItem.tag && (() => {
                                           const tagStyle = getTagStyle(checkItem.tag);
