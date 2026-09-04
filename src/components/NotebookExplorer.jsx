@@ -1280,6 +1280,55 @@ export default function NotebookExplorer() {
     }
   };
 
+  const handleAddChecklistToGroup = async (sectionId) => {
+    if (!activeItem || !sectionId) return;
+    const newItem = {
+      id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      text: '',
+      completed: false,
+      detail: ''
+    };
+
+    const secIdx = baseChecklists.findIndex((c) => c.id === sectionId);
+    let updated;
+    if (secIdx === -1) {
+      updated = [...baseChecklists, newItem];
+    } else {
+      let insertIdx = baseChecklists.length;
+      for (let i = secIdx + 1; i < baseChecklists.length; i++) {
+        if (baseChecklists[i].isSection) {
+          insertIdx = i;
+          break;
+        }
+      }
+      updated = [...baseChecklists];
+      updated.splice(insertIdx, 0, newItem);
+    }
+
+    // 그룹이 접혀있다면 자동 펼치기
+    setCollapsedSections((prev) => ({ ...prev, [sectionId]: false }));
+
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    setSelectedChecklistId(newItem.id);
+    setChecklistDetailDraft('');
+    setChecklistDetailBlocks([]);
+    setEditingCheckId(newItem.id);
+    setEditingCheckText('');
+    setEditingCheckTag('');
+    setCustomTagInput('');
+
+    try {
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: updated,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error adding checklist to group:', err);
+    }
+  };
+
   const toggleSectionCollapse = (sectionId) => {
     setCollapsedSections((prev) => ({
       ...prev,
@@ -1330,7 +1379,17 @@ export default function NotebookExplorer() {
   };
 
   const handleSaveEditChecklist = async (checkId) => {
-    if (!activeItem || !editingCheckText.trim()) return;
+    if (!activeItem) return;
+    if (!editingCheckText.trim()) {
+      if (checkId !== '__main__') {
+        handleDeleteChecklist(checkId);
+      }
+      setEditingCheckId(null);
+      setEditingCheckText('');
+      setEditingCheckTag('');
+      setCustomTagInput('');
+      return;
+    }
     if (checkId === '__main__') {
       setEditingCheckId(null);
       setEditingCheckText('');
@@ -4276,6 +4335,28 @@ export default function NotebookExplorer() {
                                             )}
                                             <button
                                               type="button"
+                                              onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                border: '1px solid #CBD5E1',
+                                                backgroundColor: '#FFFFFF',
+                                                cursor: 'pointer',
+                                                padding: '2px 7px',
+                                                color: '#2563EB',
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                borderRadius: '4px',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                              }}
+                                              title="그룹 내 체크리스트 추가"
+                                            >
+                                              <Plus size={12} strokeWidth={2.5} />
+                                              <span>추가</span>
+                                            </button>
+                                            <button
+                                              type="button"
                                               onClick={() => {
                                                 setEditingCheckId(group.section.id);
                                                 setEditingCheckText(group.section.text);
@@ -4405,7 +4486,12 @@ export default function NotebookExplorer() {
                                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
                                                     <button
                                                       type="button"
-                                                      onClick={() => setEditingCheckId(null)}
+onClick={() => {
+                                                        if (!checkItem.text && !editingCheckText.trim()) {
+                                                          handleDeleteChecklist(checkItem.id);
+                                                        }
+                                                        setEditingCheckId(null);
+                                                      }}
                                                       style={styles.btnSmallCancel}
                                                     >
                                                       <X size={13} /> 취소
@@ -5092,6 +5178,28 @@ export default function NotebookExplorer() {
                                           )}
                                           <button
                                             type="button"
+                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              border: '1px solid #CBD5E1',
+                                              backgroundColor: '#FFFFFF',
+                                              cursor: 'pointer',
+                                              padding: '2px 7px',
+                                              color: '#2563EB',
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              borderRadius: '4px',
+                                              boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                            }}
+                                            title="그룹 내 체크리스트 추가"
+                                          >
+                                            <Plus size={12} strokeWidth={2.5} />
+                                            <span>추가</span>
+                                          </button>
+                                          <button
+                                            type="button"
                                             onClick={() => {
                                               setEditingCheckId(group.section.id);
                                               setEditingCheckText(group.section.text);
@@ -5221,7 +5329,12 @@ export default function NotebookExplorer() {
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
                                                   <button
                                                     type="button"
-                                                    onClick={() => setEditingCheckId(null)}
+onClick={() => {
+                                                      if (!checkItem.text && !editingCheckText.trim()) {
+                                                        handleDeleteChecklist(checkItem.id);
+                                                      }
+                                                      setEditingCheckId(null);
+                                                    }}
                                                     style={styles.btnSmallCancel}
                                                   >
                                                     <X size={13} /> 취소
