@@ -4669,43 +4669,6 @@ export default function NotebookExplorer() {
 
 
 
-                          {/* Checklist Header Bar & Print Button */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            paddingBottom: '8px',
-                            marginBottom: '10px',
-                            borderBottom: '1px solid #E2E8F0',
-                            paddingLeft: isMobile ? '4px' : '0',
-                            paddingRight: isMobile ? '4px' : '0'
-                          }} className="no-print">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
-                              <ListChecks size={16} color="#2563EB" />
-                              <span>진행 체크리스트 ({completedCount}/{totalCount})</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={handleOpenAddGroupModal}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '3px 8px',
-                                fontSize: '11px',
-                                fontWeight: 600,
-                                color: '#1D4ED8',
-                                backgroundColor: '#EFF6FF',
-                                border: '1px solid #BFDBFE',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                              }}
-                              title="새 그룹 추가"
-                            >
-                              <FolderPlus size={13} />
-                              <span>그룹</span>
-                            </button>
-                          </div>
 
                           {/* Input Form for new checklist item or section */}
                           <div style={{
