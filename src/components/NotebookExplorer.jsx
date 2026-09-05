@@ -1803,6 +1803,27 @@ export default function NotebookExplorer() {
     handleSaveChecklistDetail(selectedChecklistId, updated);
   };
 
+  const handleAddNewChecklistBlock = () => {
+    if (!selectedChecklistId) return;
+    const newBlockId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newBlock = {
+      id: newBlockId,
+      type: 'checklist',
+      title: '체크리스트',
+      items: [
+        {
+          id: `item_${Date.now()}_0`,
+          text: '',
+          completed: false
+        }
+      ]
+    };
+    const updated = [...checklistDetailBlocks, newBlock];
+    setChecklistDetailBlocks(updated);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
+  };
+
+
   // Sync draft state when active item changes
   useEffect(() => {
     if (activeItem) {
@@ -5557,11 +5578,60 @@ onClick={() => {
                                     justifyContent: 'space-between',
                                     paddingBottom: '8px',
                                     marginBottom: '10px',
-                                    borderBottom: '1px solid #E2E8F0'
+                                    borderBottom: '1px solid #E2E8F0',
+                                    flexWrap: 'wrap',
+                                    gap: '6px'
                                   }}>
                                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
                                       ☑️ {selectedCheckItem.text} 상세내용
                                     </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="no-print">
+                                      <button
+                                        type="button"
+                                        onClick={handleAddNewTextBlock}
+                                        style={{
+                                          ...styles.btnSecondary,
+                                          color: '#1D4ED8',
+                                          backgroundColor: '#EFF6FF',
+                                          borderColor: '#BFDBFE',
+                                          fontWeight: 600
+                                        }}
+                                        title="새 텍스트 박스 추가"
+                                      >
+                                        <Plus size={13} />
+                                        <span>텍스트박스</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={handleAddNewDividerBlock}
+                                        style={{
+                                          ...styles.btnSecondary,
+                                          color: '#475569',
+                                          backgroundColor: '#F8FAFC',
+                                          borderColor: '#E2E8F0',
+                                          fontWeight: 600
+                                        }}
+                                        title="새 구분선 추가"
+                                      >
+                                        <Minus size={13} />
+                                        <span>구분선</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={handleAddNewChecklistBlock}
+                                        style={{
+                                          ...styles.btnSecondary,
+                                          color: '#D97706',
+                                          backgroundColor: '#FEF3C7',
+                                          borderColor: '#FDE68A',
+                                          fontWeight: 600
+                                        }}
+                                        title="새 체크리스트 블록 추가"
+                                      >
+                                        <CheckSquare size={13} />
+                                        <span>체크리스트</span>
+                                      </button>
+                                    </div>
                                   </div>
                                   <DetailBlocksManager
                                     blocks={checklistDetailBlocks}
@@ -6626,6 +6696,22 @@ onClick={() => {
                                     >
                                       <Minus size={13} />
                                       <span>구분선</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={handleAddNewChecklistBlock}
+                                      style={{
+                                        ...styles.btnSecondary,
+                                        color: '#D97706',
+                                        backgroundColor: '#FEF3C7',
+                                        borderColor: '#FDE68A',
+                                        fontWeight: 600
+                                      }}
+                                      title="새 체크리스트 블록 추가"
+                                    >
+                                      <CheckSquare size={13} />
+                                      <span>체크리스트</span>
                                     </button>
 
                                     <button

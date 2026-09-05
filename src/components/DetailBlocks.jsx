@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Plus, Minus, Type, Edit2, Check, X, RotateCcw } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Plus, Minus, Type, Edit2, Check, X, RotateCcw, CheckSquare } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
 /**
@@ -8,12 +8,35 @@ import { renderWithLinks } from '../utils/linkify';
  */
 export const parseDetailBlocks = (detailValue, detailBlocks) => {
   if (Array.isArray(detailBlocks) && detailBlocks.length > 0) {
-    return detailBlocks.map((b, idx) => ({
-      id: b.id || `b_${Date.now()}_${idx}`,
-      type: b.type === 'divider' ? 'divider' : 'text',
-      title: typeof b.title === 'string' ? b.title : '',
-      content: typeof b.content === 'string' ? b.content : ''
-    }));
+    return detailBlocks.map((b, idx) => {
+      if (b.type === 'divider') {
+        return {
+          id: b.id || `b_${Date.now()}_${idx}`,
+          type: 'divider'
+        };
+      }
+      if (b.type === 'checklist') {
+        const rawItems = Array.isArray(b.items) && b.items.length > 0
+          ? b.items
+          : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
+        return {
+          id: b.id || `chk_${Date.now()}_${idx}`,
+          type: 'checklist',
+          title: typeof b.title === 'string' ? b.title : '체크리스트',
+          items: rawItems.map((it, i) => ({
+            id: it.id || `item_${Date.now()}_${i}`,
+            text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : ''),
+            completed: Boolean(it.completed)
+          }))
+        };
+      }
+      return {
+        id: b.id || `b_${Date.now()}_${idx}`,
+        type: 'text',
+        title: typeof b.title === 'string' ? b.title : '',
+        content: typeof b.content === 'string' ? b.content : ''
+      };
+    });
   }
 
   if (typeof detailValue === 'string' && detailValue.trim().length > 0) {
@@ -46,6 +69,15 @@ export const blocksToPlainText = (blocks) => {
   return blocks
     .map((b) => {
       if (b.type === 'divider') return '────────────────────';
+      if (b.type === 'checklist') {
+        const parts = [];
+        if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
+        (b.items || []).forEach((it) => {
+          const mark = it.completed ? '[v]' : '[ ]';
+          if (it.text && it.text.trim()) parts.push(`${mark} ${it.text.trim()}`);
+        });
+        return parts.join('\n');
+      }
       const parts = [];
       if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
       if (b.content && b.content.trim()) parts.push(b.content.trim());
@@ -69,6 +101,8 @@ export const DetailBlocksManager = ({
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [editingChecklistTitleId, setEditingChecklistTitleId] = useState(null);
+  const [draftChecklistTitle, setDraftChecklistTitle] = useState('');
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -77,6 +111,79 @@ export const DetailBlocksManager = ({
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+  };
+
+  // 체크리스트 항목 텍스트 변경
+  const handleUpdateChecklistItemText = (blockId, itemId, newText) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, text: newText } : it))
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 체크리스트 항목 체크/해제 토글
+  const handleToggleChecklistItem = (blockId, itemId) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, completed: !it.completed } : it))
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 체크리스트 항목 추가 (빈 항목 생성)
+  const handleAddChecklistItem = (blockId, afterItemId = null) => {
+    const newItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: '',
+      completed: false
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const items = [...(b.items || [])];
+      if (afterItemId) {
+        const idx = items.findIndex((it) => it.id === afterItemId);
+        if (idx !== -1) {
+          items.splice(idx + 1, 0, newItem);
+        } else {
+          items.push(newItem);
+        }
+      } else {
+        items.push(newItem);
+      }
+      return { ...b, items };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setTimeout(() => {
+      const el = document.getElementById(`chk_input_${newItem.id}`);
+      if (el) el.focus();
+    }, 50);
+  };
+
+  // 체크리스트 항목 삭제
+  const handleDeleteChecklistItem = (blockId, itemId) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const filtered = (b.items || []).filter((it) => it.id !== itemId);
+      return {
+        ...b,
+        items: filtered.length > 0 ? filtered : [{ id: `item_${Date.now()}`, text: '', completed: false }]
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 체크리스트 블록 제목 저장
+  const handleSaveChecklistTitle = (blockId, newTitle) => {
+    const next = blocks.map((b) => (b.id === blockId ? { ...b, title: newTitle.trim() } : b));
+    setEditingChecklistTitleId(null);
+    if (onChangeAndSave) onChangeAndSave(next);
   };
 
   // 편집 시작
@@ -162,6 +269,14 @@ export const DetailBlocksManager = ({
         openDeleteModal(
           '구분선 삭제',
           '구분선을 정말 삭제하시겠습니까?',
+          () => executeDelete(index)
+        );
+      } else if (targetBlock.type === 'checklist') {
+        const titleText = targetBlock.title && targetBlock.title.trim();
+        const name = titleText ? `'${titleText}' 체크리스트` : '체크리스트 블록';
+        openDeleteModal(
+          '체크리스트 삭제',
+          `${name}을(를) 정말 삭제하시겠습니까?`,
           () => executeDelete(index)
         );
       } else {
@@ -316,6 +431,373 @@ export const DetailBlocksManager = ({
                 >
                   <Trash2 size={13} />
                 </button>
+              </div>
+            </div>
+          );
+        }
+
+        if (block.type === 'checklist') {
+          const isEditingTitle = editingChecklistTitleId === block.id;
+          const items = Array.isArray(block.items) && block.items.length > 0
+            ? block.items
+            : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
+
+          return (
+            <div
+              key={block.id || `checklist_${idx}`}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                overflow: 'hidden',
+                flexShrink: 0
+              }}
+            >
+              {/* 체크리스트 헤더 바 (Sticky 상시 고정) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  backgroundColor: '#EFF6FF',
+                  borderBottom: '1px solid #DBEAFE',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 5,
+                  flexShrink: 0
+                }}
+              >
+                {/* 좌측: 체크박스 아이콘 & 제목 (인라인 수정 지원) */}
+                {isEditingTitle ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}>
+                    <CheckSquare size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      value={draftChecklistTitle}
+                      onChange={(e) => setDraftChecklistTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveChecklistTitle(block.id, draftChecklistTitle);
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          setEditingChecklistTitleId(null);
+                        }
+                      }}
+                      placeholder="체크리스트 이름 입력..."
+                      autoFocus
+                      style={{
+                        flex: 1,
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#1E293B',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #2563EB',
+                        outline: 'none',
+                        backgroundColor: '#FFFFFF'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveChecklistTitle(block.id, draftChecklistTitle)}
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        backgroundColor: '#2563EB',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      저장
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingChecklistTitleId(null)}
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        color: '#64748B',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flex: 1,
+                      minWidth: 0,
+                      cursor: 'pointer'
+                    }}
+                    onDoubleClick={() => {
+                      setEditingChecklistTitleId(block.id);
+                      setDraftChecklistTitle(block.title || '');
+                    }}
+                    title="더블클릭하여 이름 수정"
+                  >
+                    <CheckSquare size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        color: '#1E293B',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {block.title && block.title.trim() ? block.title : '체크리스트'}
+                    </span>
+                    <button
+                      type="button"
+                      className="no-print"
+                      onClick={() => {
+                        setEditingChecklistTitleId(block.id);
+                        setDraftChecklistTitle(block.title || '');
+                      }}
+                      title="이름 수정"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#64748B',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                  </div>
+                )}
+
+                {/* 우측: [+ 항목 추가], [위로], [아래로], [삭제] 컨트롤 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
+                  <button
+                    type="button"
+                    onClick={() => handleAddChecklistItem(block.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #BFDBFE',
+                      backgroundColor: '#EFF6FF',
+                      color: '#1D4ED8',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                    title="새 체크리스트 항목 추가"
+                  >
+                    <Plus size={12} />
+                    <span>항목 추가</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleMoveUp(idx)}
+                    disabled={idx === 0}
+                    title="위로 이동"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                      color: idx === 0 ? '#CBD5E1' : '#64748B',
+                      padding: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <ArrowUp size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveDown(idx)}
+                    disabled={idx === blocks.length - 1}
+                    title="아래로 이동"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
+                      color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
+                      padding: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <ArrowDown size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(idx)}
+                    title="체크리스트 블록 삭제"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: '#EF4444',
+                      padding: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '4px',
+                      marginLeft: '2px'
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 체크리스트 본문 (내부 테두리 박스 및 항목 목록) */}
+              <div style={{ padding: '10px 12px' }}>
+                <div
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    backgroundColor: '#FFFFFF',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}
+                >
+                  {items.map((item, itemIdx) => (
+                    <div
+                      key={item.id || `item_${itemIdx}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #E2E8F0',
+                        backgroundColor: item.completed ? '#F8FAFC' : '#FFFFFF',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                        transition: 'background-color 0.15s'
+                      }}
+                    >
+                      {/* 사각형 녹색 체크박스 */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleChecklistItem(block.id, item.id)}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '4px',
+                          backgroundColor: item.completed ? '#059669' : '#FFFFFF',
+                          border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          padding: 0,
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={item.completed ? '완료 해제' : '완료 체크'}
+                      >
+                        {item.completed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+                      </button>
+
+                      {/* 인라인 텍스트 입력 */}
+                      <input
+                        id={`chk_input_${item.id}`}
+                        type="text"
+                        value={item.text || ''}
+                        onChange={(e) => handleUpdateChecklistItemText(block.id, item.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddChecklistItem(block.id, item.id);
+                          } else if (e.key === 'Backspace' && !item.text && items.length > 1) {
+                            e.preventDefault();
+                            handleDeleteChecklistItem(block.id, item.id);
+                            const prevItem = items[itemIdx - 1];
+                            if (prevItem) {
+                              setTimeout(() => {
+                                const el = document.getElementById(`chk_input_${prevItem.id}`);
+                                if (el) el.focus();
+                              }, 50);
+                            }
+                          }
+                        }}
+                        placeholder="체크 항목 입력... (Enter 다음 항목 추가)"
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          border: 'none',
+                          outline: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: item.completed ? '#94A3B8' : '#1E293B',
+                          textDecoration: item.completed ? 'line-through' : 'none',
+                          backgroundColor: 'transparent'
+                        }}
+                      />
+
+                      {/* 우측 완료 뱃지 (첨부 이미지 디자인) */}
+                      {item.completed && (
+                        <span
+                          style={{
+                            backgroundColor: '#D1FAE5',
+                            color: '#059669',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            flexShrink: 0,
+                            userSelect: 'none'
+                          }}
+                        >
+                          ✓ 완료
+                        </span>
+                      )}
+
+                      {/* 항목 삭제 버튼 */}
+                      <button
+                        type="button"
+                        className="no-print"
+                        onClick={() => handleDeleteChecklistItem(block.id, item.id)}
+                        title="항목 삭제"
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#94A3B8',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                          borderRadius: '3px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           );
