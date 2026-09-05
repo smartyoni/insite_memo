@@ -1,5 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Plus, Minus, Type, Edit2, Check, X, RotateCcw, CheckSquare } from 'lucide-react';
+import {
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Plus,
+  Minus,
+  Type,
+  Edit2,
+  Check,
+  X,
+  RotateCcw,
+  CheckSquare,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  ChevronsUp,
+  ChevronsDown,
+  Triangle,
+  MoreVertical
+} from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
 /**
@@ -103,8 +122,33 @@ export const DetailBlocksManager = ({
   const [draftContent, setDraftContent] = useState('');
   const [editingChecklistTitleId, setEditingChecklistTitleId] = useState(null);
   const [draftChecklistTitle, setDraftChecklistTitle] = useState('');
+  const [openBlockMenuId, setOpenBlockMenuId] = useState(null);
+  const [openBlockMenuPos, setOpenBlockMenuPos] = useState(null);
+  const [collapsedBlockIds, setCollapsedBlockIds] = useState({});
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
+
+  const toggleBlockCollapse = (blockId) => {
+    setCollapsedBlockIds((prev) => ({
+      ...prev,
+      [blockId]: !prev[blockId]
+    }));
+  };
+
+  const handleOpenBlockMenu = (e, blockId) => {
+    e.stopPropagation();
+    if (openBlockMenuId === blockId) {
+      setOpenBlockMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 160;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenBlockMenuPos({ top, right });
+      setOpenBlockMenuId(blockId);
+    }
+  };
 
   // 텍스트에어리어 높이 자동 조절
   const adjustTextareaHeight = (el) => {
@@ -212,6 +256,28 @@ export const DetailBlocksManager = ({
     setDraftContent('');
     if (onChangeAndSave) {
       onChangeAndSave(nextBlocks);
+    }
+  };
+
+  // 가장 위로 이동
+  const handleMoveToTop = (index) => {
+    if (index <= 0) return;
+    const next = [...blocks];
+    const [moved] = next.splice(index, 1);
+    next.unshift(moved);
+    if (onChangeAndSave) {
+      onChangeAndSave(next);
+    }
+  };
+
+  // 가장 아래로 이동
+  const handleMoveToBottom = (index) => {
+    if (index >= blocks.length - 1) return;
+    const next = [...blocks];
+    const [moved] = next.splice(index, 1);
+    next.push(moved);
+    if (onChangeAndSave) {
+      onChangeAndSave(next);
     }
   };
 
@@ -441,6 +507,9 @@ export const DetailBlocksManager = ({
           const items = Array.isArray(block.items) && block.items.length > 0
             ? block.items
             : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
+          const isFirstBlock = idx === 0;
+          const isLastBlock = idx === blocks.length - 1;
+          const isCollapsed = Boolean(collapsedBlockIds[block.id]);
 
           return (
             <div
@@ -449,32 +518,42 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#F8FAFC',
-                borderRadius: '10px',
+                borderRadius: '8px',
                 border: '1px solid #CBD5E1',
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
                 overflow: 'hidden',
                 flexShrink: 0
               }}
             >
-              {/* 체크리스트 헤더 바 (Sticky 상시 고정) */}
+              {/* 체크리스트 그룹 헤더 바 (좌측 체크리스트 영역 그룹헤더와 동일한 구조) */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  backgroundColor: '#EFF6FF',
-                  borderBottom: '1px solid #DBEAFE',
+                  backgroundColor: '#EEF2F6',
+                  borderBottom: isCollapsed ? 'none' : '1px solid #CBD5E1',
+                  cursor: isEditingTitle ? 'default' : 'pointer',
+                  userSelect: 'none',
                   position: 'sticky',
                   top: 0,
                   zIndex: 5,
                   flexShrink: 0
                 }}
+                onClick={() => {
+                  if (!isEditingTitle) {
+                    toggleBlockCollapse(block.id);
+                  }
+                }}
               >
-                {/* 좌측: 체크박스 아이콘 & 제목 (인라인 수정 지원) */}
+                {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
                 {isEditingTitle ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}>
-                    <CheckSquare size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
                     <input
                       type="text"
                       value={draftChecklistTitle}
@@ -540,136 +619,352 @@ export const DetailBlocksManager = ({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '6px',
                       flex: 1,
-                      minWidth: 0,
-                      cursor: 'pointer'
+                      minWidth: 0
                     }}
-                    onDoubleClick={() => {
-                      setEditingChecklistTitleId(block.id);
-                      setDraftChecklistTitle(block.title || '');
-                    }}
-                    title="더블클릭하여 이름 수정"
                   >
-                    <CheckSquare size={16} color="#D97706" style={{ flexShrink: 0 }} />
+                    <span
+                      style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                      title={isCollapsed ? '펼치기' : '접기'}
+                    >
+                      {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                    </span>
+                    <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
                     <span
                       style={{
-                        fontSize: '14px',
+                        fontSize: '13px',
                         fontWeight: 700,
                         color: '#1E293B',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                       }}
-                    >
-                      {block.title && block.title.trim() ? block.title : '체크리스트'}
-                    </span>
-                    <button
-                      type="button"
-                      className="no-print"
-                      onClick={() => {
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
                         setEditingChecklistTitleId(block.id);
                         setDraftChecklistTitle(block.title || '');
                       }}
-                      title="이름 수정"
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#64748B',
-                        cursor: 'pointer',
-                        padding: '2px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
+                      title="더블클릭하여 이름 수정"
                     >
-                      <Edit2 size={12} />
-                    </button>
+                      {block.title && block.title.trim() ? block.title : '체크리스트'}
+                    </span>
+                    {isCollapsed && (
+                      <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                        (접힘)
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {/* 우측: [+ 항목 추가], [위로], [아래로], [삭제] 컨트롤 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="no-print">
-                  <button
-                    type="button"
-                    onClick={() => handleAddChecklistItem(block.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      border: '1px solid #BFDBFE',
-                      backgroundColor: '#EFF6FF',
-                      color: '#1D4ED8',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                    title="새 체크리스트 항목 추가"
-                  >
-                    <Plus size={12} />
-                    <span>항목 추가</span>
-                  </button>
+                {/* 우측: 위치이동 화살표 2단 세트 & 3점 메뉴 */}
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="no-print">
+                    {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '22px',
+                        height: '26px'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToTop(idx);
+                        }}
+                        disabled={isFirstBlock}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="가장 위로 이동"
+                      >
+                        <ChevronsUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToBottom(idx);
+                        }}
+                        disabled={isLastBlock}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="가장 아래로 이동"
+                      >
+                        <ChevronsDown size={13} />
+                      </button>
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleMoveUp(idx)}
-                    disabled={idx === 0}
-                    title="위로 이동"
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                      color: idx === 0 ? '#CBD5E1' : '#64748B',
-                      padding: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    <ArrowUp size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveDown(idx)}
-                    disabled={idx === blocks.length - 1}
-                    title="아래로 이동"
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
-                      color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
-                      padding: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    <ArrowDown size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(idx)}
-                    title="체크리스트 블록 삭제"
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: '#EF4444',
-                      padding: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '4px',
-                      marginLeft: '2px'
-                    }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                    {/* 한 칸 위 / 아래로 이동 (우측) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '22px',
+                        height: '26px'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveUp(idx);
+                        }}
+                        disabled={isFirstBlock}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="위로 이동"
+                      >
+                        <Triangle size={9} fill="currentColor" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveDown(idx);
+                        }}
+                        disabled={isLastBlock}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="아래로 이동"
+                      >
+                        <Triangle size={9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3점 메뉴 (가장 우측) */}
+                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenBlockMenu(e, block.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: openBlockMenuId === block.id ? '#E2E8F0' : 'transparent',
+                        color: openBlockMenuId === block.id ? '#2563EB' : '#64748B',
+                        cursor: 'pointer'
+                      }}
+                      title="메뉴"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+
+                    {openBlockMenuId === block.id && (
+                      <>
+                        <div
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 9999,
+                            backgroundColor: 'transparent'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenBlockMenuId(null);
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'fixed',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                            border: '1px solid #E2E8F0',
+                            padding: '4px',
+                            zIndex: 10000,
+                            minWidth: '110px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            whiteSpace: 'nowrap',
+                            top: openBlockMenuPos?.top ?? 0,
+                            right: openBlockMenuPos?.right ?? 0
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenBlockMenuId(null);
+                              handleAddChecklistItem(block.id);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#334155',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <Plus size={14} color="#2563EB" />
+                            <span>추가</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenBlockMenuId(null);
+                              setEditingChecklistTitleId(block.id);
+                              setDraftChecklistTitle(block.title || '');
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#334155',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <Edit2 size={14} color="#475569" />
+                            <span>수정</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenBlockMenuId(null);
+                              handleDelete(idx);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#DC2626',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <Trash2 size={14} color="#DC2626" />
+                            <span>삭제</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOpenBlockMenuId(null)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#64748B',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <X size={14} color="#64748B" />
+                            <span>취소</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* 체크리스트 본문 (내부 테두리 박스 및 항목 목록) */}
-              <div style={{ padding: '10px 12px' }}>
+              {/* 체크리스트 본문 (내부 테두리 박스 및 항목 목록 - 접혀있지 않을 때만 렌더링) */}
+              {!isCollapsed && (
+                <div style={{ padding: '10px 12px' }}>
                 <div
                   style={{
                     border: '1px solid #CBD5E1',
@@ -799,8 +1094,9 @@ export const DetailBlocksManager = ({
                   ))}
                 </div>
               </div>
-            </div>
-          );
+            )}
+          </div>
+        );
         }
 
         const isEditingThisBlock = editingBlockId === block.id;
