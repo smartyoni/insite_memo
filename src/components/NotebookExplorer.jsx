@@ -227,6 +227,18 @@ const AD_INBOX_CATEGORY = { id: 'ad_inbox', name: 'In-box', order: -99999, isFix
 
 const FIXED_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox', 'office_inbox', 'ad_inbox'];
 
+// Fixed Trash category definitions
+const TRASH_CATEGORY = { id: 'trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'explorer' };
+const BLOG_TRASH_CATEGORY = { id: 'blog_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'blog' };
+const CLIPBOARD_TRASH_CATEGORY = { id: 'clipboard_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'clipboard' };
+const BALANCE_TRASH_CATEGORY = { id: 'balance_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'balance' };
+const CLIP_TRASH_CATEGORY = { id: 'clip_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'clip' };
+const OFFICE_TRASH_CATEGORY = { id: 'office_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'office' };
+const AD_TRASH_CATEGORY = { id: 'ad_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'ad' };
+
+const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash', 'office_trash', 'ad_trash'];
+const ALL_FIXED_CATEGORY_IDS = [...FIXED_INBOX_IDS, ...FIXED_TRASH_IDS];
+
 const getScopeForTab = (tab) => {
   if (tab === 'blog') return 'blog';
   if (tab === 'clipboard') return 'clipboard';
@@ -247,6 +259,16 @@ const getInboxIdForTab = (tab) => {
   return 'inbox';
 };
 
+const getTrashIdForTab = (tab) => {
+  if (tab === 'blog') return 'blog_trash';
+  if (tab === 'clipboard') return 'clipboard_trash';
+  if (tab === 'balance') return 'balance_trash';
+  if (tab === 'clip') return 'clip_trash';
+  if (tab === 'office') return 'office_trash';
+  if (tab === 'ad') return 'ad_trash';
+  return 'trash';
+};
+
 const getFixedCategoryForTab = (tab) => {
   if (tab === 'blog') return BLOG_INBOX_CATEGORY;
   if (tab === 'clipboard') return CLIPBOARD_INBOX_CATEGORY;
@@ -255,6 +277,16 @@ const getFixedCategoryForTab = (tab) => {
   if (tab === 'office') return OFFICE_INBOX_CATEGORY;
   if (tab === 'ad') return AD_INBOX_CATEGORY;
   return INBOX_CATEGORY;
+};
+
+const getFixedTrashCategoryForTab = (tab) => {
+  if (tab === 'blog') return BLOG_TRASH_CATEGORY;
+  if (tab === 'clipboard') return CLIPBOARD_TRASH_CATEGORY;
+  if (tab === 'balance') return BALANCE_TRASH_CATEGORY;
+  if (tab === 'clip') return CLIP_TRASH_CATEGORY;
+  if (tab === 'office') return OFFICE_TRASH_CATEGORY;
+  if (tab === 'ad') return AD_TRASH_CATEGORY;
+  return TRASH_CATEGORY;
 };
 
 // Helper to highlight matching searchQuery in text
@@ -376,7 +408,7 @@ export default function NotebookExplorer() {
   const getHierarchicalCategoryOptions = (scope, excludeId = null) => {
     const fixed = getFixedCategoryForTab(activeMainTab);
     const scopeCategories = categories.filter(c => {
-      if (FIXED_INBOX_IDS.includes(c.id)) return false;
+      if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
       if (scope === 'explorer') return !c.scope || c.scope === 'explorer';
       return c.scope === scope;
     });
@@ -448,19 +480,20 @@ export default function NotebookExplorer() {
 
   const canMoveCategory = (sourceId, targetParentId) => {
     if (!sourceId) return false;
-    if (FIXED_INBOX_IDS.includes(sourceId)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(sourceId)) return false;
     if (targetParentId === null) return true;
-    if (FIXED_INBOX_IDS.includes(targetParentId)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(targetParentId)) return false;
     if (sourceId === targetParentId) return false;
     if (isDescendant(sourceId, targetParentId)) return false;
     return true;
   };
 
-  // Combine fixed In-box category at top, sort remaining categories in ascending order (가나다순)
+  // Combine fixed In-box at top, user categories in middle (가나다순), fixed Trash category at bottom
   const currentFixedCategory = getFixedCategoryForTab(activeMainTab);
+  const currentFixedTrashCategory = getFixedTrashCategoryForTab(activeMainTab);
   const currentScope = getScopeForTab(activeMainTab);
   const filteredCategories = categories.filter((c) => {
-    if (FIXED_INBOX_IDS.includes(c.id)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
     if (currentScope === 'explorer') {
       return !c.scope || c.scope === 'explorer';
     }
@@ -470,8 +503,11 @@ export default function NotebookExplorer() {
   const allCategories = [
     currentFixedCategory,
     ...filteredCategories
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' })),
+    currentFixedTrashCategory
   ];
+
+  const isTrashSelected = FIXED_TRASH_IDS.includes(selectedCategoryId);
 
   // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 860);
@@ -974,7 +1010,16 @@ export default function NotebookExplorer() {
 
   // Filter & Sort items by selected category (Default: ascending order by title / 가나다순)
   const filteredItems = items
-    .filter((item) => item.categoryId === selectedCategoryId)
+    .filter((item) => {
+      if (isTrashSelected) {
+        return (
+          item.categoryId === selectedCategoryId ||
+          (item.isDeleted && (item.categoryId === selectedCategoryId || item.deletedTab === activeMainTab))
+        );
+      }
+      if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
+      return item.categoryId === selectedCategoryId;
+    })
     .sort((a, b) => {
       const titleA = (a.title || '').trim();
       const titleB = (b.title || '').trim();
@@ -1107,7 +1152,19 @@ export default function NotebookExplorer() {
   // Search matched items (across ALL categories and tabs if search is active)
   const matchedItems = isSearchActive
     ? items
-        .filter((item) => checkItemMatches(item, searchLower))
+        .filter((item) => {
+          if (isTrashSelected) {
+            const inThisTrash =
+              item.categoryId === selectedCategoryId ||
+              (item.isDeleted && (item.categoryId === selectedCategoryId || item.deletedTab === activeMainTab));
+            if (!inThisTrash) return false;
+          } else {
+            if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) {
+              return false;
+            }
+          }
+          return checkItemMatches(item, searchLower);
+        })
         .sort((a, b) => {
           const titleA = (a.title || '').trim();
           const titleB = (b.title || '').trim();
@@ -1139,6 +1196,7 @@ export default function NotebookExplorer() {
   // Get active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
+  const isItemInTrash = Boolean(activeItem && (activeItem.isDeleted || FIXED_TRASH_IDS.includes(activeItem.categoryId) || isTrashSelected));
 
   const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
   const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
@@ -1257,7 +1315,7 @@ export default function NotebookExplorer() {
   };
 
   const handleToggleInlineChecklistInReadMode = async (fieldId, originalIdx, newCompleted) => {
-    if (!activeItem) return;
+    if (!activeItem || isItemInTrash) return;
     const currentVal = activeItem.templateValues?.[fieldId];
     const activeTpl = templates.find((t) => t.id === activeItem.templateId);
     const field = activeTpl?.fields?.find((f) => f.id === fieldId);
@@ -1299,7 +1357,7 @@ export default function NotebookExplorer() {
 
   // Checklist Handlers
   const handleToggleChecklist = async (checkId) => {
-    if (!activeItem) return;
+    if (!activeItem || isItemInTrash) return;
     if (checkId === '__main__') {
       try {
         await updateDoc(doc(db, 'items', activeItem.id), {
@@ -1885,7 +1943,7 @@ export default function NotebookExplorer() {
   };
 
   const handleUpdateCategoryName = async (catId) => {
-    if (FIXED_INBOX_IDS.includes(catId)) return;
+    if (ALL_FIXED_CATEGORY_IDS.includes(catId)) return;
     if (!editingCategoryName.trim()) {
       setEditingCategoryId(null);
       return;
@@ -1935,7 +1993,7 @@ export default function NotebookExplorer() {
   };
 
   const handleDeleteCategory = async (catId) => {
-    if (FIXED_INBOX_IDS.includes(catId)) return;
+    if (ALL_FIXED_CATEGORY_IDS.includes(catId)) return;
     try {
       const allTargetCatIds = getCategoryDescendantIds(catId);
       const batch = writeBatch(db);
@@ -2037,7 +2095,60 @@ export default function NotebookExplorer() {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  // Move item to trash (Soft Delete)
+  const handleMoveToTrash = async (itemId) => {
+    try {
+      const itemToTrash = items.find((i) => i.id === itemId);
+      const trashId = getTrashIdForTab(activeMainTab);
+      const originalCatId = (itemToTrash && itemToTrash.categoryId && !FIXED_TRASH_IDS.includes(itemToTrash.categoryId))
+        ? itemToTrash.categoryId
+        : getInboxIdForTab(activeMainTab);
+
+      await updateDoc(doc(db, 'items', itemId), {
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+        originalCategoryId: originalCatId,
+        categoryId: trashId,
+        deletedTab: activeMainTab,
+        updatedAt: serverTimestamp()
+      });
+
+      setDeletingItemId(null);
+      if (selectedItemId === itemId) {
+        const remaining = filteredItems.filter((i) => i.id !== itemId);
+        setSelectedItemId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch (err) {
+      console.error('Error moving item to trash:', err);
+    }
+  };
+
+  // Restore item from trash
+  const handleRestoreItem = async (item) => {
+    if (!item) return;
+    try {
+      const targetCategoryId = item.originalCategoryId || getInboxIdForTab(activeMainTab);
+      const isValidCat = FIXED_INBOX_IDS.includes(targetCategoryId) || categories.some((c) => c.id === targetCategoryId);
+      const restoreCatId = isValidCat ? targetCategoryId : getInboxIdForTab(activeMainTab);
+
+      await updateDoc(doc(db, 'items', item.id), {
+        isDeleted: false,
+        deletedAt: null,
+        categoryId: restoreCatId,
+        updatedAt: serverTimestamp()
+      });
+
+      if (selectedItemId === item.id) {
+        const remaining = filteredItems.filter((i) => i.id !== item.id);
+        setSelectedItemId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch (err) {
+      console.error('Error restoring item:', err);
+    }
+  };
+
+  // Permanent Delete single item
+  const handlePermanentDeleteItem = async (itemId) => {
     try {
       await deleteDoc(doc(db, 'items', itemId));
       setDeletingItemId(null);
@@ -2046,9 +2157,36 @@ export default function NotebookExplorer() {
         setSelectedItemId(remaining.length > 0 ? remaining[0].id : null);
       }
     } catch (err) {
-      console.error('Error deleting item:', err);
+      console.error('Error permanently deleting item:', err);
     }
   };
+
+  // Empty all items in current trash
+  const handleEmptyTrash = async () => {
+    try {
+      const currentTrashId = getTrashIdForTab(activeMainTab);
+      const trashedItems = items.filter(
+        (it) => it.categoryId === currentTrashId || (it.isDeleted && (it.categoryId === currentTrashId || it.deletedTab === activeMainTab))
+      );
+      if (trashedItems.length === 0) return;
+
+      const batchSize = 400;
+      for (let i = 0; i < trashedItems.length; i += batchSize) {
+        const chunk = trashedItems.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+        chunk.forEach((it) => {
+          batch.delete(doc(db, 'items', it.id));
+        });
+        await batch.commit();
+      }
+
+      setSelectedItemId(null);
+    } catch (err) {
+      console.error('Error emptying trash:', err);
+    }
+  };
+
+  const handleDeleteItem = handleMoveToTrash;
 
   // Helper to construct combined body text from template fields
   const buildTemplateCombinedBody = (tplId, tplVals) => {
@@ -2513,6 +2651,7 @@ export default function NotebookExplorer() {
   };
 
   const handleEnterEditMode = () => {
+    if (isItemInTrash) return;
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
@@ -2534,10 +2673,11 @@ export default function NotebookExplorer() {
     setActiveMainTab(targetTab);
     const targetScope = getScopeForTab(targetTab);
     const targetInboxId = getInboxIdForTab(targetTab);
+    const targetTrashId = getTrashIdForTab(targetTab);
     const isCurrentCatValid = categories.some(
       c => c.id === selectedCategoryId && (targetScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === targetScope)
     );
-    if (!isCurrentCatValid && selectedCategoryId !== targetInboxId) {
+    if (!isCurrentCatValid && selectedCategoryId !== targetInboxId && selectedCategoryId !== targetTrashId) {
       setSelectedCategoryId(targetInboxId);
       setSelectedItemId(null);
     }
@@ -2681,7 +2821,7 @@ export default function NotebookExplorer() {
   const renderCategoryNode = (node, level = 0) => {
     const isSelected = node.id === selectedCategoryId;
     const isEditing = node.id === editingCategoryId;
-    const count = items.filter((item) => item.categoryId === node.id).length;
+    const count = items.filter((item) => item.categoryId === node.id && !item.isDeleted && !FIXED_TRASH_IDS.includes(item.categoryId)).length;
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedFolders[node.id] !== false;
     const isBeingDragged = draggedCategoryId === node.id;
@@ -3038,6 +3178,7 @@ export default function NotebookExplorer() {
                 {(() => {
                   const isSelected = currentFixedCategory.id === selectedCategoryId;
                   const count = items.filter((item) => {
+                    if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
                     if (currentFixedCategory.id === 'inbox') return !item.categoryId || item.categoryId === 'inbox';
                     return item.categoryId === currentFixedCategory.id;
                   }).length;
@@ -3141,6 +3282,54 @@ export default function NotebookExplorer() {
 
                 {/* Hierarchical category tree nodes */}
                 {buildCategoryTree(filteredCategories).map((node) => renderCategoryNode(node, 0))}
+
+                {/* Fixed Trash Category at bottom */}
+                {(() => {
+                  const isSelected = currentFixedTrashCategory.id === selectedCategoryId;
+                  const count = items.filter((item) => {
+                    return (
+                      item.categoryId === currentFixedTrashCategory.id ||
+                      (item.isDeleted && (item.categoryId === currentFixedTrashCategory.id || item.deletedTab === activeMainTab))
+                    );
+                  }).length;
+
+                  return (
+                    <div style={{ marginTop: '14px', paddingTop: '6px' }}>
+                      <div style={{ height: '1px', backgroundColor: '#CBD5E1', margin: '4px 4px 6px 4px' }} />
+                      <div
+                        key={currentFixedTrashCategory.id}
+                        onClick={() => navigateToItems(currentFixedTrashCategory.id)}
+                        style={{
+                          ...styles.catRow,
+                          backgroundColor: isSelected ? '#FEE2E2' : 'transparent',
+                          color: isSelected ? '#991B1B' : '#64748B',
+                          fontWeight: isSelected ? 600 : 400,
+                          paddingLeft: '6px',
+                          paddingRight: '6px',
+                          paddingTop: '6px',
+                          paddingBottom: '6px',
+                          gap: '6px'
+                        }}
+                      >
+                        <span style={{ width: 14, height: 14, flexShrink: 0 }} />
+                        <Trash2 size={16} color={isSelected ? '#DC2626' : '#94A3B8'} style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
+                            {currentFixedTrashCategory.name}
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            color: isSelected ? '#DC2626' : '#94A3B8',
+                            fontWeight: isSelected ? 700 : 500,
+                            flexShrink: 0
+                          }}>
+                            ({count})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Mobile Footer for Pane 1 */}
@@ -3236,6 +3425,44 @@ export default function NotebookExplorer() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {isTrashSelected ? (
+                        displayedItems.length > 0 && (
+                          <button
+                            onClick={() => {
+                              openDeleteModal(
+                                '휴지통 비우기',
+                                '휴지통의 모든 메모를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+                                handleEmptyTrash
+                              );
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#FEE2E2',
+                              color: '#DC2626',
+                              border: '1px solid #FECACA',
+                              borderRadius: '5px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="휴지통 비우기"
+                          >
+                            <Trash2 size={13} />
+                            <span>휴지통 비우기</span>
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          onClick={handleAddItem}
+                          style={styles.iconBtnLight}
+                          title="메모 추가"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
                         style={{
@@ -3251,13 +3478,6 @@ export default function NotebookExplorer() {
                       >
                         {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
                         <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-                      </button>
-                      <button
-                        onClick={handleAddItem}
-                        style={styles.iconBtnLight}
-                        title="메모 추가"
-                      >
-                        <Plus size={18} />
                       </button>
                     </div>
                   </div>
@@ -3282,22 +3502,52 @@ export default function NotebookExplorer() {
                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
                       {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                     </span>
-                    <button
-                      onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                      style={{
-                        ...styles.iconBtnLight,
-                        padding: '4px 6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        fontSize: '11px',
-                        color: '#4B5563'
-                      }}
-                      title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
-                    >
-                      {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                      <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {isTrashSelected && displayedItems.length > 0 && (
+                        <button
+                          onClick={() => {
+                            openDeleteModal(
+                              '휴지통 비우기',
+                              '휴지통의 모든 메모를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+                              handleEmptyTrash
+                            );
+                          }}
+                          style={{
+                            padding: '4px 6px',
+                            backgroundColor: '#FEE2E2',
+                            color: '#DC2626',
+                            border: '1px solid #FECACA',
+                            borderRadius: '5px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title="휴지통 비우기"
+                        >
+                          <Trash2 size={12} />
+                          <span>비우기</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                        style={{
+                          ...styles.iconBtnLight,
+                          padding: '4px 6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          fontSize: '11px',
+                          color: '#4B5563'
+                        }}
+                        title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
+                      >
+                        {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                        <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -3419,20 +3669,49 @@ export default function NotebookExplorer() {
                               </div>
 
                               <div style={styles.actionGroup}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openDeleteModal(
-                                      '메모 삭제',
-                                      `'${item.title || '제목 없음'}' 메모를 삭제하시겠습니까?`,
-                                      () => handleDeleteItem(item.id)
-                                    );
-                                  }}
-                                  style={styles.actionBtnLight}
-                                  title="삭제"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
+                                {isTrashSelected ? (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRestoreItem(item);
+                                      }}
+                                      style={styles.actionBtnLight}
+                                      title="원래 카테고리로 복원"
+                                    >
+                                      <RotateCcw size={13} color="#16A34A" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteModal(
+                                          '영구 삭제',
+                                          `'${item.title || '제목 없음'}' 메모를 영구 삭제하시겠습니까? 복구할 수 없습니다.`,
+                                          () => handlePermanentDeleteItem(item.id)
+                                        );
+                                      }}
+                                      style={styles.actionBtnLight}
+                                      title="영구 삭제"
+                                    >
+                                      <Trash2 size={13} color="#DC2626" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openDeleteModal(
+                                        '휴지통으로 이동',
+                                        `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
+                                        () => handleMoveToTrash(item.id)
+                                      );
+                                    }}
+                                    style={styles.actionBtnLight}
+                                    title="휴지통으로 이동"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
                               </div>
                             </div>
 
@@ -3474,7 +3753,7 @@ export default function NotebookExplorer() {
                   </div>
 
                 {/* Floating Action Button (FAB) for Mobile Sublist */}
-                {isMobile && (
+                {isMobile && !isTrashSelected && (
                   <button
                     onClick={handleAddItem}
                     style={styles.mobileFabBtn}
@@ -4164,6 +4443,77 @@ export default function NotebookExplorer() {
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
               >
+                {/* Trash Notice Banner */}
+                {isItemInTrash && (
+                  <div style={{
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    marginBottom: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Trash2 size={18} color="#DC2626" />
+                      <span style={{ fontSize: '13px', color: '#991B1B', fontWeight: 600 }}>
+                        휴지통에 보관된 메모입니다.
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => handleRestoreItem(activeItem)}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: '#16A34A',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '5px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="원래 카테고리로 복원"
+                      >
+                        <RotateCcw size={13} />
+                        <span>복원</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          openDeleteModal(
+                            '영구 삭제',
+                            `'${activeItem.title || '제목 없음'}' 메모를 영구 삭제하시겠습니까? 복구할 수 없습니다.`,
+                            () => handlePermanentDeleteItem(activeItem.id)
+                          );
+                        }}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: '#DC2626',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '5px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="영구 삭제"
+                      >
+                        <Trash2 size={13} />
+                        <span>영구 삭제</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {isEditMode ? (
                   <div style={styles.splitEditContainer}>
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
@@ -5214,79 +5564,85 @@ onClick={() => {
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
-                            <button
-                              type="button"
-                              onClick={handleOpenAddGroupModal}
-                              style={{
-                                ...styles.btnSecondary,
-                                color: '#1D4ED8',
-                                backgroundColor: '#EFF6FF',
-                                borderColor: '#BFDBFE'
-                              }}
-                              className="no-print"
-                              title="새 그룹 추가"
-                            >
-                              <FolderPlus size={13} />
-                              <span>그룹</span>
-                            </button>
+                            {!isItemInTrash && (
+                              <button
+                                type="button"
+                                onClick={handleOpenAddGroupModal}
+                                style={{
+                                  ...styles.btnSecondary,
+                                  color: '#1D4ED8',
+                                  backgroundColor: '#EFF6FF',
+                                  borderColor: '#BFDBFE'
+                                }}
+                                className="no-print"
+                                title="새 그룹 추가"
+                              >
+                                <FolderPlus size={13} />
+                                <span>그룹</span>
+                              </button>
+                            )}
                             {showSavedToast && (
                               <span style={styles.toastBadge}>
                                 ✓ 저장됨
                               </span>
                             )}
-                            <button
-                              onClick={handleEnterEditMode}
-                              style={styles.btnPrimary}
-                              title="메모 기본정보 및 템플릿 수정"
-                            >
-                              <Edit2 size={13} />
-                              수정
-                            </button>
+                            {!isItemInTrash && (
+                              <button
+                                onClick={handleEnterEditMode}
+                                style={styles.btnPrimary}
+                                title="메모 기본정보 및 템플릿 수정"
+                              >
+                                <Edit2 size={13} />
+                                수정
+                              </button>
+                            )}
                           </div>
                         </div>
 
 
 
                         {/* Input Form for new multiline checklist item or section */}
-                        <div style={{
-                          ...styles.checklistInputContainer,
-                          ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
-                        }} className="no-print">
-                          <div style={styles.checklistInputGroup}>
-                            <textarea
-                              rows={2}
-                              value={newChecklistText}
-                              onChange={(e) => setNewChecklistText(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                  e.preventDefault();
-                                  handleAddChecklist();
-                                }
-                              }}
-                              placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
-                              style={styles.checklistTextarea}
-                            />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
-                              <button
-                                onClick={handleAddChecklist}
-                                style={{
-                                  ...styles.checklistAddBtn,
-                                  opacity: newChecklistText.trim() ? 1 : 0.6,
-                                  cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
-                                  flex: 1,
-                                  height: 'auto',
-                                  padding: '5px 12px'
+                        {!isItemInTrash && (
+                          <div style={{
+                            ...styles.checklistInputContainer,
+                            ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
+                          }} className="no-print">
+                            <div style={styles.checklistInputGroup}>
+                              <textarea
+                                rows={2}
+                                value={newChecklistText}
+                                onChange={(e) => setNewChecklistText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    handleAddChecklist();
+                                  }
                                 }}
-                                disabled={!newChecklistText.trim()}
-                                title="체크리스트 추가 (Ctrl+Enter)"
-                              >
-                                <Plus size={14} />
-                                <span>항목 추가</span>
-                              </button>
-                              
+                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
+                                style={styles.checklistTextarea}
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
+                                <button
+                                  onClick={handleAddChecklist}
+                                  style={{
+                                    ...styles.checklistAddBtn,
+                                    opacity: newChecklistText.trim() ? 1 : 0.6,
+                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
+                                    flex: 1,
+                                    height: 'auto',
+                                    padding: '5px 12px'
+                                  }}
+                                  disabled={!newChecklistText.trim()}
+                                  title="체크리스트 추가 (Ctrl+Enter)"
+                                >
+                                  <Plus size={14} />
+                                  <span>항목 추가</span>
+                                </button>
+                                
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                         <div style={{
@@ -5882,13 +6238,15 @@ onClick={() => {
                                   <Printer size={13} color="#334155" />
                                   <span>인쇄</span>
                                 </button>
-                                <button
-                                  onClick={handleEnterEditMode}
-                                  style={styles.btnPrimary}
-                                >
-                                  <Edit2 size={13} />
-                                  수정
-                                </button>
+                                {!isItemInTrash && (
+                                  <button
+                                    onClick={handleEnterEditMode}
+                                    style={styles.btnPrimary}
+                                  >
+                                    <Edit2 size={13} />
+                                    수정
+                                  </button>
+                                )}
                               </div>
                             </div>
 
@@ -6516,7 +6874,7 @@ onClick={() => {
               >
                 <option value="">[ 최상위(루트) 폴더 ]</option>
                 {getHierarchicalCategoryOptions(currentScope, movingCategory.id)
-                  .filter((c) => !FIXED_INBOX_IDS.includes(c.id))
+                  .filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id))
                   .map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.displayName || c.name}
