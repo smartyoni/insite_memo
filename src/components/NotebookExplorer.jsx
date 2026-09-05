@@ -50,6 +50,8 @@ import {
   MoreVertical,
   Search,
   Triangle,
+  ChevronsUp,
+  ChevronsDown,
   Copy
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
@@ -1507,10 +1509,20 @@ export default function NotebookExplorer() {
     const secGroupIdx = groups.findIndex((g) => g.section && g.section.id === sectionId);
     if (secGroupIdx === -1) return;
 
-    const targetGroupIdx = direction === 'up' ? secGroupIdx - 1 : secGroupIdx + 1;
-    if (targetGroupIdx < 0 || targetGroupIdx >= groups.length) return;
+    let targetGroupIdx;
+    if (direction === 'up') {
+      targetGroupIdx = secGroupIdx - 1;
+    } else if (direction === 'down') {
+      targetGroupIdx = secGroupIdx + 1;
+    } else if (direction === 'top') {
+      targetGroupIdx = 0;
+    } else if (direction === 'bottom') {
+      targetGroupIdx = groups.length - 1;
+    }
 
-    // Swap groups
+    if (targetGroupIdx === undefined || targetGroupIdx === secGroupIdx || targetGroupIdx < 0 || targetGroupIdx >= groups.length) return;
+
+    // Move group
     const updatedGroups = [...groups];
     const [movedGroup] = updatedGroups.splice(secGroupIdx, 1);
     updatedGroups.splice(targetGroupIdx, 0, movedGroup);
@@ -4869,54 +4881,133 @@ export default function NotebookExplorer() {
                                             style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            {/* 이동용 화살표 (위 / 아래) */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }} className="no-print">
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleMoveGroup(group.section.id, 'up');
-                                                }}
-                                                disabled={isFirstGroup}
+                                            {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '1px' : '2px' }} className="no-print">
+                                              {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                                              <div
                                                 style={{
-                                                  display: 'inline-flex',
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
-                                                  height: isMobile ? '24px' : '26px',
-                                                  borderRadius: '4px',
-                                                  border: 'none',
-                                                  backgroundColor: 'transparent',
-                                                  color: isFirstGroup ? '#CBD5E1' : '#64748B',
-                                                  cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                  width: isMobile ? '20px' : '22px',
+                                                  height: isMobile ? '24px' : '26px'
                                                 }}
-                                                title="그룹 위로 이동"
                                               >
-                                                <Triangle size={isMobile ? 10 : 11} fill="currentColor" />
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleMoveGroup(group.section.id, 'down');
-                                                }}
-                                                disabled={isLastGroup}
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'top');
+                                                  }}
+                                                  disabled={isFirstGroup}
+                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 가장 위로 이동"
+                                                >
+                                                  <ChevronsUp size={isMobile ? 12 : 13} />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'bottom');
+                                                  }}
+                                                  disabled={isLastGroup}
+                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 가장 아래로 이동"
+                                                >
+                                                  <ChevronsDown size={isMobile ? 12 : 13} />
+                                                </button>
+                                              </div>
+
+                                              {/* 한 칸 위 / 아래로 이동 (우측) */}
+                                              <div
                                                 style={{
-                                                  display: 'inline-flex',
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
-                                                  height: isMobile ? '24px' : '26px',
-                                                  borderRadius: '4px',
-                                                  border: 'none',
-                                                  backgroundColor: 'transparent',
-                                                  color: isLastGroup ? '#CBD5E1' : '#64748B',
-                                                  cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                  width: isMobile ? '20px' : '22px',
+                                                  height: isMobile ? '24px' : '26px'
                                                 }}
-                                                title="그룹 아래로 이동"
                                               >
-                                                <Triangle size={isMobile ? 10 : 11} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                                              </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'up');
+                                                  }}
+                                                  disabled={isFirstGroup}
+                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 위로 이동"
+                                                >
+                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'down');
+                                                  }}
+                                                  disabled={isLastGroup}
+                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 아래로 이동"
+                                                >
+                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                                                </button>
+                                              </div>
                                             </div>
 
                                             {/* Group 3-dot Menu (가장 우측) */}
@@ -5780,55 +5871,134 @@ onClick={() => {
                                           style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          {/* 이동용 화살표 (위 / 아래) */}
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }} className="no-print">
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleMoveGroup(group.section.id, 'up');
-                                              }}
-                                              disabled={isFirstGroup}
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: isMobile ? '24px' : '26px',
-                                                height: isMobile ? '24px' : '26px',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                backgroundColor: 'transparent',
-                                                color: isFirstGroup ? '#CBD5E1' : '#64748B',
-                                                cursor: isFirstGroup ? 'not-allowed' : 'pointer'
-                                              }}
-                                              title="그룹 위로 이동"
-                                            >
-                                              <Triangle size={isMobile ? 10 : 11} fill="currentColor" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleMoveGroup(group.section.id, 'down');
-                                              }}
-                                              disabled={isLastGroup}
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: isMobile ? '24px' : '26px',
-                                                height: isMobile ? '24px' : '26px',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                backgroundColor: 'transparent',
-                                                color: isLastGroup ? '#CBD5E1' : '#64748B',
-                                                cursor: isLastGroup ? 'not-allowed' : 'pointer'
-                                              }}
-                                              title="그룹 아래로 이동"
-                                            >
-                                              <Triangle size={isMobile ? 10 : 11} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                                            </button>
-                                          </div>
+                                            {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '1px' : '2px' }} className="no-print">
+                                              {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                                              <div
+                                                style={{
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '20px' : '22px',
+                                                  height: isMobile ? '24px' : '26px'
+                                                }}
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'top');
+                                                  }}
+                                                  disabled={isFirstGroup}
+                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 가장 위로 이동"
+                                                >
+                                                  <ChevronsUp size={isMobile ? 12 : 13} />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'bottom');
+                                                  }}
+                                                  disabled={isLastGroup}
+                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 가장 아래로 이동"
+                                                >
+                                                  <ChevronsDown size={isMobile ? 12 : 13} />
+                                                </button>
+                                              </div>
+
+                                              {/* 한 칸 위 / 아래로 이동 (우측) */}
+                                              <div
+                                                style={{
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '20px' : '22px',
+                                                  height: isMobile ? '24px' : '26px'
+                                                }}
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'up');
+                                                  }}
+                                                  disabled={isFirstGroup}
+                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 위로 이동"
+                                                >
+                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" />
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMoveGroup(group.section.id, 'down');
+                                                  }}
+                                                  disabled={isLastGroup}
+                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '100%',
+                                                    height: isMobile ? '12px' : '13px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                                    padding: 0
+                                                  }}
+                                                  title="그룹 아래로 이동"
+                                                >
+                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                                                </button>
+                                              </div>
+                                            </div>
 
                                           {/* Group 3-dot Menu (가장 우측) */}
                                           <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
