@@ -635,6 +635,8 @@ export default function NotebookExplorer() {
   const [customTagInput, setCustomTagInput] = useState('');
   const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
   const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
+  const [openGroupMenuId, setOpenGroupMenuId] = useState(null);
+  const [openGroupMenuPos, setOpenGroupMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
@@ -1550,6 +1552,21 @@ export default function NotebookExplorer() {
       const right = Math.max(10, window.innerWidth - rect.right);
       setOpenChecklistMenuPos({ top, right });
       setOpenChecklistMenuId(checkItemId);
+    }
+  };
+
+  const handleOpenGroupMenu = (e, groupId) => {
+    e.stopPropagation();
+    if (openGroupMenuId === groupId) {
+      setOpenGroupMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 160;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenGroupMenuPos({ top, right });
+      setOpenGroupMenuId(groupId);
     }
   };
 
@@ -4409,80 +4426,112 @@ export default function NotebookExplorer() {
                                             style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            {group.groupTotalCount > 0 && (
-                                              <span style={{
-                                                fontSize: '11px',
-                                                fontWeight: 700,
-                                                color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
-                                                backgroundColor: '#FFFFFF',
-                                                padding: isMobile ? '1px 5px' : '1px 7px',
-                                                borderRadius: '10px',
-                                                border: '1px solid #E2E8F0'
-                                              }}>
-                                                {group.groupCompletedCount}/{group.groupTotalCount} 완료
-                                              </span>
-                                            )}
-                                            <button
-                                              type="button"
-                                              onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                              style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '3px',
-                                                border: '1px solid #CBD5E1',
-                                                backgroundColor: '#FFFFFF',
-                                                cursor: 'pointer',
-                                                padding: isMobile ? '2px 5px' : '2px 7px',
-                                                color: '#2563EB',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                borderRadius: '4px',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                              }}
-                                              title="그룹 내 체크리스트 추가"
-                                            >
-                                              <Plus size={12} strokeWidth={2.5} />
-                                              <span>추가</span>
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setEditingCheckId(group.section.id);
-                                                setEditingCheckText(group.section.text);
-                                              }}
-                                              style={{
-                                                border: 'none',
-                                                background: 'transparent',
-                                                cursor: 'pointer',
-                                                padding: isMobile ? '2px' : '2px 4px',
-                                                color: '#64748B',
-                                                borderRadius: '3px'
-                                              }}
-                                              title="그룹 이름 수정"
-                                            >
-                                              <Edit2 size={13} />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                openDeleteModal(
-                                                  '그룹 삭제',
-                                                  `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
-                                                  () => handleDeleteChecklist(group.section.id)
-                                                );
-                                              }}
-                                              style={{
-                                                border: 'none',
-                                                background: 'transparent',
-                                                cursor: 'pointer',
-                                                padding: isMobile ? '2px' : '2px 4px',
-                                                color: '#EF4444',
-                                                borderRadius: '3px'
-                                              }}
-                                              title="그룹 삭제"
-                                            >
-                                              <Trash2 size={13} />
-                                            </button>
+                                            {/* Group 3-dot Menu */}
+                                            <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => handleOpenGroupMenu(e, group.section.id)}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '28px',
+                                                  height: isMobile ? '24px' : '28px',
+                                                  borderRadius: '6px',
+                                                  border: 'none',
+                                                  backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
+                                                  color: openGroupMenuId === group.section.id ? '#2563EB' : '#64748B',
+                                                  cursor: 'pointer'
+                                                }}
+                                                title="그룹 메뉴"
+                                              >
+                                                <MoreVertical size={isMobile ? 15 : 16} />
+                                              </button>
+
+                                              {openGroupMenuId === group.section.id && (
+                                                <>
+                                                  <div
+                                                    style={{
+                                                      position: 'fixed',
+                                                      top: 0,
+                                                      left: 0,
+                                                      right: 0,
+                                                      bottom: 0,
+                                                      zIndex: 9999,
+                                                      backgroundColor: 'transparent'
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenGroupMenuId(null);
+                                                    }}
+                                                  />
+                                                  <div
+                                                    style={{
+                                                      ...styles.checklistDropdownMenu,
+                                                      top: openGroupMenuPos?.top ?? 0,
+                                                      right: openGroupMenuPos?.right ?? 0
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  >
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setOpenGroupMenuId(null);
+                                                        handleAddChecklistToGroup(group.section.id);
+                                                      }}
+                                                      style={styles.checklistDropdownItem}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Plus size={14} color="#2563EB" />
+                                                      <span>추가</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setOpenGroupMenuId(null);
+                                                        setEditingCheckId(group.section.id);
+                                                        setEditingCheckText(group.section.text);
+                                                      }}
+                                                      style={styles.checklistDropdownItem}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Edit2 size={14} color="#475569" />
+                                                      <span>수정</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setOpenGroupMenuId(null);
+                                                        openDeleteModal(
+                                                          '그룹 삭제',
+                                                          `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
+                                                          () => handleDeleteChecklist(group.section.id)
+                                                        );
+                                                      }}
+                                                      style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Trash2 size={14} color="#DC2626" />
+                                                      <span>삭제</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => setOpenGroupMenuId(null)}
+                                                      style={styles.checklistDropdownItem}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <X size={14} color="#64748B" />
+                                                      <span>취소</span>
+                                                    </button>
+                                                  </div>
+                                                </>
+                                              )}
+                                            </div>
+
                                             <div
                                               title="드래그하여 그룹 순서 이동"
                                               style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
@@ -5264,80 +5313,112 @@ onClick={() => {
                                           style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          {group.groupTotalCount > 0 && (
-                                            <span style={{
-                                              fontSize: '11px',
-                                              fontWeight: 700,
-                                              color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
-                                              backgroundColor: '#FFFFFF',
-                                              padding: isMobile ? '1px 5px' : '1px 7px',
-                                              borderRadius: '10px',
-                                              border: '1px solid #E2E8F0'
-                                            }}>
-                                              {group.groupCompletedCount}/{group.groupTotalCount} 완료
-                                            </span>
-                                          )}
-                                          <button
-                                            type="button"
-                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '3px',
-                                              border: '1px solid #CBD5E1',
-                                              backgroundColor: '#FFFFFF',
-                                              cursor: 'pointer',
-                                              padding: isMobile ? '2px 5px' : '2px 7px',
-                                              color: '#2563EB',
-                                              fontSize: '11px',
-                                              fontWeight: 600,
-                                              borderRadius: '4px',
-                                              boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                            }}
-                                            title="그룹 내 체크리스트 추가"
-                                          >
-                                            <Plus size={12} strokeWidth={2.5} />
-                                            <span>추가</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setEditingCheckId(group.section.id);
-                                              setEditingCheckText(group.section.text);
-                                            }}
-                                            style={{
-                                              border: 'none',
-                                              background: 'transparent',
-                                              cursor: 'pointer',
-                                              padding: isMobile ? '2px' : '2px 4px',
-                                              color: '#64748B',
-                                              borderRadius: '3px'
-                                            }}
-                                            title="그룹 이름 수정"
-                                          >
-                                            <Edit2 size={13} />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              openDeleteModal(
-                                                '그룹 삭제',
-                                                `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
-                                                () => handleDeleteChecklist(group.section.id)
-                                              );
-                                            }}
-                                            style={{
-                                              border: 'none',
-                                              background: 'transparent',
-                                              cursor: 'pointer',
-                                              padding: isMobile ? '2px' : '2px 4px',
-                                              color: '#EF4444',
-                                              borderRadius: '3px'
-                                            }}
-                                              title="그룹 삭제"
-                                          >
-                                            <Trash2 size={13} />
-                                          </button>
+                                          {/* Group 3-dot Menu */}
+                                          <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => handleOpenGroupMenu(e, group.section.id)}
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: isMobile ? '24px' : '28px',
+                                                height: isMobile ? '24px' : '28px',
+                                                borderRadius: '6px',
+                                                border: 'none',
+                                                backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
+                                                color: openGroupMenuId === group.section.id ? '#2563EB' : '#64748B',
+                                                cursor: 'pointer'
+                                              }}
+                                              title="그룹 메뉴"
+                                            >
+                                              <MoreVertical size={isMobile ? 15 : 16} />
+                                            </button>
+
+                                            {openGroupMenuId === group.section.id && (
+                                              <>
+                                                <div
+                                                  style={{
+                                                    position: 'fixed',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    zIndex: 9999,
+                                                    backgroundColor: 'transparent'
+                                                  }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenGroupMenuId(null);
+                                                  }}
+                                                />
+                                                <div
+                                                  style={{
+                                                    ...styles.checklistDropdownMenu,
+                                                    top: openGroupMenuPos?.top ?? 0,
+                                                    right: openGroupMenuPos?.right ?? 0
+                                                  }}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                >
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setOpenGroupMenuId(null);
+                                                      handleAddChecklistToGroup(group.section.id);
+                                                    }}
+                                                    style={styles.checklistDropdownItem}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                  >
+                                                    <Plus size={14} color="#2563EB" />
+                                                    <span>추가</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setOpenGroupMenuId(null);
+                                                      setEditingCheckId(group.section.id);
+                                                      setEditingCheckText(group.section.text);
+                                                    }}
+                                                    style={styles.checklistDropdownItem}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                  >
+                                                    <Edit2 size={14} color="#475569" />
+                                                    <span>수정</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setOpenGroupMenuId(null);
+                                                      openDeleteModal(
+                                                        '그룹 삭제',
+                                                        `'${group.section.text}' 그룹 구분을 삭제하시겠습니까?\n(하위 체크리스트 항목들은 삭제되지 않고 유지됩니다.)`,
+                                                        () => handleDeleteChecklist(group.section.id)
+                                                      );
+                                                    }}
+                                                    style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                  >
+                                                    <Trash2 size={14} color="#DC2626" />
+                                                    <span>삭제</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setOpenGroupMenuId(null)}
+                                                    style={styles.checklistDropdownItem}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                  >
+                                                    <X size={14} color="#64748B" />
+                                                    <span>취소</span>
+                                                  </button>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+
                                           <div
                                             title="드래그하여 그룹 순서 이동"
                                             style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
