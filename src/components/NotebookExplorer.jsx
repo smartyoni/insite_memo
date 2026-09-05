@@ -1424,6 +1424,56 @@ export default function NotebookExplorer() {
     }));
   };
 
+  const handleMoveGroup = async (sectionId, direction) => {
+    setOpenGroupMenuId(null);
+    if (!sectionId) return;
+
+    // Build raw groups from baseChecklists
+    const groups = [];
+    let curGroup = { section: null, items: [] };
+    baseChecklists.forEach((item) => {
+      if (item.isSection) {
+        if (curGroup.section || curGroup.items.length > 0) {
+          groups.push(curGroup);
+        }
+        curGroup = { section: item, items: [] };
+      } else {
+        curGroup.items.push(item);
+      }
+    });
+    if (curGroup.section || curGroup.items.length > 0) {
+      groups.push(curGroup);
+    }
+
+    const secGroupIdx = groups.findIndex((g) => g.section && g.section.id === sectionId);
+    if (secGroupIdx === -1) return;
+
+    const targetGroupIdx = direction === 'up' ? secGroupIdx - 1 : secGroupIdx + 1;
+    if (targetGroupIdx < 0 || targetGroupIdx >= groups.length) return;
+
+    // Swap groups
+    const updatedGroups = [...groups];
+    const [movedGroup] = updatedGroups.splice(secGroupIdx, 1);
+    updatedGroups.splice(targetGroupIdx, 0, movedGroup);
+
+    // Flatten back to array
+    const updated = updatedGroups.flatMap((g) => (g.section ? [g.section, ...g.items] : g.items));
+
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    if (activeItem) {
+      try {
+        await updateDoc(doc(db, 'items', activeItem.id), {
+          checklists: updated,
+          updatedAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Error moving group:', err);
+      }
+    }
+  };
+
   const handleNoteChecklistDrop = async (e, targetId) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1437,16 +1487,60 @@ export default function NotebookExplorer() {
       setDragOverNoteChecklistId(null);
       return;
     }
-    const fromIdx = baseChecklists.findIndex((c) => c.id === draggedNoteChecklistId);
-    const toIdx = baseChecklists.findIndex((c) => c.id === targetId);
-    if (fromIdx === -1 || toIdx === -1) {
-      setDraggedNoteChecklistId(null);
-      setDragOverNoteChecklistId(null);
-      return;
+
+    // Build raw groups from baseChecklists
+    const groups = [];
+    let curGroup = { section: null, items: [] };
+    baseChecklists.forEach((item) => {
+      if (item.isSection) {
+        if (curGroup.section || curGroup.items.length > 0) {
+          groups.push(curGroup);
+        }
+        curGroup = { section: item, items: [] };
+      } else {
+        curGroup.items.push(item);
+      }
+    });
+    if (curGroup.section || curGroup.items.length > 0) {
+      groups.push(curGroup);
     }
-    const updated = [...baseChecklists];
-    const [moved] = updated.splice(fromIdx, 1);
-    updated.splice(toIdx, 0, moved);
+
+    const draggedItem = baseChecklists.find((c) => c.id === draggedNoteChecklistId);
+    const draggedIsSection = Boolean(draggedItem?.isSection);
+
+    let updated = [];
+
+    if (draggedIsSection) {
+      // 1. 그룹 전체 단위 이동 (해당 섹션과 그에 속한 모든 아이템 묶음 통째로 이동)
+      const fromGroupIdx = groups.findIndex((g) => g.section && g.section.id === draggedNoteChecklistId);
+      const toGroupIdx = groups.findIndex(
+        (g) => (g.section && g.section.id === targetId) || g.items.some((i) => i.id === targetId)
+      );
+
+      if (fromGroupIdx === -1 || toGroupIdx === -1 || fromGroupIdx === toGroupIdx) {
+        setDraggedNoteChecklistId(null);
+        setDragOverNoteChecklistId(null);
+        return;
+      }
+
+      const updatedGroups = [...groups];
+      const [movedGroup] = updatedGroups.splice(fromGroupIdx, 1);
+      updatedGroups.splice(toGroupIdx, 0, movedGroup);
+      updated = updatedGroups.flatMap((g) => (g.section ? [g.section, ...g.items] : g.items));
+    } else {
+      // 2. 단일 체크리스트 아이템 이동
+      const fromIdx = baseChecklists.findIndex((c) => c.id === draggedNoteChecklistId);
+      const toIdx = baseChecklists.findIndex((c) => c.id === targetId);
+      if (fromIdx === -1 || toIdx === -1) {
+        setDraggedNoteChecklistId(null);
+        setDragOverNoteChecklistId(null);
+        return;
+      }
+      const listCopy = [...baseChecklists];
+      const [moved] = listCopy.splice(fromIdx, 1);
+      listCopy.splice(toIdx, 0, moved);
+      updated = listCopy;
+    }
 
     setDraggedNoteChecklistId(null);
     setDragOverNoteChecklistId(null);
@@ -4280,11 +4374,13 @@ export default function NotebookExplorer() {
                                 등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
                               </div>
                             ) : (
-                              checklistGroups.map((group, groupIdx) => {
+                                checklistGroups.map((group, groupIdx) => {
                                 const isSecEditing = group.section && editingCheckId === group.section.id;
                                 const isSecDragged = group.section && draggedNoteChecklistId === group.section.id;
                                 const isSecDragOver = group.section && dragOverNoteChecklistId === group.section.id;
                                 const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
+                                const isFirstGroup = groupIdx === 0;
+                                const isLastGroup = groupIdx === checklistGroups.length - 1;
 
                                 return (
                                   <div
@@ -4473,6 +4569,30 @@ export default function NotebookExplorer() {
                                                     }}
                                                     onClick={(e) => e.stopPropagation()}
                                                   >
+                                                    {!isFirstGroup && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleMoveGroup(group.section.id, 'up')}
+                                                        style={styles.checklistDropdownItem}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                      >
+                                                        <ArrowUp size={14} color="#475569" />
+                                                        <span>위로 이동</span>
+                                                      </button>
+                                                    )}
+                                                    {!isLastGroup && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleMoveGroup(group.section.id, 'down')}
+                                                        style={styles.checklistDropdownItem}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                      >
+                                                        <ArrowDown size={14} color="#475569" />
+                                                        <span>아래로 이동</span>
+                                                      </button>
+                                                    )}
                                                     <button
                                                       type="button"
                                                       onClick={() => {
@@ -5170,6 +5290,8 @@ onClick={() => {
                               const isSecDragged = group.section && draggedNoteChecklistId === group.section.id;
                               const isSecDragOver = group.section && dragOverNoteChecklistId === group.section.id;
                               const isSecCollapsed = group.section && Boolean(collapsedSections[group.section.id]);
+                              const isFirstGroup = groupIdx === 0;
+                              const isLastGroup = groupIdx === checklistGroups.length - 1;
 
                               return (
                                 <div
@@ -5360,7 +5482,31 @@ onClick={() => {
                                                   }}
                                                   onClick={(e) => e.stopPropagation()}
                                                 >
-                                                  <button
+                                                  {!isFirstGroup && (
+                                                   <button
+                                                     type="button"
+                                                     onClick={() => handleMoveGroup(group.section.id, 'up')}
+                                                     style={styles.checklistDropdownItem}
+                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                   >
+                                                     <ArrowUp size={14} color="#475569" />
+                                                     <span>위로 이동</span>
+                                                   </button>
+                                                 )}
+                                                 {!isLastGroup && (
+                                                   <button
+                                                     type="button"
+                                                     onClick={() => handleMoveGroup(group.section.id, 'down')}
+                                                     style={styles.checklistDropdownItem}
+                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                   >
+                                                     <ArrowDown size={14} color="#475569" />
+                                                     <span>아래로 이동</span>
+                                                   </button>
+                                                 )}
+                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                       setOpenGroupMenuId(null);
