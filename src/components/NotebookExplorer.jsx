@@ -1789,18 +1789,6 @@ export default function NotebookExplorer() {
     const updated = [...checklistDetailBlocks, newBlock];
     setChecklistDetailBlocks(updated);
     setEditingBlockId(newBlockId);
-    handleSaveChecklistDetail(selectedChecklistId, updated);
-  };
-
-  const handleAddNewDividerBlock = () => {
-    if (!selectedChecklistId) return;
-    const newBlock = {
-      id: `div_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      type: 'divider'
-    };
-    const updated = [...checklistDetailBlocks, newBlock];
-    setChecklistDetailBlocks(updated);
-    handleSaveChecklistDetail(selectedChecklistId, updated);
   };
 
   const handleAddNewChecklistBlock = () => {
@@ -5596,25 +5584,10 @@ onClick={() => {
                                           borderColor: '#BFDBFE',
                                           fontWeight: 600
                                         }}
-                                        title="새 텍스트 박스 추가"
+                                        title="새 텍스트 추가"
                                       >
                                         <Plus size={13} />
-                                        <span>텍스트박스</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={handleAddNewDividerBlock}
-                                        style={{
-                                          ...styles.btnSecondary,
-                                          color: '#475569',
-                                          backgroundColor: '#F8FAFC',
-                                          borderColor: '#E2E8F0',
-                                          fontWeight: 600
-                                        }}
-                                        title="새 구분선 추가"
-                                      >
-                                        <Minus size={13} />
-                                        <span>구분선</span>
+                                        <span>텍스트</span>
                                       </button>
                                       <button
                                         type="button"
@@ -5626,10 +5599,10 @@ onClick={() => {
                                           borderColor: '#FDE68A',
                                           fontWeight: 600
                                         }}
-                                        title="새 체크리스트 블록 추가"
+                                        title="새 체크 추가"
                                       >
                                         <CheckSquare size={13} />
-                                        <span>체크리스트</span>
+                                        <span>체크</span>
                                       </button>
                                     </div>
                                   </div>
@@ -6676,26 +6649,10 @@ onClick={() => {
                                         borderColor: '#BFDBFE',
                                         fontWeight: 600
                                       }}
-                                      title="새 텍스트 박스 추가"
+                                      title="새 텍스트 추가"
                                     >
                                       <Plus size={13} />
-                                      <span>텍스트박스</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={handleAddNewDividerBlock}
-                                      style={{
-                                        ...styles.btnSecondary,
-                                        color: '#475569',
-                                        backgroundColor: '#F8FAFC',
-                                        borderColor: '#E2E8F0',
-                                        fontWeight: 600
-                                      }}
-                                      title="새 구분선 추가"
-                                    >
-                                      <Minus size={13} />
-                                      <span>구분선</span>
+                                      <span>텍스트</span>
                                     </button>
 
                                     <button
@@ -6708,19 +6665,10 @@ onClick={() => {
                                         borderColor: '#FDE68A',
                                         fontWeight: 600
                                       }}
-                                      title="새 체크리스트 블록 추가"
+                                      title="새 체크 추가"
                                     >
                                       <CheckSquare size={13} />
-                                      <span>체크리스트</span>
-                                    </button>
-
-                                    <button
-                                      onClick={handleOpenDetailPrint}
-                                      style={styles.btnSecondary}
-                                      title="상세내용 인쇄"
-                                    >
-                                      <Printer size={13} color="#334155" />
-                                      <span>인쇄</span>
+                                      <span>체크</span>
                                     </button>
                                   </div>
                                 </div>

@@ -4,7 +4,6 @@ import {
   ArrowDown,
   Trash2,
   Plus,
-  Minus,
   Type,
   Edit2,
   Check,
@@ -27,13 +26,9 @@ import { renderWithLinks } from '../utils/linkify';
  */
 export const parseDetailBlocks = (detailValue, detailBlocks) => {
   if (Array.isArray(detailBlocks) && detailBlocks.length > 0) {
-    return detailBlocks.map((b, idx) => {
-      if (b.type === 'divider') {
-        return {
-          id: b.id || `b_${Date.now()}_${idx}`,
-          type: 'divider'
-        };
-      }
+    const validBlocks = detailBlocks.filter((b) => b && b.type !== 'divider');
+    if (validBlocks.length > 0) {
+      return validBlocks.map((b, idx) => {
       if (b.type === 'checklist') {
         const rawItems = Array.isArray(b.items) && b.items.length > 0
           ? b.items
@@ -57,6 +52,7 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
       };
     });
   }
+}
 
   if (typeof detailValue === 'string' && detailValue.trim().length > 0) {
     return [
@@ -86,8 +82,8 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
 export const blocksToPlainText = (blocks) => {
   if (!Array.isArray(blocks)) return '';
   return blocks
+    .filter((b) => b && b.type !== 'divider')
     .map((b) => {
-      if (b.type === 'divider') return '────────────────────';
       if (b.type === 'checklist') {
         const parts = [];
         if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
@@ -331,17 +327,11 @@ export const DetailBlocksManager = ({
     if (!targetBlock) return;
 
     if (openDeleteModal) {
-      if (targetBlock.type === 'divider') {
-        openDeleteModal(
-          '구분선 삭제',
-          '구분선을 정말 삭제하시겠습니까?',
-          () => executeDelete(index)
-        );
-      } else if (targetBlock.type === 'checklist') {
+      if (targetBlock.type === 'checklist') {
         const titleText = targetBlock.title && targetBlock.title.trim();
-        const name = titleText ? `'${titleText}' 체크리스트` : '체크리스트 블록';
+        const name = titleText ? `'${titleText}' 체크` : '체크 블록';
         openDeleteModal(
-          '체크리스트 삭제',
+          '체크 블록 삭제',
           `${name}을(를) 정말 삭제하시겠습니까?`,
           () => executeDelete(index)
         );
@@ -351,16 +341,16 @@ export const DetailBlocksManager = ({
         let message = '';
 
         if (titleText) {
-          message = `'${titleText}' 텍스트박스를 정말 삭제하시겠습니까?`;
+          message = `'${titleText}' 텍스트를 정말 삭제하시겠습니까?`;
         } else if (contentText) {
           const preview = contentText.length > 30 ? contentText.slice(0, 30) + '...' : contentText;
-          message = `'${preview}' 텍스트박스를 정말 삭제하시겠습니까?`;
+          message = `'${preview}' 텍스트를 정말 삭제하시겠습니까?`;
         } else {
-          message = '비어 있는 텍스트박스를 삭제하시겠습니까?';
+          message = '비어 있는 텍스트를 삭제하시겠습니까?';
         }
 
         openDeleteModal(
-          '텍스트박스 삭제',
+          '텍스트 삭제',
           message,
           () => executeDelete(index)
         );
@@ -398,110 +388,6 @@ export const DetailBlocksManager = ({
       }}
     >
       {blocks.map((block, idx) => {
-        if (block.type === 'divider') {
-          return (
-            <div
-              key={block.id || `divider_${idx}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                margin: '6px 0',
-                userSelect: 'none',
-                flexShrink: 0
-              }}
-            >
-              {/* 구분선 실선/대시 */}
-              <div
-                style={{
-                  flex: 1,
-                  height: '1px',
-                  backgroundColor: '#CBD5E1',
-                  borderTop: '1px dashed #94A3B8'
-                }}
-              />
-
-              {/* 구분선 우측 끝 컨트롤: 순서 이동 & 삭제 버튼 */}
-              <div
-                className="no-print"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                  backgroundColor: '#F1F5F9',
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  border: '1px solid #E2E8F0'
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    color: '#64748B',
-                    marginRight: '4px'
-                  }}
-                >
-                  구분선
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleMoveUp(idx)}
-                  disabled={idx === 0}
-                  title="위로 이동"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                    color: idx === 0 ? '#CBD5E1' : '#64748B',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '3px'
-                  }}
-                >
-                  <ArrowUp size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMoveDown(idx)}
-                  disabled={idx === blocks.length - 1}
-                  title="아래로 이동"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
-                    color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '3px'
-                  }}
-                >
-                  <ArrowDown size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(idx)}
-                  title="구분선 삭제"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: '#EF4444',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '3px'
-                  }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </div>
-          );
-        }
-
         if (block.type === 'checklist') {
           const isEditingTitle = editingChecklistTitleId === block.id;
           const items = Array.isArray(block.items) && block.items.length > 0
