@@ -4543,115 +4543,116 @@ export default function NotebookExplorer() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            gap: '6px',
+                            gap: isMobile ? '4px' : '8px',
                             marginBottom: '10px',
                             paddingBottom: '8px',
                             borderBottom: '1px solid #F1F5F9',
-                            flexWrap: 'wrap',
+                            flexWrap: 'nowrap',
                             paddingLeft: isMobile ? '4px' : '0',
-                            paddingRight: isMobile ? '4px' : '0'
+                            paddingRight: isMobile ? '4px' : '0',
+                            width: '100%',
+                            minWidth: 0
                           }}>
                             {/* Left Controls: Category & Template Selectors */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <div style={styles.headerCategorySelector}>
-                                <span style={styles.headerCategoryLabel}>이동:</span>
-                                <select
-                                  value={draftCategoryId}
-                                  onChange={(e) => setDraftCategoryId(e.target.value)}
-                                  style={styles.headerCategorySelect}
-                                >
-                                  {getHierarchicalCategoryOptions(currentScope).map((cat) => (
-                                    <option key={cat.id} value={cat.id}>
-                                      {cat.displayName || cat.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flex: 1, minWidth: 0 }}>
+                              <select
+                                value={draftCategoryId}
+                                onChange={(e) => setDraftCategoryId(e.target.value)}
+                                style={{
+                                  ...styles.headerCategorySelect,
+                                  flex: 1,
+                                  minWidth: 0,
+                                  maxWidth: isMobile ? '135px' : '220px',
+                                  height: isMobile ? '28px' : '32px'
+                                }}
+                                title="카테고리 선택"
+                              >
+                                {getHierarchicalCategoryOptions(currentScope).map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.displayName || cat.name}
+                                  </option>
+                                ))}
+                              </select>
 
-                              <div style={styles.headerCategorySelector}>
-                                <span style={styles.headerCategoryLabel}>템플릿:</span>
-                                <select
-                                  value={draftTemplateId || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value || null;
-                                    setDraftTemplateId(val);
-                                    if (val) {
-                                      const targetTpl = templates.find(t => t.id === val);
-                                      if (targetTpl) {
-                                        if (targetTpl.fields) {
-                                          const initialVals = { ...draftTemplateValues };
-                                          targetTpl.fields.forEach(f => {
-                                            if (f.type === 'checklist') {
-                                              if (!initialVals[f.id]) {
-                                                initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
-                                              }
-                                            } else {
-                                              if (initialVals[f.id] === undefined && f.placeholder) {
-                                                initialVals[f.id] = f.placeholder.replace(/\//g, '\n');
-                                              }
+                              <select
+                                value={draftTemplateId || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value || null;
+                                  setDraftTemplateId(val);
+                                  if (val) {
+                                    const targetTpl = templates.find(t => t.id === val);
+                                    if (targetTpl) {
+                                      if (targetTpl.fields) {
+                                        const initialVals = { ...draftTemplateValues };
+                                        targetTpl.fields.forEach(f => {
+                                          if (f.type === 'checklist') {
+                                            if (!initialVals[f.id]) {
+                                              initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
                                             }
-                                          });
-                                          setDraftTemplateValues(initialVals);
-                                        }
-                                        if (targetTpl.checklists && targetTpl.checklists.length > 0) {
-                                          const converted = targetTpl.checklists.map((c, i) => ({
-                                            id: `tcheck_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
-                                            text: typeof c === 'string' ? c : c.text,
-                                            completed: false,
-                                            tag: typeof c === 'object' ? (c.tag || null) : null
-                                          }));
-                                          setDraftChecklists(converted);
-                                        }
+                                          } else {
+                                            if (initialVals[f.id] === undefined && f.placeholder) {
+                                              initialVals[f.id] = f.placeholder.replace(/\//g, '\n');
+                                            }
+                                          }
+                                        });
+                                        setDraftTemplateValues(initialVals);
+                                      }
+                                      if (targetTpl.checklists && targetTpl.checklists.length > 0) {
+                                        const converted = targetTpl.checklists.map((c, i) => ({
+                                          id: `tcheck_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+                                          text: typeof c === 'string' ? c : c.text,
+                                          completed: false,
+                                          tag: typeof c === 'object' ? (c.tag || null) : null
+                                        }));
+                                        setDraftChecklists(converted);
                                       }
                                     }
-                                  }}
-                                  style={{ ...styles.headerCategorySelect, minWidth: '130px', fontWeight: 600, color: draftTemplateId ? '#2563EB' : '#334155' }}
-                                >
-                                  <option value="">기본 텍스트 박스</option>
-                                  {templates.map((tpl) => (
-                                    <option key={tpl.id} value={tpl.id}>
-                                      📋 {tpl.title}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <button
-                                onClick={() => setActiveMainTab('template')}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: '#F8FAFC',
-                                  border: '1px solid #CBD5E1',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  color: '#475569',
-                                  cursor: 'pointer'
+                                  }
                                 }}
-                                title="템플릿 탭으로 이동하여 템플릿 직접 제작"
+                                style={{
+                                  ...styles.headerCategorySelect,
+                                  flex: 1,
+                                  minWidth: 0,
+                                  maxWidth: isMobile ? '135px' : '220px',
+                                  height: isMobile ? '28px' : '32px',
+                                  fontWeight: 600,
+                                  color: draftTemplateId ? '#2563EB' : '#334155'
+                                }}
+                                title="템플릿 선택"
                               >
-                                <Settings size={13} color="#2563EB" />
-                                <span>템플릿 관리</span>
-                              </button>
+                                <option value="">기본 텍스트 박스</option>
+                                {templates.map((tpl) => (
+                                  <option key={tpl.id} value={tpl.id}>
+                                    📋 {tpl.title}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
 
                             {/* Right Controls: Cancel & Save Buttons */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flexShrink: 0 }}>
                               <button
                                 onClick={handleCancelDetailEdit}
-                                style={styles.btnSecondary}
+                                style={{
+                                  ...styles.btnSecondary,
+                                  padding: isMobile ? '4px 8px' : '6px 12px',
+                                  fontSize: isMobile ? '12px' : '13px',
+                                  height: isMobile ? '28px' : '32px'
+                                }}
                               >
-                                <RotateCcw size={13} />
+                                <RotateCcw size={isMobile ? 12 : 13} />
                                 취소
                               </button>
                               <button
                                 onClick={handleSaveDetail}
-                                style={styles.btnPrimary}
+                                style={{
+                                  ...styles.btnPrimary,
+                                  padding: isMobile ? '4px 10px' : '6px 14px',
+                                  fontSize: isMobile ? '12px' : '13px',
+                                  height: isMobile ? '28px' : '32px'
+                                }}
                               >
-                                <Save size={13} />
+                                <Save size={isMobile ? 12 : 13} />
                                 저장
                               </button>
                             </div>
