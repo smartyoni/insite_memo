@@ -404,10 +404,11 @@ export default function NotebookExplorer() {
 
     const sortNodes = (nodes) => {
       nodes.sort((a, b) => {
-        const orderA = typeof a.order === 'number' ? a.order : 0;
-        const orderB = typeof b.order === 'number' ? b.order : 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        const res = nameA.localeCompare(nameB, 'ko-KR', { numeric: true, sensitivity: 'base' });
+        if (res !== 0) return res;
+        return nameA.localeCompare(nameB, 'ko-KR');
       });
       nodes.forEach(n => {
         if (n.children && n.children.length > 0) {
@@ -519,10 +520,11 @@ export default function NotebookExplorer() {
     currentFixedCategory,
     ...filteredCategories
       .sort((a, b) => {
-        const orderA = typeof a.order === 'number' ? a.order : 0;
-        const orderB = typeof b.order === 'number' ? b.order : 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        const res = nameA.localeCompare(nameB, 'ko-KR', { numeric: true, sensitivity: 'base' });
+        if (res !== 0) return res;
+        return nameA.localeCompare(nameB, 'ko-KR');
       }),
     currentFixedTrashCategory
   ];
