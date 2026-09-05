@@ -648,6 +648,10 @@ export default function NotebookExplorer() {
       window.print();
     }, 100);
   };
+  const titleInputRef = useRef(null);
+  const autoEditItemIdRef = useRef(null);
+  const shouldFocusTitleRef = useRef(false);
+
   const [draftCategoryId, setDraftCategoryId] = useState('inbox');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
@@ -1851,6 +1855,14 @@ export default function NotebookExplorer() {
 
   // Sync draft state when active item changes
   useEffect(() => {
+    if (autoEditItemIdRef.current && autoEditItemIdRef.current === selectedItemId) {
+      autoEditItemIdRef.current = null;
+      setIsEditMode(true);
+      setEditingBlockId(null);
+      setIsEditingChecklistDetail(false);
+      return;
+    }
+
     if (activeItem) {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
@@ -1890,6 +1902,25 @@ export default function NotebookExplorer() {
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
   }, [selectedItemId]);
+
+  // Auto-focus title input when entering edit mode for newly created item
+  useEffect(() => {
+    if (isEditMode && shouldFocusTitleRef.current) {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          shouldFocusTitleRef.current = false;
+          clearInterval(interval);
+        } else if (attempts > 10) {
+          shouldFocusTitleRef.current = false;
+          clearInterval(interval);
+        }
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [isEditMode, selectedItemId, mobileView]);
 
   // Sync checklist detail draft when selectedChecklistId changes
   useEffect(() => {
@@ -2125,18 +2156,26 @@ export default function NotebookExplorer() {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
         categoryId: targetInboxId,
-        title: '새 빠른 메모',
+        title: '',
         body: '',
         subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
       setSelectedCategoryId(targetInboxId);
+      autoEditItemIdRef.current = newRef.id;
+      shouldFocusTitleRef.current = true;
       navigateToDetail(newRef.id);
       setDraftCategoryId(targetInboxId);
-      setDraftTitle('새 빠른 메모');
+      setDraftTitle('');
       setDraftBody('');
       setDraftSubBody('');
+      setDraftTemplateId(null);
+      setDraftTemplateValues({});
+      setDraftChecklists([]);
+      setSelectedChecklistId('__main__');
+      setChecklistDetailDraft('');
+      setChecklistDetailBlocks([]);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding quick note:', err);
@@ -2161,17 +2200,25 @@ export default function NotebookExplorer() {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
         categoryId: targetCatId,
-        title: '새 메모',
+        title: '',
         body: '',
         subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      autoEditItemIdRef.current = newRef.id;
+      shouldFocusTitleRef.current = true;
       navigateToDetail(newRef.id);
       setDraftCategoryId(targetCatId);
-      setDraftTitle('새 메모');
+      setDraftTitle('');
       setDraftBody('');
       setDraftSubBody('');
+      setDraftTemplateId(null);
+      setDraftTemplateValues({});
+      setDraftChecklists([]);
+      setSelectedChecklistId('__main__');
+      setChecklistDetailDraft('');
+      setChecklistDetailBlocks([]);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding item:', err);
@@ -4822,6 +4869,7 @@ export default function NotebookExplorer() {
 
                           {/* Standalone Full-Width Title Input Box */}
                           <input
+                            ref={titleInputRef}
                             type="text"
                             value={draftTitle}
                             onChange={(e) => setDraftTitle(e.target.value)}
