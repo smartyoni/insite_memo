@@ -389,14 +389,11 @@ export default function NotebookExplorer() {
 
   // Tree Structure & Hierarchy Helpers
   const buildCategoryTree = (catList) => {
-    const sorted = [...catList].sort((a, b) =>
-      (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' })
-    );
     const nodeMap = new Map();
-    sorted.forEach(c => nodeMap.set(c.id, { ...c, children: [] }));
+    catList.forEach(c => nodeMap.set(c.id, { ...c, children: [] }));
 
     const roots = [];
-    sorted.forEach(c => {
+    catList.forEach(c => {
       const node = nodeMap.get(c.id);
       if (c.parentId && nodeMap.has(c.parentId) && c.parentId !== c.id) {
         nodeMap.get(c.parentId).children.push(node);
@@ -404,6 +401,22 @@ export default function NotebookExplorer() {
         roots.push(node);
       }
     });
+
+    const sortNodes = (nodes) => {
+      nodes.sort((a, b) => {
+        const orderA = typeof a.order === 'number' ? a.order : 0;
+        const orderB = typeof b.order === 'number' ? b.order : 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+      });
+      nodes.forEach(n => {
+        if (n.children && n.children.length > 0) {
+          sortNodes(n.children);
+        }
+      });
+    };
+
+    sortNodes(roots);
     return roots;
   };
 
@@ -505,7 +518,12 @@ export default function NotebookExplorer() {
   const allCategories = [
     currentFixedCategory,
     ...filteredCategories
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' })),
+      .sort((a, b) => {
+        const orderA = typeof a.order === 'number' ? a.order : 0;
+        const orderB = typeof b.order === 'number' ? b.order : 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true, sensitivity: 'base' });
+      }),
     currentFixedTrashCategory
   ];
 
@@ -676,6 +694,8 @@ export default function NotebookExplorer() {
   const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
   const [openGroupMenuId, setOpenGroupMenuId] = useState(null);
   const [openGroupMenuPos, setOpenGroupMenuPos] = useState({ top: 0, right: 0 });
+  const [openCatMenuId, setOpenCatMenuId] = useState(null);
+  const [openCatMenuPos, setOpenCatMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
@@ -1735,6 +1755,21 @@ export default function NotebookExplorer() {
     }
   };
 
+  const handleOpenCatMenu = (e, catId) => {
+    e.stopPropagation();
+    if (openCatMenuId === catId) {
+      setOpenCatMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 190;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenCatMenuPos({ top, right });
+      setOpenCatMenuId(catId);
+    }
+  };
+
   const handleSaveChecklistDetail = async (checkId, blocksToSave) => {
     const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
     const plainText = blocksToPlainText(targetBlocks);
@@ -1898,6 +1933,8 @@ export default function NotebookExplorer() {
       if (e.key === 'Escape') {
         if (movingCategory) {
           setMovingCategory(null);
+        } else if (openCatMenuId) {
+          setOpenCatMenuId(null);
         } else if (openChecklistMenuId) {
           setOpenChecklistMenuId(null);
         } else if (isEditingChecklistDetail) {
@@ -1921,18 +1958,21 @@ export default function NotebookExplorer() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openChecklistMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
+  }, [openChecklistMenuId, openCatMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
 
   useEffect(() => {
-    if (!openChecklistMenuId) return;
-    const handleCloseMenu = () => setOpenChecklistMenuId(null);
+    if (!openChecklistMenuId && !openCatMenuId) return;
+    const handleCloseMenu = () => {
+      setOpenChecklistMenuId(null);
+      setOpenCatMenuId(null);
+    };
     window.addEventListener('resize', handleCloseMenu);
     window.addEventListener('scroll', handleCloseMenu, true);
     return () => {
       window.removeEventListener('resize', handleCloseMenu);
       window.removeEventListener('scroll', handleCloseMenu, true);
     };
-  }, [openChecklistMenuId]);
+  }, [openChecklistMenuId, openCatMenuId]);
 
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
@@ -1990,6 +2030,42 @@ export default function NotebookExplorer() {
       }
     } catch (err) {
       console.error('Error moving category:', err);
+    }
+  };
+
+  const handleMoveCategoryOrder = async (node, direction, siblings) => {
+    setOpenCatMenuId(null);
+    if (!node || !siblings || siblings.length <= 1) return;
+    const currIdx = siblings.findIndex((c) => c.id === node.id);
+    if (currIdx === -1) return;
+
+    let targetIdx;
+    if (direction === 'up') {
+      targetIdx = currIdx - 1;
+    } else if (direction === 'down') {
+      targetIdx = currIdx + 1;
+    } else if (direction === 'top') {
+      targetIdx = 0;
+    } else if (direction === 'bottom') {
+      targetIdx = siblings.length - 1;
+    }
+
+    if (targetIdx === undefined || targetIdx === currIdx || targetIdx < 0 || targetIdx >= siblings.length) return;
+
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(currIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    try {
+      const batch = writeBatch(db);
+      reordered.forEach((cat, index) => {
+        batch.update(doc(db, 'categories', cat.id), {
+          order: index * 10
+        });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Error updating category order:', err);
     }
   };
 
@@ -2839,7 +2915,7 @@ export default function NotebookExplorer() {
     </div>
   );
 
-  const renderCategoryNode = (node, level = 0) => {
+  const renderCategoryNode = (node, level = 0, siblings = [], idx = 0) => {
     const isSelected = node.id === selectedCategoryId;
     const isEditing = node.id === editingCategoryId;
     const count = items.filter((item) => item.categoryId === node.id && !item.isDeleted && !FIXED_TRASH_IDS.includes(item.categoryId)).length;
@@ -2847,6 +2923,8 @@ export default function NotebookExplorer() {
     const isExpanded = expandedFolders[node.id] !== false;
     const isBeingDragged = draggedCategoryId === node.id;
     const isDropTarget = dragOverCategoryId === node.id;
+    const isFirst = idx === 0;
+    const isLast = idx === siblings.length - 1;
 
     return (
       <div key={node.id} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2969,60 +3047,261 @@ export default function NotebookExplorer() {
             </div>
           )}
 
-          <div style={styles.actionGroup}>
-            {/* Add Subfolder [+] */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddingParentId(node.id);
-                setIsAddingCategory(true);
-                setNewCategoryName('');
-                setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
-              }}
-              style={styles.actionBtnDark}
-              title="하위 폴더 추가"
+          {!isEditing && (
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <FolderPlus size={13} />
-            </button>
+              {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }} className="no-print">
+                {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '18px',
+                    height: '24px'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveCategoryOrder(node, 'top', siblings);
+                    }}
+                    disabled={isFirst}
+                    onMouseEnter={(e) => { if (!isFirst) e.currentTarget.style.color = '#2563EB'; }}
+                    onMouseLeave={(e) => { if (!isFirst) e.currentTarget.style.color = '#7C95B1'; }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: isFirst ? '#CBD5E1' : '#7C95B1',
+                      cursor: isFirst ? 'not-allowed' : 'pointer',
+                      padding: 0
+                    }}
+                    title="가장 위로 이동"
+                  >
+                    <ChevronsUp size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveCategoryOrder(node, 'bottom', siblings);
+                    }}
+                    disabled={isLast}
+                    onMouseEnter={(e) => { if (!isLast) e.currentTarget.style.color = '#2563EB'; }}
+                    onMouseLeave={(e) => { if (!isLast) e.currentTarget.style.color = '#7C95B1'; }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: isLast ? '#CBD5E1' : '#7C95B1',
+                      cursor: isLast ? 'not-allowed' : 'pointer',
+                      padding: 0
+                    }}
+                    title="가장 아래로 이동"
+                  >
+                    <ChevronsDown size={12} />
+                  </button>
+                </div>
 
-            {/* Change Parent / Move Folder */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setMovingCategory(node);
-                setTargetMoveParentId(node.parentId || '');
-              }}
-              style={styles.actionBtnDark}
-              title="폴더 이동"
-            >
-              <FolderInput size={13} />
-            </button>
+                {/* 한 칸 위 / 아래로 이동 (우측) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '18px',
+                    height: '24px'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveCategoryOrder(node, 'up', siblings);
+                    }}
+                    disabled={isFirst}
+                    onMouseEnter={(e) => { if (!isFirst) e.currentTarget.style.color = '#2563EB'; }}
+                    onMouseLeave={(e) => { if (!isFirst) e.currentTarget.style.color = '#7C95B1'; }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: isFirst ? '#CBD5E1' : '#7C95B1',
+                      cursor: isFirst ? 'not-allowed' : 'pointer',
+                      padding: 0
+                    }}
+                    title="위로 이동"
+                  >
+                    <Triangle size={8} fill="currentColor" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveCategoryOrder(node, 'down', siblings);
+                    }}
+                    disabled={isLast}
+                    onMouseEnter={(e) => { if (!isLast) e.currentTarget.style.color = '#2563EB'; }}
+                    onMouseLeave={(e) => { if (!isLast) e.currentTarget.style.color = '#7C95B1'; }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: isLast ? '#CBD5E1' : '#7C95B1',
+                      cursor: isLast ? 'not-allowed' : 'pointer',
+                      padding: 0
+                    }}
+                    title="아래로 이동"
+                  >
+                    <Triangle size={8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                  </button>
+                </div>
+              </div>
 
-            {/* Rename */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingCategoryId(node.id);
-                setEditingCategoryName(node.name);
-              }}
-              style={styles.actionBtnDark}
-              title="이름 변경"
-            >
-              <Edit2 size={13} />
-            </button>
+              {/* 3점 메뉴 */}
+              <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenCatMenu(e, node.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: openCatMenuId === node.id ? '#DBEAFE' : 'transparent',
+                    color: openCatMenuId === node.id ? '#2563EB' : '#7C95B1',
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                  title="메뉴"
+                >
+                  <MoreVertical size={14} />
+                </button>
 
-            {/* Delete */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openDeleteCategoryModal(node);
-              }}
-              style={styles.actionBtnDark}
-              title="삭제"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+                {openCatMenuId === node.id && (
+                  <>
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9999,
+                        backgroundColor: 'transparent'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenCatMenuId(null);
+                      }}
+                    />
+                    <div
+                      style={{
+                        ...styles.checklistDropdownMenu,
+                        top: openCatMenuPos?.top ?? 0,
+                        right: openCatMenuPos?.right ?? 0
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCatMenuId(null);
+                          setAddingParentId(node.id);
+                          setIsAddingCategory(true);
+                          setNewCategoryName('');
+                          setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
+                        }}
+                        style={styles.checklistDropdownItem}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <FolderPlus size={14} color="#2563EB" />
+                        <span>하위폴더추가</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCatMenuId(null);
+                          setMovingCategory(node);
+                          setTargetMoveParentId(node.parentId || '');
+                        }}
+                        style={styles.checklistDropdownItem}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <FolderInput size={14} color="#475569" />
+                        <span>폴더이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCatMenuId(null);
+                          setEditingCategoryId(node.id);
+                          setEditingCategoryName(node.name);
+                        }}
+                        style={styles.checklistDropdownItem}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Edit2 size={14} color="#475569" />
+                        <span>수정</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCatMenuId(null);
+                          openDeleteCategoryModal(node);
+                        }}
+                        style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Trash2 size={14} color="#DC2626" />
+                        <span>삭제</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCatMenuId(null)}
+                        style={styles.checklistDropdownItem}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <X size={14} color="#64748B" />
+                        <span>취소</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Subfolders & inline add container with Obsidian-style vertical line */}
@@ -3057,7 +3336,7 @@ export default function NotebookExplorer() {
                 />
               </div>
             )}
-            {hasChildren && node.children.map((child) => renderCategoryNode(child, level + 1))}
+            {hasChildren && node.children.map((child, childIdx) => renderCategoryNode(child, level + 1, node.children, childIdx))}
           </div>
         )}
       </div>
@@ -3302,7 +3581,10 @@ export default function NotebookExplorer() {
                 )}
 
                 {/* Hierarchical category tree nodes */}
-                {buildCategoryTree(filteredCategories).map((node) => renderCategoryNode(node, 0))}
+                {(() => {
+                  const rootNodes = buildCategoryTree(filteredCategories);
+                  return rootNodes.map((node, idx) => renderCategoryNode(node, 0, rootNodes, idx));
+                })()}
 
                 {/* Fixed Trash Category at bottom */}
                 {(() => {
