@@ -390,15 +390,28 @@ export default function NotebookExplorer() {
   // Tree Structure & Hierarchy Helpers
   const buildCategoryTree = (catList) => {
     const nodeMap = new Map();
-    catList.forEach(c => nodeMap.set(c.id, { ...c, children: [] }));
+    catList.forEach(c => {
+      const ord = typeof c.order === 'number' && c.order >= 0 ? c.order : 0;
+      nodeMap.set(c.id, { ...c, order: ord, children: [] });
+    });
 
     const roots = [];
     catList.forEach(c => {
       const node = nodeMap.get(c.id);
-      if (c.parentId && nodeMap.has(c.parentId) && c.parentId !== c.id) {
-        nodeMap.get(c.parentId).children.push(node);
-      } else {
+      const isRoot = (node.order % 10 === 0) || !c.parentId;
+      if (isRoot) {
         roots.push(node);
+      } else {
+        let parentNode = c.parentId ? nodeMap.get(c.parentId) : null;
+        if (!parentNode) {
+          const major = Math.floor(node.order / 10);
+          parentNode = Array.from(nodeMap.values()).find(n => (n.order % 10 === 0) && Math.floor(n.order / 10) === major);
+        }
+        if (parentNode && parentNode.id !== c.id) {
+          parentNode.children.push(node);
+        } else {
+          roots.push(node);
+        }
       }
     });
 
@@ -1983,10 +1996,59 @@ export default function NotebookExplorer() {
     }
     try {
       const currentScope = getScopeForTab(activeMainTab);
+      const scopeCats = categories.filter((c) => {
+        if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
+        if (currentScope === 'explorer') return !c.scope || c.scope === 'explorer';
+        return c.scope === currentScope;
+      });
+
+      let nextOrder = 0;
+      if (addingParentId === null) {
+        // Root Category: find lowest unused major in 0..9
+        const rootCats = scopeCats.filter((c) => (c.order ?? 0) % 10 === 0 || !c.parentId);
+        const usedMajors = new Set(rootCats.map((c) => Math.floor((c.order ?? 0) / 10)));
+        let nextM = -1;
+        for (let m = 0; m <= 9; m++) {
+          if (!usedMajors.has(m)) {
+            nextM = m;
+            break;
+          }
+        }
+        if (nextM === -1) {
+          alert('최상위 카테고리는 최대 10개(0~9)까지만 생성할 수 있습니다.');
+          setIsAddingCategory(false);
+          setAddingParentId(null);
+          return;
+        }
+        nextOrder = nextM * 10;
+      } else {
+        // Subcategory under addingParentId
+        const parentCat = scopeCats.find((c) => c.id === addingParentId);
+        const parentMajor = parentCat ? Math.floor((parentCat.order ?? 0) / 10) : 0;
+        const siblingSubs = scopeCats.filter(
+          (c) => Math.floor((c.order ?? 0) / 10) === parentMajor && (c.order ?? 0) % 10 > 0
+        );
+        const usedMinors = new Set(siblingSubs.map((c) => (c.order ?? 0) % 10));
+        let nextSub = -1;
+        for (let s = 1; s <= 9; s++) {
+          if (!usedMinors.has(s)) {
+            nextSub = s;
+            break;
+          }
+        }
+        if (nextSub === -1) {
+          alert('하위 카테고리는 최대 9개(1~9)까지만 생성할 수 있습니다.');
+          setIsAddingCategory(false);
+          setAddingParentId(null);
+          return;
+        }
+        nextOrder = parentMajor * 10 + nextSub;
+      }
+
       const newRef = doc(collection(db, 'categories'));
       await setDoc(newRef, {
         name: newCategoryName.trim(),
-        order: categories.length,
+        order: nextOrder,
         scope: currentScope,
         parentId: addingParentId || null,
         createdAt: serverTimestamp()
@@ -2033,39 +2095,139 @@ export default function NotebookExplorer() {
     }
   };
 
-  const handleMoveCategoryOrder = async (node, direction, siblings) => {
-    setOpenCatMenuId(null);
-    if (!node || !siblings || siblings.length <= 1) return;
-    const currIdx = siblings.findIndex((c) => c.id === node.id);
-    if (currIdx === -1) return;
+  const handleCategoryOrderNumberChange = async (targetCat, newMajor, newMinor) => {
+    const currentScope = getScopeForTab(activeMainTab);
+    const scopeCats = categories.filter((c) => {
+      if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
+      if (currentScope === 'explorer') return !c.scope || c.scope === 'explorer';
+      return c.scope === currentScope;
+    });
 
-    let targetIdx;
-    if (direction === 'up') {
-      targetIdx = currIdx - 1;
-    } else if (direction === 'down') {
-      targetIdx = currIdx + 1;
-    } else if (direction === 'top') {
-      targetIdx = 0;
-    } else if (direction === 'bottom') {
-      targetIdx = siblings.length - 1;
+    const currOrd = typeof targetCat.order === 'number' && targetCat.order >= 0 ? targetCat.order : 0;
+    const currMajor = Math.floor(currOrd / 10);
+    const currMinor = currOrd % 10;
+
+    if (currMajor === newMajor && currMinor === newMinor) return;
+
+    // SCENARIO 1: Changing to / moving Root Category (newMinor === 0)
+    if (newMinor === 0) {
+      const otherRoots = scopeCats.filter((c) => c.id !== targetCat.id && ((c.order ?? 0) % 10 === 0 || !c.parentId));
+      const conflictRoot = otherRoots.find((c) => Math.floor((c.order ?? 0) / 10) === newMajor);
+
+      const batch = writeBatch(db);
+
+      if (conflictRoot) {
+        const rootsToShift = otherRoots
+          .filter((c) => Math.floor((c.order ?? 0) / 10) >= newMajor)
+          .sort((a, b) => Math.floor((b.order ?? 0) / 10) - Math.floor((a.order ?? 0) / 10));
+
+        const maxMajor = Math.max(...rootsToShift.map((c) => Math.floor((c.order ?? 0) / 10)));
+        if (maxMajor + 1 > 9) {
+          alert('최상위 카테고리는 최대 9번까지만 지정할 수 있어 밀려날 수 없습니다.');
+          return;
+        }
+
+        // Shift existing roots and all their children
+        for (const root of rootsToShift) {
+          const oldM = Math.floor((root.order ?? 0) / 10);
+          const nextM = oldM + 1;
+          batch.update(doc(db, 'categories', root.id), {
+            order: nextM * 10,
+            parentId: null
+          });
+
+          const childrenOfRoot = scopeCats.filter(
+            (child) => child.id !== targetCat.id && (child.parentId === root.id || (Math.floor((child.order ?? 0) / 10) === oldM && (child.order ?? 0) % 10 > 0))
+          );
+          for (const child of childrenOfRoot) {
+            const childMinor = (child.order ?? 0) % 10;
+            batch.update(doc(db, 'categories', child.id), {
+              order: nextM * 10 + childMinor,
+              parentId: root.id
+            });
+          }
+        }
+      }
+
+      // Update targetCat to newMajor * 10
+      batch.update(doc(db, 'categories', targetCat.id), {
+        order: newMajor * 10,
+        parentId: null
+      });
+
+      // If targetCat itself has children, shift its children to newMajor
+      const targetChildren = scopeCats.filter(
+        (child) => child.id !== targetCat.id && (child.parentId === targetCat.id || (Math.floor((child.order ?? 0) / 10) === currMajor && (child.order ?? 0) % 10 > 0))
+      );
+      for (const child of targetChildren) {
+        const childMinor = (child.order ?? 0) % 10;
+        batch.update(doc(db, 'categories', child.id), {
+          order: newMajor * 10 + childMinor,
+          parentId: targetCat.id
+        });
+      }
+
+      try {
+        await batch.commit();
+      } catch (err) {
+        console.error('Error updating category root order:', err);
+      }
+      return;
     }
 
-    if (targetIdx === undefined || targetIdx === currIdx || targetIdx < 0 || targetIdx >= siblings.length) return;
+    // SCENARIO 2: Changing to / moving Subcategory (newMinor > 0)
+    if (newMinor > 0) {
+      const rootForMajor = scopeCats.find(
+        (c) => c.id !== targetCat.id && Math.floor((c.order ?? 0) / 10) === newMajor && ((c.order ?? 0) % 10 === 0 || !c.parentId)
+      );
 
-    const reordered = [...siblings];
-    const [moved] = reordered.splice(currIdx, 1);
-    reordered.splice(targetIdx, 0, moved);
+      if (!rootForMajor) {
+        alert(`상위 카테고리(${newMajor}0)가 존재하지 않습니다. 먼저 ${newMajor}0 최상위 카테고리를 만들어주세요.`);
+        return;
+      }
 
-    try {
+      const otherSubs = scopeCats.filter(
+        (c) => c.id !== targetCat.id && Math.floor((c.order ?? 0) / 10) === newMajor && (c.order ?? 0) % 10 > 0
+      );
+
+      const conflictSub = otherSubs.find((c) => (c.order ?? 0) % 10 === newMinor);
+
       const batch = writeBatch(db);
-      reordered.forEach((cat, index) => {
-        batch.update(doc(db, 'categories', cat.id), {
-          order: index * 10
-        });
+
+      if (conflictSub) {
+        const subsToShift = otherSubs
+          .filter((c) => (c.order ?? 0) % 10 >= newMinor)
+          .sort((a, b) => ((b.order ?? 0) % 10) - ((a.order ?? 0) % 10));
+
+        const maxMinor = Math.max(...subsToShift.map((c) => (c.order ?? 0) % 10));
+        if (maxMinor + 1 > 9) {
+          alert('하위 카테고리는 최대 9번까지만 지정할 수 있어 밀려날 수 없습니다.');
+          return;
+        }
+
+        // Shift subs
+        for (const sub of subsToShift) {
+          const oldSubMinor = (sub.order ?? 0) % 10;
+          const nextSubMinor = oldSubMinor + 1;
+          batch.update(doc(db, 'categories', sub.id), {
+            order: newMajor * 10 + nextSubMinor,
+            parentId: rootForMajor.id
+          });
+        }
+      }
+
+      // Update targetCat
+      batch.update(doc(db, 'categories', targetCat.id), {
+        order: newMajor * 10 + newMinor,
+        parentId: rootForMajor.id
       });
-      await batch.commit();
-    } catch (err) {
-      console.error('Error updating category order:', err);
+
+      try {
+        await batch.commit();
+      } catch (err) {
+        console.error('Error updating category sub order:', err);
+      }
+      return;
     }
   };
 
@@ -2923,6 +3085,9 @@ export default function NotebookExplorer() {
     const isExpanded = expandedFolders[node.id] !== false;
     const isBeingDragged = draggedCategoryId === node.id;
     const isDropTarget = dragOverCategoryId === node.id;
+    const ord = typeof node.order === 'number' && node.order >= 0 && node.order <= 99 ? node.order : 0;
+    const majorDigit = Math.min(9, Math.max(0, Math.floor(ord / 10)));
+    const minorDigit = Math.min(9, Math.max(0, ord % 10));
 
     return (
       <div key={node.id} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -3013,7 +3178,78 @@ export default function NotebookExplorer() {
             <span style={{ width: 14, height: 14, flexShrink: 0 }} />
           )}
 
-          <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
+          {/* 2자리 숫자 선택 박스 ([십의 자리 (0~9)] [일의 자리 (0~9)]) */}
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* 십의 자리 (절대순서 / 메인 그룹) */}
+            <select
+              value={majorDigit}
+              onChange={(e) => handleCategoryOrderNumberChange(node, parseInt(e.target.value, 10), minorDigit)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                width: '24px',
+                height: '22px',
+                padding: '0',
+                fontSize: '12px',
+                fontWeight: 700,
+                textAlign: 'center',
+                textAlignLast: 'center',
+                borderRadius: '4px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: '#FFFFFF',
+                color: isSelected ? '#2563EB' : '#1E293B',
+                cursor: 'pointer',
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
+              title="메인 그룹 순번 (0~9)"
+            >
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <option key={`m_${num}`} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+
+            {/* 일의 자리 (하위 순번: 0은 최상위, 1~9는 하위) */}
+            <select
+              value={minorDigit}
+              onChange={(e) => handleCategoryOrderNumberChange(node, majorDigit, parseInt(e.target.value, 10))}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{
+                width: '24px',
+                height: '22px',
+                padding: '0',
+                fontSize: '12px',
+                fontWeight: 700,
+                textAlign: 'center',
+                textAlignLast: 'center',
+                borderRadius: '4px',
+                border: '1px solid #CBD5E1',
+                backgroundColor: minorDigit === 0 ? '#EFF6FF' : '#FFFFFF',
+                color: minorDigit === 0 ? '#2563EB' : '#475569',
+                cursor: 'pointer',
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
+              title="하위 순번 (0: 최상위, 1~9: 하위)"
+            >
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <option key={`sub_${num}`} value={num}>
+                  {num}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {isEditing ? (
             <input
