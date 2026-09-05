@@ -49,6 +49,7 @@ import {
   GripVertical,
   MoreVertical,
   Search,
+  Triangle,
   Copy
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
@@ -4521,7 +4522,7 @@ export default function NotebookExplorer() {
                                                 }}
                                                 title="그룹 위로 이동"
                                               >
-                                                <ArrowUp size={isMobile ? 15 : 16} />
+                                                <Triangle size={isMobile ? 10 : 11} fill="currentColor" />
                                               </button>
                                               <button
                                                 type="button"
@@ -4544,7 +4545,7 @@ export default function NotebookExplorer() {
                                                 }}
                                                 title="그룹 아래로 이동"
                                               >
-                                                <ArrowDown size={isMobile ? 15 : 16} />
+                                                <Triangle size={isMobile ? 10 : 11} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                                               </button>
                                             </div>
 
@@ -5429,7 +5430,7 @@ onClick={() => {
                                               }}
                                               title="그룹 위로 이동"
                                             >
-                                              <ArrowUp size={isMobile ? 15 : 16} />
+                                              <Triangle size={isMobile ? 10 : 11} fill="currentColor" />
                                             </button>
                                             <button
                                               type="button"
@@ -5452,7 +5453,7 @@ onClick={() => {
                                               }}
                                               title="그룹 아래로 이동"
                                             >
-                                              <ArrowDown size={isMobile ? 15 : 16} />
+                                              <Triangle size={isMobile ? 10 : 11} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                                             </button>
                                           </div>
 
