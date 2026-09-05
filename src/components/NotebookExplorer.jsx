@@ -2458,11 +2458,13 @@ export default function NotebookExplorer() {
       const blocksPlainText = blocksToPlainText(checklistDetailBlocks);
       const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : (blocksPlainText || draftBody);
 
+      const finalTitle = draftTitle.trim() || activeItem?.title || '새 메모';
+      const finalCategoryId = draftCategoryId || activeItem?.categoryId || 'inbox';
       const updatePayload = {
-        title: draftTitle,
+        title: finalTitle,
         body: finalBody,
         subBody: draftSubBody,
-        categoryId: draftCategoryId,
+        categoryId: finalCategoryId,
         templateId: draftTemplateId || null,
         templateValues: draftTemplateValues || {},
         updatedAt: serverTimestamp()
@@ -2508,6 +2510,24 @@ export default function NotebookExplorer() {
     }
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
+  };
+
+  const handleEnterEditMode = () => {
+    if (activeItem) {
+      setDraftTitle(activeItem.title || '');
+      setDraftBody(activeItem.body || '');
+      setDraftSubBody(activeItem.subBody || '');
+      setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftTemplateId(activeItem.templateId || null);
+      setDraftTemplateValues(activeItem.templateValues || {});
+      setDraftChecklists(activeItem.checklists || []);
+      const initialText = activeItem.body || '';
+      const initialBlocks = activeItem.detailBlocks;
+      setChecklistDetailDraft(initialText);
+      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocks));
+    }
+    setSelectedChecklistId('__main__');
+    setIsEditMode(true);
   };
 
   const handleTabSwitch = (targetTab) => {
@@ -5215,10 +5235,7 @@ onClick={() => {
                               </span>
                             )}
                             <button
-                              onClick={() => {
-                                setSelectedChecklistId('__main__');
-                                setIsEditMode(true);
-                              }}
+                              onClick={handleEnterEditMode}
                               style={styles.btnPrimary}
                               title="메모 기본정보 및 템플릿 수정"
                             >
@@ -5866,7 +5883,7 @@ onClick={() => {
                                   <span>인쇄</span>
                                 </button>
                                 <button
-                                  onClick={() => setIsEditMode(true)}
+                                  onClick={handleEnterEditMode}
                                   style={styles.btnPrimary}
                                 >
                                   <Edit2 size={13} />
