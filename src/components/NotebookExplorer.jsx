@@ -4392,7 +4392,7 @@ export default function NotebookExplorer() {
                                       padding: isMobile ? '4px 2px' : '8px',
                                       backgroundColor: '#F8FAFC',
                                       borderRadius: isMobile ? '6px' : '10px',
-                                      border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
+                                      border: '2px solid #94A3B8',
                                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                                       marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
                                       marginLeft: 0,
@@ -4406,29 +4406,6 @@ export default function NotebookExplorer() {
                                     {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
                                     {group.section && (
                                       <div
-                                        draggable={!isSecEditing}
-                                        onDragStart={(e) => {
-                                          if (isSecEditing) return;
-                                          setDraggedNoteChecklistId(group.section.id);
-                                          e.dataTransfer.effectAllowed = 'move';
-                                          e.dataTransfer.setData('text/plain', group.section.id);
-                                        }}
-                                        onDragOver={(e) => {
-                                          if (isSecEditing) return;
-                                          e.preventDefault();
-                                          e.dataTransfer.dropEffect = 'move';
-                                          if (dragOverNoteChecklistId !== group.section.id) {
-                                            setDragOverNoteChecklistId(group.section.id);
-                                          }
-                                        }}
-                                        onDrop={(e) => {
-                                          if (isSecEditing) return;
-                                          handleNoteChecklistDrop(e, group.section.id);
-                                        }}
-                                        onDragEnd={() => {
-                                          setDraggedNoteChecklistId(null);
-                                          setDragOverNoteChecklistId(null);
-                                        }}
                                         style={{
                                           display: 'flex',
                                           alignItems: 'center',
@@ -4441,7 +4418,6 @@ export default function NotebookExplorer() {
                                           border: '1px solid #CBD5E1',
                                           borderRadius: isMobile ? '5px' : '8px',
                                           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                                          opacity: isSecDragged ? 0.4 : 1,
                                           cursor: isSecEditing ? 'default' : 'pointer',
                                           userSelect: 'none'
                                         }}
@@ -4519,10 +4495,60 @@ export default function NotebookExplorer() {
 
                                         {!isSecEditing && (
                                           <div
-                                            style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            {/* Group 3-dot Menu */}
+                                            {/* 이동용 화살표 (위 / 아래) */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }} className="no-print">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleMoveGroup(group.section.id, 'up');
+                                                }}
+                                                disabled={isFirstGroup}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: isMobile ? '24px' : '26px',
+                                                  borderRadius: '4px',
+                                                  border: 'none',
+                                                  backgroundColor: 'transparent',
+                                                  color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                  cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                }}
+                                                title="그룹 위로 이동"
+                                              >
+                                                <ArrowUp size={isMobile ? 15 : 16} />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleMoveGroup(group.section.id, 'down');
+                                                }}
+                                                disabled={isLastGroup}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: isMobile ? '24px' : '26px',
+                                                  borderRadius: '4px',
+                                                  border: 'none',
+                                                  backgroundColor: 'transparent',
+                                                  color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                  cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                }}
+                                                title="그룹 아래로 이동"
+                                              >
+                                                <ArrowDown size={isMobile ? 15 : 16} />
+                                              </button>
+                                            </div>
+
+                                            {/* Group 3-dot Menu (가장 우측) */}
                                             <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                               <button
                                                 type="button"
@@ -4569,30 +4595,6 @@ export default function NotebookExplorer() {
                                                     }}
                                                     onClick={(e) => e.stopPropagation()}
                                                   >
-                                                    {!isFirstGroup && (
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleMoveGroup(group.section.id, 'up')}
-                                                        style={styles.checklistDropdownItem}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                      >
-                                                        <ArrowUp size={14} color="#475569" />
-                                                        <span>위로 이동</span>
-                                                      </button>
-                                                    )}
-                                                    {!isLastGroup && (
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleMoveGroup(group.section.id, 'down')}
-                                                        style={styles.checklistDropdownItem}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                      >
-                                                        <ArrowDown size={14} color="#475569" />
-                                                        <span>아래로 이동</span>
-                                                      </button>
-                                                    )}
                                                     <button
                                                       type="button"
                                                       onClick={() => {
@@ -4650,13 +4652,6 @@ export default function NotebookExplorer() {
                                                   </div>
                                                 </>
                                               )}
-                                            </div>
-
-                                            <div
-                                              title="드래그하여 그룹 순서 이동"
-                                              style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
-                                            >
-                                              <GripVertical size={14} />
                                             </div>
                                           </div>
                                         )}
@@ -5303,7 +5298,7 @@ onClick={() => {
                                     padding: isMobile ? '4px 2px' : '8px',
                                     backgroundColor: '#F8FAFC',
                                     borderRadius: isMobile ? '6px' : '10px',
-                                    border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
+                                    border: '2px solid #94A3B8',
                                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
                                     marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
                                     marginLeft: 0,
@@ -5317,29 +5312,6 @@ onClick={() => {
                                   {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
                                   {group.section && (
                                     <div
-                                      draggable={!isSecEditing}
-                                      onDragStart={(e) => {
-                                        if (isSecEditing) return;
-                                        setDraggedNoteChecklistId(group.section.id);
-                                        e.dataTransfer.effectAllowed = 'move';
-                                        e.dataTransfer.setData('text/plain', group.section.id);
-                                      }}
-                                      onDragOver={(e) => {
-                                        if (isSecEditing) return;
-                                        e.preventDefault();
-                                        e.dataTransfer.dropEffect = 'move';
-                                        if (dragOverNoteChecklistId !== group.section.id) {
-                                          setDragOverNoteChecklistId(group.section.id);
-                                        }
-                                      }}
-                                      onDrop={(e) => {
-                                        if (isSecEditing) return;
-                                        handleNoteChecklistDrop(e, group.section.id);
-                                      }}
-                                      onDragEnd={() => {
-                                        setDraggedNoteChecklistId(null);
-                                        setDragOverNoteChecklistId(null);
-                                      }}
                                       style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -5352,7 +5324,6 @@ onClick={() => {
                                         border: '1px solid #CBD5E1',
                                         borderRadius: isMobile ? '5px' : '8px',
                                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                                        opacity: isSecDragged ? 0.4 : 1,
                                         cursor: isSecEditing ? 'default' : 'pointer',
                                         userSelect: 'none'
                                       }}
@@ -5432,10 +5403,60 @@ onClick={() => {
                                       {/* 우측: 완료 배지 & 수정/삭제 & 드래그 핸들 */}
                                       {!isSecEditing && (
                                         <div
-                                          style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          {/* Group 3-dot Menu */}
+                                          {/* 이동용 화살표 (위 / 아래) */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }} className="no-print">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMoveGroup(group.section.id, 'up');
+                                              }}
+                                              disabled={isFirstGroup}
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: isMobile ? '24px' : '26px',
+                                                height: isMobile ? '24px' : '26px',
+                                                borderRadius: '4px',
+                                                border: 'none',
+                                                backgroundColor: 'transparent',
+                                                color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                              }}
+                                              title="그룹 위로 이동"
+                                            >
+                                              <ArrowUp size={isMobile ? 15 : 16} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMoveGroup(group.section.id, 'down');
+                                              }}
+                                              disabled={isLastGroup}
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: isMobile ? '24px' : '26px',
+                                                height: isMobile ? '24px' : '26px',
+                                                borderRadius: '4px',
+                                                border: 'none',
+                                                backgroundColor: 'transparent',
+                                                color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                              }}
+                                              title="그룹 아래로 이동"
+                                            >
+                                              <ArrowDown size={isMobile ? 15 : 16} />
+                                            </button>
+                                          </div>
+
+                                          {/* Group 3-dot Menu (가장 우측) */}
                                           <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                             <button
                                               type="button"
@@ -5482,31 +5503,7 @@ onClick={() => {
                                                   }}
                                                   onClick={(e) => e.stopPropagation()}
                                                 >
-                                                  {!isFirstGroup && (
-                                                   <button
-                                                     type="button"
-                                                     onClick={() => handleMoveGroup(group.section.id, 'up')}
-                                                     style={styles.checklistDropdownItem}
-                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                   >
-                                                     <ArrowUp size={14} color="#475569" />
-                                                     <span>위로 이동</span>
-                                                   </button>
-                                                 )}
-                                                 {!isLastGroup && (
-                                                   <button
-                                                     type="button"
-                                                     onClick={() => handleMoveGroup(group.section.id, 'down')}
-                                                     style={styles.checklistDropdownItem}
-                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                   >
-                                                     <ArrowDown size={14} color="#475569" />
-                                                     <span>아래로 이동</span>
-                                                   </button>
-                                                 )}
-                                                 <button
+                                                  <button
                                                     type="button"
                                                     onClick={() => {
                                                       setOpenGroupMenuId(null);
@@ -5563,13 +5560,6 @@ onClick={() => {
                                                 </div>
                                               </>
                                             )}
-                                          </div>
-
-                                          <div
-                                            title="드래그하여 그룹 순서 이동"
-                                            style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
-                                          >
-                                            <GripVertical size={14} />
                                           </div>
                                         </div>
                                       )}
