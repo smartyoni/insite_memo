@@ -482,6 +482,7 @@ export default function NotebookExplorer() {
   const exitToastTimerRef = useRef(null);
   const touchStartXRef = useRef(null);
   const touchStartYRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   // Category inline editing states & hierarchy states
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -2775,11 +2776,14 @@ export default function NotebookExplorer() {
     <div style={styles.appContainer}>
       {/* Pane 1: Category Sidebar (Pastel Blue, 280px or 100% on Mobile) */}
       {(!isMobile || mobileView === 'categories') && (
-        <div style={{
-          ...styles.pane1,
-          width: isMobile ? '100%' : '280px',
-          minWidth: isMobile ? '100%' : '280px'
-        }}>
+        <div
+          ref={sidebarRef}
+          style={{
+            ...styles.pane1,
+            width: isMobile ? '100%' : '280px',
+            minWidth: isMobile ? '100%' : '280px'
+          }}
+        >
           {/* Main Mode Tab Switcher & Header for Desktop */}
           {!isMobile && renderMainModeBar()}
 
@@ -6171,8 +6175,27 @@ onClick={() => {
 
       {/* Category Move Modal (Mobile & Desktop) */}
       {movingCategory && (
-        <div style={styles.modalOverlay} onClick={() => setMovingCategory(null)}>
-          <div style={{ ...styles.modalContent, maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <div
+          style={{
+            ...styles.modalOverlay,
+            display: 'block'
+          }}
+          onClick={() => setMovingCategory(null)}
+        >
+          <div
+            style={{
+              ...styles.modalContent,
+              position: 'absolute',
+              top: '33.33%',
+              left: isMobile ? '50%' : `${sidebarRef.current?.getBoundingClientRect().right || 280}px`,
+              transform: isMobile ? 'translate(-50%, -50%)' : 'translateY(-50%)',
+              width: isMobile ? '90%' : '380px',
+              maxWidth: '400px',
+              border: '1px solid #E2E8F0',
+              margin: 0
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
