@@ -4025,7 +4025,10 @@ export default function NotebookExplorer() {
 
               {/* Content Body - Split 2-pane Workspace (Touch Swipe enabled) */}
               <div
-                style={styles.pane3Body}
+                style={{
+                  ...styles.pane3Body,
+                  ...(isMobile ? { padding: '4px 2px 2px 2px' } : {})
+                }}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
               >
@@ -4034,7 +4037,13 @@ export default function NotebookExplorer() {
                     {/* Split Edit Textarea Fields (Desktop: 2 Cards side-by-side, Mobile: 1 Full Card by SubTab) */}
                     <div style={styles.splitEditFields}>
                       {(!isMobile || mobileSubTab === 'main') && (
-                        <div style={styles.editPaneMainCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
+                        <div
+                          style={{
+                            ...styles.editPaneMainCard,
+                            ...(isMobile ? { padding: '8px 2px', borderRadius: '4px' } : {})
+                          }}
+                          className={printTarget === 'checklist' ? 'print-area' : 'no-print'}
+                        >
                           {/* Top Control Bar: Category Selector + Template Selector + Cancel/Save Buttons */}
                           <div style={{
                             display: 'flex',
@@ -4044,7 +4053,9 @@ export default function NotebookExplorer() {
                             marginBottom: '10px',
                             paddingBottom: '8px',
                             borderBottom: '1px solid #F1F5F9',
-                            flexWrap: 'wrap'
+                            flexWrap: 'wrap',
+                            paddingLeft: isMobile ? '4px' : '0',
+                            paddingRight: isMobile ? '4px' : '0'
                           }}>
                             {/* Left Controls: Category & Template Selectors */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -4170,7 +4181,9 @@ export default function NotebookExplorer() {
                             justifyContent: 'space-between',
                             paddingBottom: '8px',
                             marginBottom: '10px',
-                            borderBottom: '1px solid #E2E8F0'
+                            borderBottom: '1px solid #E2E8F0',
+                            paddingLeft: isMobile ? '4px' : '0',
+                            paddingRight: isMobile ? '4px' : '0'
                           }} className="no-print">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
                               <ListChecks size={16} color="#2563EB" />
@@ -4200,7 +4213,10 @@ export default function NotebookExplorer() {
                           </div>
 
                           {/* Input Form for new checklist item or section */}
-                          <div style={styles.checklistInputContainer} className="no-print">
+                          <div style={{
+                            ...styles.checklistInputContainer,
+                            ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
+                          }} className="no-print">
                             <div style={styles.checklistInputGroup}>
                               <textarea
                                 rows={2}
@@ -4238,7 +4254,10 @@ export default function NotebookExplorer() {
                           </div>
 
                           {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
-                          <div style={styles.checklistListContainer}>
+                          <div style={{
+                            ...styles.checklistListContainer,
+                            ...(isMobile ? { padding: '2px 0 6px 0' } : {})
+                          }}>
                             {currentChecklists.length === 0 ? (
                               <div style={styles.checklistEmptyText}>
                                 등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
@@ -4256,17 +4275,19 @@ export default function NotebookExplorer() {
                                     style={group.section ? {
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      gap: '6px',
-                                      padding: '8px',
+                                      gap: isMobile ? '4px' : '6px',
+                                      padding: isMobile ? '4px 2px' : '8px',
                                       backgroundColor: '#F8FAFC',
-                                      borderRadius: '10px',
+                                      borderRadius: isMobile ? '6px' : '10px',
                                       border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
                                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-                                      marginTop: groupIdx === 0 ? '0' : '8px'
+                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
+                                      marginLeft: 0,
+                                      marginRight: 0
                                     } : {
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      gap: '8px'
+                                      gap: isMobile ? '4px' : '8px'
                                     }}
                                   >
                                     {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
@@ -4299,13 +4320,13 @@ export default function NotebookExplorer() {
                                           display: 'flex',
                                           alignItems: 'center',
                                           justifyContent: 'space-between',
-                                          gap: '8px',
-                                          padding: '7px 10px',
+                                          gap: isMobile ? '4px' : '8px',
+                                          padding: isMobile ? '5px 4px' : '7px 10px',
                                           marginTop: '0',
                                           marginBottom: isSecCollapsed ? '0' : '2px',
                                           backgroundColor: '#EEF2F6',
                                           border: '1px solid #CBD5E1',
-                                          borderRadius: '8px',
+                                          borderRadius: isMobile ? '5px' : '8px',
                                           boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                                           opacity: isSecDragged ? 0.4 : 1,
                                           cursor: isSecEditing ? 'default' : 'pointer',
@@ -4385,7 +4406,7 @@ export default function NotebookExplorer() {
 
                                         {!isSecEditing && (
                                           <div
-                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
                                             {group.groupTotalCount > 0 && (
@@ -4394,7 +4415,7 @@ export default function NotebookExplorer() {
                                                 fontWeight: 700,
                                                 color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
                                                 backgroundColor: '#FFFFFF',
-                                                padding: '1px 7px',
+                                                padding: isMobile ? '1px 5px' : '1px 7px',
                                                 borderRadius: '10px',
                                                 border: '1px solid #E2E8F0'
                                               }}>
@@ -4411,7 +4432,7 @@ export default function NotebookExplorer() {
                                                 border: '1px solid #CBD5E1',
                                                 backgroundColor: '#FFFFFF',
                                                 cursor: 'pointer',
-                                                padding: '2px 7px',
+                                                padding: isMobile ? '2px 5px' : '2px 7px',
                                                 color: '#2563EB',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
@@ -4433,7 +4454,7 @@ export default function NotebookExplorer() {
                                                 border: 'none',
                                                 background: 'transparent',
                                                 cursor: 'pointer',
-                                                padding: '2px 4px',
+                                                padding: isMobile ? '2px' : '2px 4px',
                                                 color: '#64748B',
                                                 borderRadius: '3px'
                                               }}
@@ -4454,7 +4475,7 @@ export default function NotebookExplorer() {
                                                 border: 'none',
                                                 background: 'transparent',
                                                 cursor: 'pointer',
-                                                padding: '2px 4px',
+                                                padding: isMobile ? '2px' : '2px 4px',
                                                 color: '#EF4444',
                                                 borderRadius: '3px'
                                               }}
@@ -4464,7 +4485,7 @@ export default function NotebookExplorer() {
                                             </button>
                                             <div
                                               title="드래그하여 그룹 순서 이동"
-                                              style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 2px' }}
+                                              style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
                                             >
                                               <GripVertical size={14} />
                                             </div>
@@ -4475,7 +4496,7 @@ export default function NotebookExplorer() {
 
                                     {/* 하위 항목들 */}
                                     {!isSecCollapsed && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '4px' : '8px' }}>
                                         {group.sortedItems.map((checkItem) => {
                                           const isEditing = editingCheckId === checkItem.id;
                                           const isSelected = selectedChecklistId === checkItem.id;
@@ -4517,6 +4538,10 @@ export default function NotebookExplorer() {
                                               }}
                                               style={{
                                                 ...styles.checklistItemRow,
+                                                ...(isMobile ? {
+                                                  padding: '6px 4px',
+                                                  borderRadius: '5px'
+                                                } : {}),
                                                 backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
                                                 border: isDragOver
                                                   ? '1.5px solid #2563EB'
@@ -4579,10 +4604,10 @@ onClick={() => {
                                                   alignItems: 'center',
                                                   justifyContent: 'space-between',
                                                   width: '100%',
-                                                  gap: '8px',
-                                                  minHeight: '26px'
+                                                  gap: isMobile ? '4px' : '8px',
+                                                  minHeight: isMobile ? '24px' : '26px'
                                                 }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flex: 1, minWidth: 0 }}>
                                                     {canDrag && (
                                                       <span
                                                         style={{
@@ -4633,8 +4658,8 @@ onClick={() => {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        width: '28px',
-                                                        height: '28px',
+                                                        width: isMobile ? '24px' : '28px',
+                                                        height: isMobile ? '24px' : '28px',
                                                         borderRadius: '6px',
                                                         border: 'none',
                                                         backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
@@ -4643,7 +4668,7 @@ onClick={() => {
                                                       }}
                                                       title="메뉴"
                                                     >
-                                                      <MoreVertical size={16} />
+                                                      <MoreVertical size={isMobile ? 15 : 16} />
                                                     </button>
 
                                                     {openChecklistMenuId === checkItem.id && (
@@ -4968,7 +4993,13 @@ onClick={() => {
                   <div style={styles.splitReadContainer}>
                     {/* Left Card: Standalone Checklist Master Card */}
                     {(!isMobile || mobileSubTab === 'main') && (
-                      <div style={styles.leftPaneCard} className={printTarget === 'checklist' ? 'print-area' : 'no-print'}>
+                      <div
+                        style={{
+                          ...styles.leftPaneCard,
+                          ...(isMobile ? { padding: '8px 2px', borderRadius: '4px' } : {})
+                        }}
+                        className={printTarget === 'checklist' ? 'print-area' : 'no-print'}
+                      >
                         {/* Title Header Line with Right-aligned Controls */}
                         <div style={{
                           display: 'flex',
@@ -4977,7 +5008,9 @@ onClick={() => {
                           gap: '12px',
                           marginBottom: '10px',
                           paddingBottom: '10px',
-                          borderBottom: '1px solid #F1F5F9'
+                          borderBottom: '1px solid #F1F5F9',
+                          paddingLeft: isMobile ? '4px' : '0',
+                          paddingRight: isMobile ? '4px' : '0'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                             {isMobile && (
@@ -5033,7 +5066,10 @@ onClick={() => {
 
 
                         {/* Input Form for new multiline checklist item or section */}
-                        <div style={styles.checklistInputContainer} className="no-print">
+                        <div style={{
+                          ...styles.checklistInputContainer,
+                          ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
+                        }} className="no-print">
                           <div style={styles.checklistInputGroup}>
                             <textarea
                               rows={2}
@@ -5071,7 +5107,10 @@ onClick={() => {
                         </div>
 
                         {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
-                        <div style={styles.checklistListContainer}>
+                        <div style={{
+                          ...styles.checklistListContainer,
+                          ...(isMobile ? { padding: '2px 0 6px 0' } : {})
+                        }}>
                           {currentChecklists.length === 0 ? (
                             <div style={styles.checklistEmptyText}>
                               등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
@@ -5089,17 +5128,19 @@ onClick={() => {
                                   style={group.section ? {
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: '6px',
-                                    padding: '8px',
+                                    gap: isMobile ? '4px' : '6px',
+                                    padding: isMobile ? '4px 2px' : '8px',
                                     backgroundColor: '#F8FAFC',
-                                    borderRadius: '10px',
+                                    borderRadius: isMobile ? '6px' : '10px',
                                     border: isSecDragOver ? '2px solid #2563EB' : '2px solid #94A3B8',
                                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-                                    marginTop: groupIdx === 0 ? '0' : '8px'
+                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
+                                    marginLeft: 0,
+                                    marginRight: 0
                                   } : {
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: '8px'
+                                    gap: isMobile ? '4px' : '8px'
                                   }}
                                 >
                                   {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
@@ -5132,13 +5173,13 @@ onClick={() => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
-                                        gap: '8px',
-                                        padding: '7px 10px',
+                                        gap: isMobile ? '4px' : '8px',
+                                        padding: isMobile ? '5px 4px' : '7px 10px',
                                         marginTop: '0',
                                         marginBottom: isSecCollapsed ? '0' : '2px',
                                         backgroundColor: '#EEF2F6',
                                         border: '1px solid #CBD5E1',
-                                        borderRadius: '8px',
+                                        borderRadius: isMobile ? '5px' : '8px',
                                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                                         opacity: isSecDragged ? 0.4 : 1,
                                         cursor: isSecEditing ? 'default' : 'pointer',
@@ -5220,7 +5261,7 @@ onClick={() => {
                                       {/* 우측: 완료 배지 & 수정/삭제 & 드래그 핸들 */}
                                       {!isSecEditing && (
                                         <div
-                                          style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '6px', flexShrink: 0 }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           {group.groupTotalCount > 0 && (
@@ -5229,7 +5270,7 @@ onClick={() => {
                                               fontWeight: 700,
                                               color: group.groupCompletedCount === group.groupTotalCount ? '#16A34A' : '#475569',
                                               backgroundColor: '#FFFFFF',
-                                              padding: '1px 7px',
+                                              padding: isMobile ? '1px 5px' : '1px 7px',
                                               borderRadius: '10px',
                                               border: '1px solid #E2E8F0'
                                             }}>
@@ -5246,7 +5287,7 @@ onClick={() => {
                                               border: '1px solid #CBD5E1',
                                               backgroundColor: '#FFFFFF',
                                               cursor: 'pointer',
-                                              padding: '2px 7px',
+                                              padding: isMobile ? '2px 5px' : '2px 7px',
                                               color: '#2563EB',
                                               fontSize: '11px',
                                               fontWeight: 600,
@@ -5268,7 +5309,7 @@ onClick={() => {
                                               border: 'none',
                                               background: 'transparent',
                                               cursor: 'pointer',
-                                              padding: '2px 4px',
+                                              padding: isMobile ? '2px' : '2px 4px',
                                               color: '#64748B',
                                               borderRadius: '3px'
                                             }}
@@ -5289,17 +5330,17 @@ onClick={() => {
                                               border: 'none',
                                               background: 'transparent',
                                               cursor: 'pointer',
-                                              padding: '2px 4px',
+                                              padding: isMobile ? '2px' : '2px 4px',
                                               color: '#EF4444',
                                               borderRadius: '3px'
                                             }}
-                                            title="그룹 삭제"
+                                              title="그룹 삭제"
                                           >
                                             <Trash2 size={13} />
                                           </button>
                                           <div
                                             title="드래그하여 그룹 순서 이동"
-                                            style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 2px' }}
+                                            style={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: '#94A3B8', padding: '0 1px' }}
                                           >
                                             <GripVertical size={14} />
                                           </div>
@@ -5310,7 +5351,7 @@ onClick={() => {
 
                                   {/* 그룹 하위 체크리스트 항목들 (접혀있지 않을 때만 렌더링) */}
                                   {!isSecCollapsed && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '4px' : '8px' }}>
                                       {group.sortedItems.map((checkItem) => {
                                         const isEditing = editingCheckId === checkItem.id;
                                         const isSelected = selectedChecklistId === checkItem.id;
@@ -5352,6 +5393,10 @@ onClick={() => {
                                             }}
                                             style={{
                                               ...styles.checklistItemRow,
+                                              ...(isMobile ? {
+                                                padding: '6px 4px',
+                                                borderRadius: '5px'
+                                              } : {}),
                                               backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
                                               border: isDragOver
                                                 ? '1.5px solid #2563EB'
@@ -5414,11 +5459,11 @@ onClick={() => {
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 width: '100%',
-                                                gap: '8px',
-                                                minHeight: '26px'
+                                                gap: isMobile ? '4px' : '8px',
+                                                minHeight: isMobile ? '24px' : '26px'
                                               }}>
                                                 {/* Left Row: Drag Handle + Checkbox + Pure Text */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flex: 1, minWidth: 0 }}>
                                                   {canDrag && (
                                                     <span
                                                       style={{
@@ -5470,8 +5515,8 @@ onClick={() => {
                                                       display: 'inline-flex',
                                                       alignItems: 'center',
                                                       justifyContent: 'center',
-                                                      width: '28px',
-                                                      height: '28px',
+                                                      width: isMobile ? '24px' : '28px',
+                                                      height: isMobile ? '24px' : '28px',
                                                       borderRadius: '6px',
                                                       border: 'none',
                                                       backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
@@ -5480,7 +5525,7 @@ onClick={() => {
                                                     }}
                                                     title="메뉴"
                                                   >
-                                                    <MoreVertical size={16} />
+                                                    <MoreVertical size={isMobile ? 15 : 16} />
                                                   </button>
 
                                                   {openChecklistMenuId === checkItem.id && (
