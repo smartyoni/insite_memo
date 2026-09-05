@@ -323,7 +323,7 @@ export default function NotebookExplorer() {
       blog: '블로그',
       clipboard: '계약',
       balance: '앱개발',
-      clip: '클립',
+      clip: '북마크',
       office: '사무실',
       ad: '광고'
     };
@@ -2485,7 +2485,7 @@ export default function NotebookExplorer() {
         </button>
       </div>
 
-      {/* Bottom Row: 계약, 광고, 클립, 템플릿 */}
+      {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
         <button
           onClick={() => handleTabSwitch('clipboard')}
@@ -2521,7 +2521,7 @@ export default function NotebookExplorer() {
             fontWeight: activeMainTab === 'clip' ? 700 : 500
           }}
         >
-          <span>클립</span>
+          <span>북마크</span>
         </button>
         <button
           onClick={() => handleTabSwitch('template')}

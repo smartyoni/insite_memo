@@ -60,7 +60,7 @@ const scopeNameMap = {
   blog: "블로그",
   clipboard: "계약",
   balance: "앱개발",
-  clip: "클립",
+  clip: "북마크",
   office: "사무실",
   ad: "광고"
 };
