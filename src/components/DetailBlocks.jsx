@@ -986,6 +986,9 @@ export const DetailBlocksManager = ({
         }
 
         const isEditingThisBlock = editingBlockId === block.id;
+        const isFirstBlock = idx === 0;
+        const isLastBlock = idx === blocks.length - 1;
+        const isCollapsed = Boolean(collapsedBlockIds[block.id]);
 
         return (
           <div
@@ -994,35 +997,45 @@ export const DetailBlocksManager = ({
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: isEditingThisBlock ? '#FFFFFF' : '#F8FAFC',
-              borderRadius: '10px',
-              border: isEditingThisBlock ? '1.5px solid #3B82F6' : '1px solid #E2E8F0',
+              borderRadius: '8px',
+              border: isEditingThisBlock ? '1.5px solid #3B82F6' : '1px solid #CBD5E1',
               boxShadow: isEditingThisBlock
                 ? '0 0 0 2px rgba(59, 130, 246, 0.15)'
-                : '0 1px 2px rgba(0,0,0,0.02)',
+                : '0 1px 3px rgba(0, 0, 0, 0.04)',
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
             }}
           >
-            {/* 카드 상단 헤더 바 (텍스트박스 이름 영역 + 컨트롤): Sticky로 상시 고정 */}
+            {/* 카드 상단 헤더 바 (체크 그룹헤더와 동일한 구조/기능): Sticky 상시 고정 */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '7px 12px',
-                backgroundColor: isEditingThisBlock ? '#EFF6FF' : '#F1F5F9',
-                borderBottom: isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #E2E8F0',
+                padding: '8px 12px',
+                backgroundColor: isEditingThisBlock ? '#EFF6FF' : '#EEF2F6',
+                borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #CBD5E1'),
+                cursor: isEditingThisBlock ? 'default' : 'pointer',
+                userSelect: 'none',
                 position: 'sticky',
                 top: 0,
                 zIndex: 5,
                 flexShrink: 0
               }}
+              onClick={() => {
+                if (!isEditingThisBlock) {
+                  toggleBlockCollapse(block.id);
+                }
+              }}
             >
-              {/* 좌측: 텍스트 박스 이름 (수정 시 input, 평상시 표시) */}
+              {/* 좌측: 토글 화살표 + 아이콘 + 텍스트 이름 */}
               {isEditingThisBlock ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}>
-                  <Type size={13} color="#2563EB" style={{ flexShrink: 0 }} />
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Type size={14} color="#2563EB" style={{ flexShrink: 0 }} />
                   <input
                     ref={titleInputRef}
                     type="text"
@@ -1037,255 +1050,452 @@ export const DetailBlocksManager = ({
                         handleCancelEdit();
                       }
                     }}
-                    placeholder="텍스트박스 이름 입력... (예: 계약조건, 전달사항)"
+                    placeholder="텍스트 이름 입력... (예: 계약조건, 전달사항)"
                     style={{
-                      fontSize: '12px',
+                      flex: 1,
+                      fontSize: '13px',
                       fontWeight: 700,
                       color: '#1E293B',
-                      padding: '3px 8px',
-                      borderRadius: '5px',
-                      border: '1px solid #93C5FD',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid #2563EB',
                       outline: 'none',
                       backgroundColor: '#FFFFFF',
+                      minWidth: 0
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveBlock(block.id)}
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      backgroundColor: '#2563EB',
+                      color: '#FFFFFF',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    저장
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #CBD5E1',
+                      backgroundColor: '#FFFFFF',
+                      color: '#64748B',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    취소
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flex: 1,
+                    minWidth: 0
+                  }}
+                >
+                  <span
+                    style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                    title={isCollapsed ? '펼치기' : '접기'}
+                  >
+                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  </span>
+                  <Type size={14} color="#2563EB" style={{ flexShrink: 0 }} />
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: block.title && block.title.trim() ? '#1E293B' : '#94A3B8',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
+                      handleStartEdit(block);
+                    }}
+                    title="더블클릭하여 이름 및 내용 수정"
+                  >
+                    {block.title && block.title.trim() ? block.title : '텍스트'}
+                  </span>
+                  {isCollapsed && (
+                    <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                      (접힘)
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 우측: 위치이동 화살표 2단 세트 & 3점 메뉴 (수정 중이 아닐 때) */}
+              {!isEditingThisBlock && (
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="no-print">
+                    {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '22px',
+                        height: '26px'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToTop(idx);
+                        }}
+                        disabled={isFirstBlock}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="가장 위로 이동"
+                      >
+                        <ChevronsUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToBottom(idx);
+                        }}
+                        disabled={isLastBlock}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="가장 아래로 이동"
+                      >
+                        <ChevronsDown size={13} />
+                      </button>
+                    </div>
+
+                    {/* 한 칸 위 / 아래로 이동 (우측) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '22px',
+                        height: '26px'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveUp(idx);
+                        }}
+                        disabled={isFirstBlock}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="위로 이동"
+                      >
+                        <Triangle size={9} fill="currentColor" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveDown(idx);
+                        }}
+                        disabled={isLastBlock}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '13px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
+                          padding: 0
+                        }}
+                        title="아래로 이동"
+                      >
+                        <Triangle size={9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3점 메뉴 (추가 버튼 없음: 수정, 삭제, 취소) */}
+                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenBlockMenu(e, block.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: openBlockMenuId === block.id ? '#E2E8F0' : 'transparent',
+                        color: openBlockMenuId === block.id ? '#2563EB' : '#64748B',
+                        cursor: 'pointer'
+                      }}
+                      title="메뉴"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+
+                    {openBlockMenuId === block.id && (
+                      <>
+                        <div
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 9999,
+                            backgroundColor: 'transparent'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenBlockMenuId(null);
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'fixed',
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
+                            border: '1px solid #E2E8F0',
+                            padding: '4px',
+                            zIndex: 10000,
+                            minWidth: '110px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            whiteSpace: 'nowrap',
+                            top: openBlockMenuPos?.top ?? 0,
+                            right: openBlockMenuPos?.right ?? 0
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenBlockMenuId(null);
+                              setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
+                              handleStartEdit(block);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#334155',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <Edit2 size={14} color="#475569" />
+                            <span>수정</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenBlockMenuId(null);
+                              handleDelete(idx);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#DC2626',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <Trash2 size={14} color="#DC2626" />
+                            <span>삭제</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOpenBlockMenuId(null)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '7px 12px',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              color: '#64748B',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <X size={14} color="#64748B" />
+                            <span>취소</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 카드 본문: 접혀있지 않거나 편집 중일 때만 렌더링 */}
+            {(!isCollapsed || isEditingThisBlock) && (
+              isEditingThisBlock ? (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    backgroundColor: '#FFFFFF',
+                    maxHeight: 'max(300px, calc(100vh - 230px))',
+                    overflowY: 'auto'
+                  }}
+                >
+                  <textarea
+                    ref={textareaRef}
+                    value={draftContent}
+                    onChange={(e) => {
+                      setDraftContent(e.target.value);
+                      adjustTextareaHeight(e.target);
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                        e.preventDefault();
+                        handleSaveBlock(block.id);
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        handleCancelEdit();
+                      }
+                    }}
+                    placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 지원 / Ctrl+S 저장)"
+                    style={{
                       width: '100%',
-                      maxWidth: '280px',
-                      boxSizing: 'border-box'
+                      height: 'auto',
+                      minHeight: '46px',
+                      padding: '0',
+                      border: 'none',
+                      outline: 'none',
+                      resize: 'none',
+                      fontSize: '14px',
+                      lineHeight: 1.65,
+                      color: '#1E293B',
+                      fontFamily: 'inherit',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      boxSizing: 'border-box',
+                      backgroundColor: 'transparent',
+                      display: 'block'
                     }}
                   />
                 </div>
               ) : (
                 <div
-                  onDoubleClick={() => handleStartEdit(block)}
-                  title="더블클릭하여 이름 및 내용 수정"
+                  onDoubleClick={() => {
+                    setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
+                    handleStartEdit(block);
+                  }}
+                  title="더블클릭하여 수정 가능"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    flex: 1,
-                    minWidth: 0
-                  }}
-                >
-                  <Type size={13} color={block.title ? '#2563EB' : '#94A3B8'} style={{ flexShrink: 0 }} />
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: block.title ? '#1E293B' : '#94A3B8',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {block.title ? block.title : '(텍스트박스 이름 없음 - 우측 수정 클릭)'}
-                  </span>
-                </div>
-              )}
-
-              {/* 우측 개별 컨트롤 */}
-              <div
-                className="no-print"
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
-              >
-                {isEditingThisBlock ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      title="편집 취소 (Esc)"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        padding: '3px 8px',
-                        borderRadius: '5px',
-                        border: '1px solid #CBD5E1',
-                        backgroundColor: '#FFFFFF',
-                        color: '#64748B',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <RotateCcw size={12} />
-                      <span>취소</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSaveBlock(block.id)}
-                      title="저장 (Ctrl+S)"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        padding: '3px 9px',
-                        borderRadius: '5px',
-                        border: '1px solid #2563EB',
-                        backgroundColor: '#2563EB',
-                        color: '#FFFFFF',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <Check size={12} />
-                      <span>저장</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveUp(idx)}
-                      disabled={idx === 0}
-                      title="위로 이동"
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                        color: idx === 0 ? '#CBD5E1' : '#64748B',
-                        padding: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <ArrowUp size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveDown(idx)}
-                      disabled={idx === blocks.length - 1}
-                      title="아래로 이동"
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: idx === blocks.length - 1 ? 'not-allowed' : 'pointer',
-                        color: idx === blocks.length - 1 ? '#CBD5E1' : '#64748B',
-                        padding: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <ArrowDown size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEdit(block)}
-                      title="이름 및 본문 수정 (더블클릭 가능)"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        padding: '2px 7px',
-                        borderRadius: '4px',
-                        border: '1px solid #CBD5E1',
-                        backgroundColor: '#FFFFFF',
-                        color: '#2563EB',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        marginLeft: '2px'
-                      }}
-                    >
-                      <Edit2 size={11} />
-                      <span>수정</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(idx)}
-                      title="텍스트 박스 삭제"
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        color: '#EF4444',
-                        padding: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px',
-                        marginLeft: '2px'
-                      }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* 카드 본문: 내용이 많을 경우 브라우저 하단까지 시원하게 표시 후 내부 스크롤 지원 */}
-            {isEditingThisBlock ? (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  backgroundColor: '#FFFFFF',
-                  maxHeight: 'max(300px, calc(100vh - 230px))',
-                  overflowY: 'auto'
-                }}
-              >
-                <textarea
-                  ref={textareaRef}
-                  value={draftContent}
-                  onChange={(e) => {
-                    setDraftContent(e.target.value);
-                    adjustTextareaHeight(e.target);
-                  }}
-                  onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                      e.preventDefault();
-                      handleSaveBlock(block.id);
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      handleCancelEdit();
-                    }
-                  }}
-                  placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 지원 / Ctrl+S 저장)"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    minHeight: '46px',
-                    padding: '0',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
+                    padding: '12px 14px',
                     fontSize: '14px',
                     lineHeight: 1.65,
                     color: '#1E293B',
-                    fontFamily: 'inherit',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
-                    boxSizing: 'border-box',
-                    backgroundColor: 'transparent',
-                    display: 'block'
+                    cursor: 'text',
+                    maxHeight: 'max(300px, calc(100vh - 230px))',
+                    overflowY: 'auto'
                   }}
-                />
-              </div>
-            ) : (
-              <div
-                onDoubleClick={() => handleStartEdit(block)}
-                title="더블클릭하여 수정 가능"
-                style={{
-                  padding: '12px 14px',
-                  fontSize: '14px',
-                  lineHeight: 1.65,
-                  color: '#1E293B',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  cursor: 'text',
-                  maxHeight: 'max(300px, calc(100vh - 230px))',
-                  overflowY: 'auto'
-                }}
-              >
-                {block.content && block.content.trim() ? (
-                  renderWithLinks(block.content, searchQuery)
-                ) : (
-                  <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
-                    (비어 있는 텍스트 박스입니다. 우측 [수정]을 누르거나 본문을 더블클릭하여 내용을 입력하세요)
-                  </span>
-                )}
-              </div>
+                >
+                  {block.content && block.content.trim() ? (
+                    renderWithLinks(block.content, searchQuery)
+                  ) : (
+                    <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
+                      (비어 있는 텍스트입니다. 메뉴의 [수정]을 누르거나 본문을 더블클릭하여 내용을 입력하세요)
+                    </span>
+                  )}
+                </div>
+              )
             )}
           </div>
         );
