@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowUp,
   ArrowDown,
@@ -100,6 +101,57 @@ export const blocksToPlainText = (blocks) => {
     })
     .filter((s) => s.length > 0)
     .join('\n\n');
+};
+
+const blockMenuItemStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '7px 12px',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#334155',
+  backgroundColor: 'transparent',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  transition: 'background-color 0.12s ease'
+};
+
+const blockMenuItemDangerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '7px 12px',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#DC2626',
+  backgroundColor: 'transparent',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  transition: 'background-color 0.12s ease'
+};
+
+const blockMenuItemCancelStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '7px 12px',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#64748B',
+  backgroundColor: 'transparent',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  transition: 'background-color 0.12s ease'
 };
 
 /**
@@ -626,6 +678,9 @@ export const DetailBlocksManager = ({
     }
   }, [editingBlockId]);
 
+  const activeMenuBlockIdx = blocks.findIndex((b) => b.id === openBlockMenuId);
+  const activeMenuBlock = activeMenuBlockIdx !== -1 ? blocks[activeMenuBlockIdx] : null;
+
   return (
     <div
       style={{
@@ -949,152 +1004,6 @@ export const DetailBlocksManager = ({
                     >
                       <MoreVertical size={16} />
                     </button>
-
-                    {openBlockMenuId === block.id && (
-                      <>
-                        <div
-                          style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 9999,
-                            backgroundColor: 'transparent'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenBlockMenuId(null);
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'fixed',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
-                            border: '1px solid #E2E8F0',
-                            padding: '4px',
-                            zIndex: 10000,
-                            minWidth: '110px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px',
-                            whiteSpace: 'nowrap',
-                            top: openBlockMenuPos?.top ?? 0,
-                            right: openBlockMenuPos?.right ?? 0
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenBlockMenuId(null);
-                              handleAddChecklistItem(block.id);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#334155',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Plus size={14} color="#2563EB" />
-                            <span>추가</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenBlockMenuId(null);
-                              setEditingChecklistTitleId(block.id);
-                              setDraftChecklistTitle(block.title || '');
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#334155',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Edit2 size={14} color="#475569" />
-                            <span>수정</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenBlockMenuId(null);
-                              handleDelete(idx);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#DC2626',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Trash2 size={14} color="#DC2626" />
-                            <span>삭제</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setOpenBlockMenuId(null)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#64748B',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <X size={14} color="#64748B" />
-                            <span>취소</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1444,125 +1353,6 @@ export const DetailBlocksManager = ({
                     >
                       <MoreVertical size={16} />
                     </button>
-
-                    {openBlockMenuId === block.id && (
-                      <>
-                        <div
-                          style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 9999,
-                            backgroundColor: 'transparent'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenBlockMenuId(null);
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: 'fixed',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08)',
-                            border: '1px solid #E2E8F0',
-                            padding: '4px',
-                            zIndex: 10000,
-                            minWidth: '110px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px',
-                            whiteSpace: 'nowrap',
-                            top: openBlockMenuPos?.top ?? 0,
-                            right: openBlockMenuPos?.right ?? 0
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenBlockMenuId(null);
-                              setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
-                              handleStartEdit(block);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#334155',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Edit2 size={14} color="#475569" />
-                            <span>수정</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenBlockMenuId(null);
-                              handleDelete(idx);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#DC2626',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <Trash2 size={14} color="#DC2626" />
-                            <span>삭제</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setOpenBlockMenuId(null)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              width: '100%',
-                              padding: '7px 12px',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              color: '#64748B',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                          >
-                            <X size={14} color="#64748B" />
-                            <span>취소</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
               )}
@@ -1648,6 +1438,240 @@ export const DetailBlocksManager = ({
           </div>
         );
       })}
+
+      {/* 블록 3점 메뉴 (Stacking Context 및 z-index 잘림 방지를 위해 document.body에 Portal 렌더링) */}
+      {openBlockMenuId && openBlockMenuPos && activeMenuBlock && typeof document !== 'undefined' && createPortal(
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99998,
+              backgroundColor: 'transparent'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenBlockMenuId(null);
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #CBD5E1',
+              padding: '4px',
+              zIndex: 99999,
+              minWidth: '115px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2px',
+              whiteSpace: 'nowrap',
+              top: openBlockMenuPos.top,
+              right: openBlockMenuPos.right
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {activeMenuBlock.type === 'checklist' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    handleAddChecklistItem(activeMenuBlock.id);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#334155',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Plus size={14} color="#2563EB" />
+                  <span>추가</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    setEditingChecklistTitleId(activeMenuBlock.id);
+                    setDraftChecklistTitle(activeMenuBlock.title || '');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#334155',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Edit2 size={14} color="#475569" />
+                  <span>수정</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    handleDelete(activeMenuBlockIdx);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#DC2626',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Trash2 size={14} color="#DC2626" />
+                  <span>삭제</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenBlockMenuId(null)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#64748B',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <X size={14} color="#64748B" />
+                  <span>취소</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    setCollapsedBlockIds((prev) => ({ ...prev, [activeMenuBlock.id]: false }));
+                    handleStartEdit(activeMenuBlock);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#334155',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Edit2 size={14} color="#475569" />
+                  <span>수정</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    handleDelete(activeMenuBlockIdx);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#DC2626',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Trash2 size={14} color="#DC2626" />
+                  <span>삭제</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenBlockMenuId(null)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#64748B',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <X size={14} color="#64748B" />
+                  <span>취소</span>
+                </button>
+              </>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 };
