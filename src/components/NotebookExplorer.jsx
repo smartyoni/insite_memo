@@ -239,7 +239,11 @@ const OFFICE_TRASH_CATEGORY = { id: 'office_trash', name: '휴지통', order: 99
 const AD_TRASH_CATEGORY = { id: 'ad_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'ad' };
 
 const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash', 'office_trash', 'ad_trash'];
-const ALL_FIXED_CATEGORY_IDS = [...FIXED_INBOX_IDS, ...FIXED_TRASH_IDS];
+
+// Fixed Quick-memo category definition (Only in explorer/note tab)
+const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990, isFixed: true, isQuickMemo: true, scope: 'explorer' };
+
+const ALL_FIXED_CATEGORY_IDS = [...FIXED_INBOX_IDS, ...FIXED_TRASH_IDS, 'quick_memo'];
 
 const getScopeForTab = (tab) => {
   if (tab === 'blog') return 'blog';
@@ -362,6 +366,9 @@ export default function NotebookExplorer() {
       office: '사무실',
       ad: '광고'
     };
+    if (categoryId === 'quick_memo') {
+      return '노트 > 퀵메모';
+    }
     const foundFixed = [
       INBOX_CATEGORY, BLOG_INBOX_CATEGORY, CLIPBOARD_INBOX_CATEGORY, 
       BALANCE_INBOX_CATEGORY, CLIP_INBOX_CATEGORY, OFFICE_INBOX_CATEGORY, AD_INBOX_CATEGORY
@@ -518,6 +525,7 @@ export default function NotebookExplorer() {
 
   const allCategories = [
     currentFixedCategory,
+    ...(activeMainTab === 'explorer' ? [QUICK_MEMO_CATEGORY] : []),
     ...filteredCategories
       .sort((a, b) => {
         const nameA = a.name || '';
@@ -664,6 +672,15 @@ export default function NotebookExplorer() {
   const [templates, setTemplates] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
+
+  // Global Quick Memo Modal States
+  const [isQuickMemoOpen, setIsQuickMemoOpen] = useState(false);
+  const [quickMemoText, setQuickMemoText] = useState('');
+  const [isSavingQuickMemo, setIsSavingQuickMemo] = useState(false);
+  const [quickMemoContext, setQuickMemoContext] = useState('');
+  const [quickMemoToast, setQuickMemoToast] = useState(false);
+  const quickMemoToastTimerRef = useRef(null);
+  const quickMemoTextareaRef = useRef(null);
 
   // Template Tab Dedicated Canvas States
   const [selectedTemplateIdInTab, setSelectedTemplateIdInTab] = useState(null); // templateId or 'NEW'
@@ -1049,6 +1066,15 @@ export default function NotebookExplorer() {
       return item.categoryId === selectedCategoryId;
     })
     .sort((a, b) => {
+      if (selectedCategoryId === 'quick_memo') {
+        const titleA = (a.title || '').trim();
+        const titleB = (b.title || '').trim();
+        const comp = titleB.localeCompare(titleA, 'ko-KR', { numeric: true, sensitivity: 'base' });
+        if (comp !== 0) return comp;
+        const tA = getItemTimestamp(a);
+        const tB = getItemTimestamp(b);
+        return tB - tA;
+      }
       const titleA = (a.title || '').trim();
       const titleB = (b.title || '').trim();
       const comp = titleA.localeCompare(titleB, 'ko-KR', { numeric: true, sensitivity: 'base' });
@@ -2149,6 +2175,139 @@ export default function NotebookExplorer() {
     }
   };
 
+  // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
+  const handleOpenQuickMemo = () => {
+    const scopeMap = {
+      explorer: '노트',
+      blog: '블로그',
+      clipboard: '계약',
+      balance: '앱개발',
+      clip: '북마크',
+      office: '사무실',
+      ad: '광고',
+      template: '템플릿'
+    };
+    const currentTabName = scopeMap[activeMainTab] || '노트';
+    const contextParts = [currentTabName];
+    if (activeCategory && !ALL_FIXED_CATEGORY_IDS.includes(activeCategory.id)) {
+      contextParts.push(activeCategory.name);
+    }
+    if (activeItem && activeItem.title && activeItem.title.trim()) {
+      contextParts.push(activeItem.title.trim());
+    }
+    setQuickMemoContext(contextParts.join(' > '));
+    setQuickMemoText('');
+    setIsQuickMemoOpen(true);
+    setTimeout(() => {
+      if (quickMemoTextareaRef.current) {
+        quickMemoTextareaRef.current.focus();
+      }
+    }, 60);
+  };
+
+  const handleCloseQuickMemo = () => {
+    setIsQuickMemoOpen(false);
+    setQuickMemoText('');
+  };
+
+  const handleSaveQuickMemo = async () => {
+    const text = quickMemoText.trim();
+    if (!text || isSavingQuickMemo) return;
+
+    setIsSavingQuickMemo(true);
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+
+      // 2줄 요약 (체크리스트 표시용)
+      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+      const summaryLines = lines.slice(0, 2).join(' ');
+      const summaryText = summaryLines.length > 70 ? `${summaryLines.slice(0, 70)}...` : summaryLines;
+      const checkItemTitle = `[${timeStr}] ${summaryText}`;
+
+      // 세부 원문 + 작업 출처 정보
+      const contextFooter = quickMemoContext ? `\n\n────────────────\n📌 작성 위치: ${quickMemoContext}` : '';
+      const fullMemoBody = `${text}${contextFooter}`;
+
+      const newChecklistId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const newChecklistItem = {
+        id: newChecklistId,
+        text: checkItemTitle,
+        completed: false,
+        detail: fullMemoBody,
+        detailBlocks: [
+          {
+            id: `b_${Date.now()}`,
+            type: 'text',
+            title: '',
+            content: fullMemoBody
+          }
+        ],
+        createdAt: Date.now()
+      };
+
+      // 오늘 날짜 퀵메모 노트 찾기
+      const existingTodayNote = items.find(
+        (item) => item.categoryId === 'quick_memo' && item.title === todayStr && !item.isDeleted
+      );
+
+      if (existingTodayNote) {
+        // 기존 노트의 체크리스트 맨 아래에 추가(Append)
+        const updatedChecklists = [...(existingTodayNote.checklists || []), newChecklistItem];
+        await updateDoc(doc(db, 'items', existingTodayNote.id), {
+          checklists: updatedChecklists,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // 오늘 첫 퀵메모 노트 신규 생성
+        const newRef = doc(collection(db, 'items'));
+        await setDoc(newRef, {
+          categoryId: 'quick_memo',
+          title: todayStr,
+          scope: 'explorer',
+          body: '',
+          subBody: '',
+          checklists: [newChecklistItem],
+          detailBlocks: [],
+          order: -Date.now(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      setIsQuickMemoOpen(false);
+      setQuickMemoText('');
+      setQuickMemoToast(true);
+      if (quickMemoToastTimerRef.current) clearTimeout(quickMemoToastTimerRef.current);
+      quickMemoToastTimerRef.current = setTimeout(() => setQuickMemoToast(false), 2200);
+    } catch (err) {
+      console.error('Error saving quick memo:', err);
+      alert('퀵메모 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingQuickMemo(false);
+    }
+  };
+
+  // Alt + Q Global Hotkey Listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Alt + Q (또는 한글 ㅂ 자판)
+      if (e.altKey && (e.key === 'q' || e.key === 'Q' || e.key === 'ㅂ' || e.code === 'KeyQ')) {
+        e.preventDefault();
+        handleOpenQuickMemo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeMainTab, activeCategory, activeItem]);
+
   // ---------------- Quick Add Note (Fast Entry to In-box) ----------------
   const handleQuickAddNote = async () => {
     const targetInboxId = getInboxIdForTab(activeMainTab);
@@ -2954,6 +3113,33 @@ export default function NotebookExplorer() {
           <span>템플릿</span>
         </button>
       </div>
+
+      {/* Quick Memo Trigger Button */}
+      <button
+        onClick={handleOpenQuickMemo}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          width: '100%',
+          padding: '6px 10px',
+          backgroundColor: '#FEF3C7',
+          border: '1px solid #FDE047',
+          borderRadius: '6px',
+          color: '#B45309',
+          fontSize: '12px',
+          fontWeight: 700,
+          cursor: 'pointer',
+          marginTop: '2px',
+          boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
+          transition: 'all 0.15s ease'
+        }}
+        title="어디서든 즉시 기록하고 원래 위치로 복귀 (단축키: Alt+Q)"
+      >
+        <Zap size={13} fill="#F59E0B" color="#D97706" />
+        <span>⚡ 퀵메모 (Alt+Q)</span>
+      </button>
     </div>
   );
 
@@ -3369,12 +3555,17 @@ export default function NotebookExplorer() {
                   <span style={styles.pane1Title}>카테고리</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
-                      onClick={handleQuickAddNote}
-                      style={styles.quickAddBtn}
-                      title="빠른 메모 생성 (In-box에 자동 저장)"
+                      onClick={handleOpenQuickMemo}
+                      style={{
+                        ...styles.quickAddBtn,
+                        backgroundColor: '#FEF3C7',
+                        borderColor: '#FDE047',
+                        color: '#B45309'
+                      }}
+                      title="⚡ 퀵메모 작성 (Alt+Q)"
                     >
-                      <Zap size={13} fill="#2563EB" color="#2563EB" />
-                      <span>빠른입력</span>
+                      <Zap size={13} fill="#F59E0B" color="#D97706" />
+                      <span>퀵메모</span>
                     </button>
                     <button
                       onClick={() => {
@@ -3426,6 +3617,49 @@ export default function NotebookExplorer() {
                         <span style={{
                           fontSize: '11px',
                           color: isSelected ? '#2563EB' : '#7C95B1',
+                          fontWeight: isSelected ? 700 : 500,
+                          flexShrink: 0
+                        }}>
+                          ({count})
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Fixed Quick-memo Category (Only in explorer/note tab) */}
+                {activeMainTab === 'explorer' && (() => {
+                  const isSelected = QUICK_MEMO_CATEGORY.id === selectedCategoryId;
+                  const count = items.filter((item) => {
+                    if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
+                    return item.categoryId === QUICK_MEMO_CATEGORY.id;
+                  }).length;
+
+                  return (
+                    <div
+                      key={QUICK_MEMO_CATEGORY.id}
+                      onClick={() => navigateToItems(QUICK_MEMO_CATEGORY.id)}
+                      style={{
+                        ...styles.catRow,
+                        backgroundColor: isSelected ? '#FEF3C7' : 'transparent',
+                        color: isSelected ? '#92400E' : '#4A607A',
+                        fontWeight: isSelected ? 700 : 500,
+                        paddingLeft: '6px',
+                        paddingRight: '6px',
+                        paddingTop: '6px',
+                        paddingBottom: '6px',
+                        gap: '6px'
+                      }}
+                    >
+                      <span style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      <Zap size={16} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#F59E0B' : 'transparent'} style={{ flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
+                          {QUICK_MEMO_CATEGORY.name}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          color: isSelected ? '#D97706' : '#F59E0B',
                           fontWeight: isSelected ? 700 : 500,
                           flexShrink: 0
                         }}>
@@ -3563,12 +3797,17 @@ export default function NotebookExplorer() {
                   <span style={styles.pane1Title}>카테고리</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
-                      onClick={handleQuickAddNote}
-                      style={styles.quickAddBtn}
-                      title="빠른 메모 생성 (In-box에 자동 저장)"
+                      onClick={handleOpenQuickMemo}
+                      style={{
+                        ...styles.quickAddBtn,
+                        backgroundColor: '#FEF3C7',
+                        borderColor: '#FDE047',
+                        color: '#B45309'
+                      }}
+                      title="⚡ 퀵메모 작성 (Alt+Q)"
                     >
-                      <Zap size={13} fill="#2563EB" color="#2563EB" />
-                      <span>빠른입력</span>
+                      <Zap size={13} fill="#F59E0B" color="#D97706" />
+                      <span>퀵메모</span>
                     </button>
                     <button
                       onClick={() => {
@@ -7411,6 +7650,225 @@ onClick={() => {
       {showExitToast && (
         <div style={styles.exitToast}>
           앱을 종료하시겠습니까? 뒤로 가기를 한 번 더 누르면 종료됩니다.
+        </div>
+      )}
+
+      {/* Global Quick Memo Modal (Ctrl+Enter to save, Esc to close) */}
+      {isQuickMemoOpen && (
+        <div
+          onClick={handleCloseQuickMemo}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              width: '100%',
+              maxWidth: '520px',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #CBD5E1',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                backgroundColor: '#FFFBEB',
+                borderBottom: '1px solid #FDE68A'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Zap size={18} color="#D97706" fill="#F59E0B" />
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#92400E' }}>
+                  퀵메모 (빠른 기록)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseQuickMemo}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  color: '#92400E',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="닫기 (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Context Badge & Textarea */}
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {quickMemoContext && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11.5px',
+                    color: '#64748B',
+                    backgroundColor: '#F1F5F9',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    width: 'fit-content',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={`작성 당시 위치: ${quickMemoContext}`}
+                >
+                  <span style={{ fontWeight: 600, color: '#475569' }}>📌 작성 위치:</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {quickMemoContext}
+                  </span>
+                </div>
+              )}
+
+              <textarea
+                ref={quickMemoTextareaRef}
+                value={quickMemoText}
+                onChange={(e) => setQuickMemoText(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveQuickMemo();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCloseQuickMemo();
+                  }
+                }}
+                placeholder="메모할 내용을 자유롭게 입력하세요...&#13;&#10;(Enter 줄바꿈, Ctrl + Enter 로 즉시 저장)"
+                rows={5}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #CBD5E1',
+                  outline: 'none',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  color: '#1E293B',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit'
+                }}
+                autoFocus
+              />
+              <div style={{ fontSize: '11.5px', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>* 오늘 날짜의 퀵메모 노트에 체크리스트로 추가됩니다.</span>
+                <span>단축키: <strong>Ctrl + Enter</strong></span>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                padding: '10px 16px',
+                backgroundColor: '#F8FAFC',
+                borderTop: '1px solid #E2E8F0'
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleCloseQuickMemo}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                취소 (Esc)
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveQuickMemo}
+                disabled={!quickMemoText.trim() || isSavingQuickMemo}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
+                  boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                }}
+              >
+                <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
+                <span>{isSavingQuickMemo ? '저장 중...' : '저장 (Ctrl+Enter)'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Memo Toast Notification */}
+      {quickMemoToast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#1E293B',
+            color: '#FEF3C7',
+            padding: '10px 20px',
+            borderRadius: '24px',
+            fontSize: '13px',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
+            zIndex: 99999,
+            pointerEvents: 'none',
+            border: '1px solid #F59E0B',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Zap size={14} fill="#F59E0B" color="#F59E0B" />
+          <span>오늘 날짜 퀵메모에 저장되었습니다.</span>
         </div>
       )}
     </div>
