@@ -103,6 +103,199 @@ export const blocksToPlainText = (blocks) => {
 };
 
 /**
+ * 체크리스트 개별 항목 컴포넌트
+ * 한글(IME) 조합 중 부모 리렌더링으로 인한 자모 분리/중복 입력 현상을 방지하기 위해 로컬 상태 및 디바운스를 적용합니다.
+ */
+function DetailChecklistItemRow({
+  blockId,
+  item,
+  itemIdx,
+  items,
+  onToggle,
+  onUpdateText,
+  onAddAfter,
+  onDelete
+}) {
+  const [localText, setLocalText] = useState(item.text || '');
+  const isComposingRef = useRef(false);
+  const debounceTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isComposingRef.current && item.text !== localText) {
+      setLocalText(item.text || '');
+    }
+  }, [item.text]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
+
+  const commitText = (newText) => {
+    if (newText !== item.text) {
+      onUpdateText(blockId, item.id, newText);
+    }
+  };
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setLocalText(val);
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      if (!isComposingRef.current) {
+        commitText(val);
+      }
+    }, 400);
+  };
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = (e) => {
+    isComposingRef.current = false;
+    const val = e.target.value;
+    setLocalText(val);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      commitText(val);
+    }, 400);
+  };
+
+  const handleBlur = (e) => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    commitText(e.target.value);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (isComposingRef.current || e.nativeEvent.isComposing) return;
+      e.preventDefault();
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      commitText(localText);
+      onAddAfter(blockId, item.id);
+    } else if (e.key === 'Backspace' && !localText && items.length > 1) {
+      e.preventDefault();
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      onDelete(blockId, item.id);
+      const prevItem = items[itemIdx - 1];
+      if (prevItem) {
+        setTimeout(() => {
+          const el = document.getElementById(`chk_input_${prevItem.id}`);
+          if (el) el.focus();
+        }, 50);
+      }
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 10px',
+        borderRadius: '6px',
+        border: '1px solid #E2E8F0',
+        backgroundColor: item.completed ? '#F8FAFC' : '#FFFFFF',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+        transition: 'background-color 0.15s'
+      }}
+    >
+      {/* 사각형 녹색 체크박스 */}
+      <button
+        type="button"
+        onClick={() => onToggle(blockId, item.id)}
+        style={{
+          width: '20px',
+          height: '20px',
+          borderRadius: '4px',
+          backgroundColor: item.completed ? '#059669' : '#FFFFFF',
+          border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          padding: 0,
+          flexShrink: 0,
+          transition: 'all 0.15s ease'
+        }}
+        title={item.completed ? '완료 해제' : '완료 체크'}
+      >
+        {item.completed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+      </button>
+
+      {/* 인라인 텍스트 입력 */}
+      <input
+        id={`chk_input_${item.id}`}
+        type="text"
+        value={localText}
+        onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder="체크 항목 입력... (Enter 다음 항목 추가)"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          border: 'none',
+          outline: 'none',
+          fontSize: '13px',
+          fontWeight: 600,
+          color: item.completed ? '#94A3B8' : '#1E293B',
+          textDecoration: item.completed ? 'line-through' : 'none',
+          backgroundColor: 'transparent'
+        }}
+      />
+
+      {/* 우측 완료 뱃지 */}
+      {item.completed && (
+        <span
+          style={{
+            backgroundColor: '#D1FAE5',
+            color: '#059669',
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: '4px',
+            flexShrink: 0,
+            userSelect: 'none'
+          }}
+        >
+          ✓ 완료
+        </span>
+      )}
+
+      {/* 항목 삭제 버튼 */}
+      <button
+        type="button"
+        className="no-print"
+        onClick={() => onDelete(blockId, item.id)}
+        title="항목 삭제"
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: '#94A3B8',
+          cursor: 'pointer',
+          padding: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '4px'
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+/**
  * 상세내용 상시 블록 관리 컴포넌트
  * 긴 내용 시 헤더 고정(Sticky Header), 본문 스크롤(maxHeight & overflowY) 지원
  */
@@ -863,120 +1056,17 @@ export const DetailBlocksManager = ({
                   }}
                 >
                   {items.map((item, itemIdx) => (
-                    <div
+                    <DetailChecklistItemRow
                       key={item.id || `item_${itemIdx}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
-                        backgroundColor: item.completed ? '#F8FAFC' : '#FFFFFF',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                        transition: 'background-color 0.15s'
-                      }}
-                    >
-                      {/* 사각형 녹색 체크박스 */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleChecklistItem(block.id, item.id)}
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '4px',
-                          backgroundColor: item.completed ? '#059669' : '#FFFFFF',
-                          border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          padding: 0,
-                          flexShrink: 0,
-                          transition: 'all 0.15s ease'
-                        }}
-                        title={item.completed ? '완료 해제' : '완료 체크'}
-                      >
-                        {item.completed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-                      </button>
-
-                      {/* 인라인 텍스트 입력 */}
-                      <input
-                        id={`chk_input_${item.id}`}
-                        type="text"
-                        value={item.text || ''}
-                        onChange={(e) => handleUpdateChecklistItemText(block.id, item.id, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddChecklistItem(block.id, item.id);
-                          } else if (e.key === 'Backspace' && !item.text && items.length > 1) {
-                            e.preventDefault();
-                            handleDeleteChecklistItem(block.id, item.id);
-                            const prevItem = items[itemIdx - 1];
-                            if (prevItem) {
-                              setTimeout(() => {
-                                const el = document.getElementById(`chk_input_${prevItem.id}`);
-                                if (el) el.focus();
-                              }, 50);
-                            }
-                          }
-                        }}
-                        placeholder="체크 항목 입력... (Enter 다음 항목 추가)"
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          border: 'none',
-                          outline: 'none',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          color: item.completed ? '#94A3B8' : '#1E293B',
-                          textDecoration: item.completed ? 'line-through' : 'none',
-                          backgroundColor: 'transparent'
-                        }}
-                      />
-
-                      {/* 우측 완료 뱃지 (첨부 이미지 디자인) */}
-                      {item.completed && (
-                        <span
-                          style={{
-                            backgroundColor: '#D1FAE5',
-                            color: '#059669',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            flexShrink: 0,
-                            userSelect: 'none'
-                          }}
-                        >
-                          ✓ 완료
-                        </span>
-                      )}
-
-                      {/* 항목 삭제 버튼 */}
-                      <button
-                        type="button"
-                        className="no-print"
-                        onClick={() => handleDeleteChecklistItem(block.id, item.id)}
-                        title="항목 삭제"
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#94A3B8',
-                          cursor: 'pointer',
-                          padding: '2px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          flexShrink: 0,
-                          borderRadius: '3px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
-                      >
-                        <X size={13} />
-                      </button>
-                    </div>
+                      blockId={block.id}
+                      item={item}
+                      itemIdx={itemIdx}
+                      items={items}
+                      onToggle={handleToggleChecklistItem}
+                      onUpdateText={handleUpdateChecklistItemText}
+                      onAddAfter={handleAddChecklistItem}
+                      onDelete={handleDeleteChecklistItem}
+                    />
                   ))}
                 </div>
               </div>
