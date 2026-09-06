@@ -182,7 +182,7 @@ function DetailChecklistItemRow({
     } else if (e.key === 'Backspace' && !e.target.value && items.length > 1) {
       e.preventDefault();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      onDelete(blockId, item.id);
+      onDelete(blockId, item.id, false);
       const prevItem = items[itemIdx - 1];
       if (prevItem) {
         setTimeout(() => {
@@ -277,7 +277,7 @@ function DetailChecklistItemRow({
       <button
         type="button"
         className="no-print"
-        onClick={() => onDelete(blockId, item.id)}
+        onClick={() => onDelete(blockId, item.id, true)}
         title="항목 삭제"
         style={{
           border: 'none',
@@ -429,8 +429,8 @@ export const DetailBlocksManager = ({
     }, 60);
   };
 
-  // 체크리스트 항목 삭제
-  const handleDeleteChecklistItem = (blockId, itemId) => {
+  // 실제 체크리스트 항목 삭제 실행
+  const executeDeleteChecklistItem = (blockId, itemId) => {
     const next = blocks.map((b) => {
       if (b.id !== blockId) return b;
       const filtered = (b.items || []).filter((it) => it.id !== itemId);
@@ -440,6 +440,34 @@ export const DetailBlocksManager = ({
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 체크리스트 항목 삭제 (자체확인모달 연동)
+  const handleDeleteChecklistItem = (blockId, itemId, isExplicitClick = false) => {
+    const targetBlock = blocks.find((b) => b.id === blockId);
+    const targetItem = targetBlock?.items?.find((it) => it.id === itemId);
+
+    // 백스페이스로 빈 줄을 지울 때는 입력 편의를 위해 모달 없이 즉시 삭제
+    if (!isExplicitClick && !targetItem?.text?.trim()) {
+      executeDeleteChecklistItem(blockId, itemId);
+      return;
+    }
+
+    if (openDeleteModal) {
+      const text = targetItem?.text?.trim();
+      let message = '이 체크 항목을 정말 삭제하시겠습니까?';
+      if (text) {
+        const preview = text.length > 30 ? text.slice(0, 30) + '...' : text;
+        message = `'${preview}' 항목을 정말 삭제하시겠습니까?`;
+      }
+      openDeleteModal(
+        '체크 항목 삭제',
+        message,
+        () => executeDeleteChecklistItem(blockId, itemId)
+      );
+    } else {
+      executeDeleteChecklistItem(blockId, itemId);
+    }
   };
 
   // 체크리스트 블록 제목 저장
