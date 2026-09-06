@@ -113,15 +113,17 @@ function DetailChecklistItemRow({
   items,
   onToggle,
   onUpdateText,
-  onAddAfter,
+  onCommitAndAdd,
   onDelete
 }) {
   const [localText, setLocalText] = useState(item.text || '');
   const isComposingRef = useRef(false);
   const debounceTimerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    if (!isComposingRef.current && item.text !== localText) {
+    // 포커스 중일 때는 외부 텍스트로 덮어쓰지 않음
+    if (document.activeElement !== inputRef.current && !isComposingRef.current && item.text !== localText) {
       setLocalText(item.text || '');
     }
   }, [item.text]);
@@ -171,12 +173,13 @@ function DetailChecklistItemRow({
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
-      if (isComposingRef.current || e.nativeEvent.isComposing) return;
       e.preventDefault();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      commitText(localText);
-      onAddAfter(blockId, item.id);
-    } else if (e.key === 'Backspace' && !localText && items.length > 1) {
+      const textToSave = e.target.value;
+      setLocalText(textToSave);
+      isComposingRef.current = false;
+      onCommitAndAdd(blockId, item.id, textToSave);
+    } else if (e.key === 'Backspace' && !e.target.value && items.length > 1) {
       e.preventDefault();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       onDelete(blockId, item.id);
@@ -229,6 +232,7 @@ function DetailChecklistItemRow({
 
       {/* 인라인 텍스트 입력 */}
       <input
+        ref={inputRef}
         id={`chk_input_${item.id}`}
         type="text"
         value={localText}
@@ -397,6 +401,32 @@ export const DetailBlocksManager = ({
       const el = document.getElementById(`chk_input_${newItem.id}`);
       if (el) el.focus();
     }, 50);
+  };
+
+  // 체크리스트 항목 텍스트 저장 및 새 항목 추가를 단일 작업으로 원자적(atomic) 처리
+  const handleCommitAndAddChecklistItem = (blockId, currentItemId, currentItemText) => {
+    const newItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: '',
+      completed: false
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const currentItems = [...(b.items || [])];
+      const targetIdx = currentItems.findIndex((it) => it.id === currentItemId);
+      if (targetIdx !== -1) {
+        currentItems[targetIdx] = { ...currentItems[targetIdx], text: currentItemText };
+        currentItems.splice(targetIdx + 1, 0, newItem);
+      } else {
+        currentItems.push(newItem);
+      }
+      return { ...b, items: currentItems };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setTimeout(() => {
+      const el = document.getElementById(`chk_input_${newItem.id}`);
+      if (el) el.focus();
+    }, 60);
   };
 
   // 체크리스트 항목 삭제
@@ -1064,7 +1094,7 @@ export const DetailBlocksManager = ({
                       items={items}
                       onToggle={handleToggleChecklistItem}
                       onUpdateText={handleUpdateChecklistItemText}
-                      onAddAfter={handleAddChecklistItem}
+                      onCommitAndAdd={handleCommitAndAddChecklistItem}
                       onDelete={handleDeleteChecklistItem}
                     />
                   ))}
