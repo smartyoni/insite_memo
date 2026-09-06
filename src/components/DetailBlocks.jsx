@@ -247,11 +247,12 @@ function DetailChecklistItemRow({
 
   return (
     <div
+      key={item.id}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        padding: '8px 10px',
+        gap: '8px',
+        padding: '5px 8px',
         borderRadius: '6px',
         border: '1px solid #E2E8F0',
         backgroundColor: item.completed ? '#F8FAFC' : '#FFFFFF',
@@ -709,7 +710,7 @@ export const DetailBlocksManager = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: '#FFFFFF',
                 borderRadius: '8px',
                 border: '1px solid #CBD5E1',
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
@@ -717,15 +718,15 @@ export const DetailBlocksManager = ({
                 flexShrink: 0
               }}
             >
-              {/* 체크리스트 그룹 헤더 바 (좌측 체크리스트 영역 그룹헤더와 동일한 구조) */}
+              {/* 체크리스트 그룹 헤더 바 */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: '#EEF2F6',
-                  borderBottom: isCollapsed ? 'none' : '1px solid #CBD5E1',
+                  padding: '6px 10px',
+                  backgroundColor: '#F8FAFC',
+                  borderBottom: isCollapsed ? 'none' : '1px solid #E2E8F0',
                   cursor: isEditingTitle ? 'default' : 'pointer',
                   userSelect: 'none',
                   position: 'sticky',
@@ -1008,18 +1009,15 @@ export const DetailBlocksManager = ({
                 </div>
               </div>
 
-              {/* 체크리스트 본문 (내부 테두리 박스 및 항목 목록 - 접혀있지 않을 때만 렌더링) */}
+              {/* 체크리스트 본문 */}
               {!isCollapsed && (
-                <div style={{ padding: '10px 12px' }}>
                 <div
                   style={{
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    padding: '8px',
+                    padding: '4px 6px',
                     backgroundColor: '#FFFFFF',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '6px'
+                    gap: '4px'
                   }}
                 >
                   {items.map((item, itemIdx) => (
@@ -1036,8 +1034,7 @@ export const DetailBlocksManager = ({
                     />
                   ))}
                 </div>
-              </div>
-            )}
+              )}
           </div>
         );
         }
