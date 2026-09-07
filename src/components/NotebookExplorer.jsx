@@ -674,11 +674,15 @@ export default function NotebookExplorer() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
+  // Global Navigation History States (for '이전' button)
+  const [navHistory, setNavHistory] = useState([]);
+  const lastNavLocationRef = useRef(null);
+  const isNavigatingBackRef = useRef(false);
+
   // Global Quick Memo Modal States
   const [isQuickMemoOpen, setIsQuickMemoOpen] = useState(false);
   const [quickMemoText, setQuickMemoText] = useState('');
   const [isSavingQuickMemo, setIsSavingQuickMemo] = useState(false);
-  const [quickMemoPrevNav, setQuickMemoPrevNav] = useState(null);
   const [quickMemoToast, setQuickMemoToast] = useState(false);
   const quickMemoToastTimerRef = useRef(null);
   const quickMemoTextareaRef = useRef(null);
@@ -2176,39 +2180,78 @@ export default function NotebookExplorer() {
     }
   };
 
-  // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
-  const handleNavigateToQuickMemo = () => {
-    // 퀵메모 이동 전의 위치를 저장 (현재가 퀵메모가 아닐 때만 기억)
-    if (!(activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id)) {
-      setQuickMemoPrevNav({
+  // ---------------- Global Navigation History Tracker (전역 직전 위치 추적) ----------------
+  useEffect(() => {
+    if (isNavigatingBackRef.current) {
+      isNavigatingBackRef.current = false;
+      lastNavLocationRef.current = {
         tab: activeMainTab,
         catId: selectedCategoryId,
         itemId: selectedItemId,
         mobileView: isMobile ? mobileView : null
-      });
+      };
+      return;
     }
+
+    const currentLoc = {
+      tab: activeMainTab,
+      catId: selectedCategoryId,
+      itemId: selectedItemId,
+      mobileView: isMobile ? mobileView : null
+    };
+
+    if (!lastNavLocationRef.current) {
+      lastNavLocationRef.current = currentLoc;
+      return;
+    }
+
+    const prev = lastNavLocationRef.current;
+    const isDifferent =
+      prev.tab !== currentLoc.tab ||
+      prev.catId !== currentLoc.catId ||
+      prev.itemId !== currentLoc.itemId;
+
+    if (isDifferent) {
+      setNavHistory((prevStack) => {
+        const nextStack = [...prevStack, prev];
+        return nextStack.length > 30 ? nextStack.slice(nextStack.length - 30) : nextStack;
+      });
+      lastNavLocationRef.current = currentLoc;
+    }
+  }, [activeMainTab, selectedCategoryId, selectedItemId, isMobile, mobileView]);
+
+  const handleReturnPrevious = () => {
+    if (navHistory.length === 0) return;
+
+    const targetLoc = navHistory[navHistory.length - 1];
+    setNavHistory((prev) => prev.slice(0, -1));
+    isNavigatingBackRef.current = true;
+
+    if (targetLoc.tab && targetLoc.tab !== activeMainTab) {
+      setActiveMainTab(targetLoc.tab);
+    }
+    if (targetLoc.catId) {
+      setSelectedCategoryId(targetLoc.catId);
+    }
+    setSelectedItemId(targetLoc.itemId || null);
+
+    if (isMobile) {
+      if (targetLoc.mobileView) {
+        setMobileView(targetLoc.mobileView);
+      } else if (targetLoc.itemId) {
+        setMobileView('detail');
+      } else {
+        setMobileView('items');
+      }
+    }
+  };
+
+  // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
+  const handleNavigateToQuickMemo = () => {
     if (activeMainTab !== 'explorer') {
       setActiveMainTab('explorer');
     }
     navigateToItems(QUICK_MEMO_CATEGORY.id);
-  };
-
-  const handleReturnFromQuickMemo = () => {
-    if (!quickMemoPrevNav) return;
-    const { tab, catId, itemId, mobileView: prevMobileView } = quickMemoPrevNav;
-    if (tab && tab !== activeMainTab) {
-      setActiveMainTab(tab);
-    }
-    if (catId) {
-      setSelectedCategoryId(catId);
-    }
-    if (itemId !== undefined) {
-      setSelectedItemId(itemId);
-    }
-    if (isMobile && prevMobileView) {
-      setMobileView(prevMobileView);
-    }
-    setQuickMemoPrevNav(null);
   };
 
   const handleOpenQuickMemo = () => {
@@ -3120,27 +3163,27 @@ export default function NotebookExplorer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', marginTop: '2px' }}>
         <button
           type="button"
-          disabled={!quickMemoPrevNav}
-          onClick={handleReturnFromQuickMemo}
+          disabled={navHistory.length === 0}
+          onClick={handleReturnPrevious}
           style={{
             flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '6px 2px',
-            backgroundColor: quickMemoPrevNav ? '#FEF3C7' : '#F1F5F9',
-            border: `1px solid ${quickMemoPrevNav ? '#F59E0B' : '#E2E8F0'}`,
+            backgroundColor: navHistory.length > 0 ? '#FEF3C7' : '#F1F5F9',
+            border: `1px solid ${navHistory.length > 0 ? '#F59E0B' : '#E2E8F0'}`,
             borderRadius: '6px',
-            color: quickMemoPrevNav ? '#92400E' : '#94A3B8',
+            color: navHistory.length > 0 ? '#92400E' : '#94A3B8',
             fontSize: '12px',
-            fontWeight: quickMemoPrevNav ? 700 : 500,
-            cursor: quickMemoPrevNav ? 'pointer' : 'not-allowed',
-            opacity: quickMemoPrevNav ? 1 : 0.6,
-            boxShadow: quickMemoPrevNav ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
+            fontWeight: navHistory.length > 0 ? 700 : 500,
+            cursor: navHistory.length > 0 ? 'pointer' : 'not-allowed',
+            opacity: navHistory.length > 0 ? 1 : 0.6,
+            boxShadow: navHistory.length > 0 ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap'
           }}
-          title={quickMemoPrevNav ? '이동 전 위치로 복귀' : '이전 위치 없음'}
+          title={navHistory.length > 0 ? '직전 위치로 이동' : '이전 위치 없음'}
         >
           <span>이전</span>
         </button>
