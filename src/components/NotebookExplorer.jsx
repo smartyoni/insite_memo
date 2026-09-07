@@ -20,6 +20,7 @@ import {
   Check,
   X,
   Folder,
+  FolderOpen,
   FolderPlus,
   FolderInput,
   ChevronDown,
@@ -2175,6 +2176,13 @@ export default function NotebookExplorer() {
   };
 
   // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
+  const handleNavigateToQuickMemo = () => {
+    if (activeMainTab !== 'explorer') {
+      setActiveMainTab('explorer');
+    }
+    navigateToItems(QUICK_MEMO_CATEGORY.id);
+  };
+
   const handleOpenQuickMemo = () => {
     setQuickMemoText('');
     setIsQuickMemoOpen(true);
@@ -3093,32 +3101,61 @@ export default function NotebookExplorer() {
         </button>
       </div>
 
-      {/* Quick Memo Trigger Button */}
-      <button
-        onClick={handleOpenQuickMemo}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          width: '100%',
-          padding: '6px 10px',
-          backgroundColor: '#FEF3C7',
-          border: '1px solid #FDE047',
-          borderRadius: '6px',
-          color: '#B45309',
-          fontSize: '12px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          marginTop: '2px',
-          boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
-          transition: 'all 0.15s ease'
-        }}
-        title="어디서든 즉시 기록하고 원래 위치로 복귀 (단축키: Alt+Q)"
-      >
-        <Zap size={13} fill="#F59E0B" color="#D97706" />
-        <span>⚡ 퀵메모 (Alt+Q)</span>
-      </button>
+      {/* Quick Memo Action Buttons (2-Split: Left = Go to Quick Memo Category, Right = Quick Memo Popup) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', marginTop: '2px' }}>
+        <button
+          type="button"
+          onClick={handleNavigateToQuickMemo}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '5px',
+            padding: '6px 4px',
+            backgroundColor: (activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id) ? '#FDE68A' : '#FEF3C7',
+            border: `1px solid ${(activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id) ? '#F59E0B' : '#FDE047'}`,
+            borderRadius: '6px',
+            color: '#B45309',
+            fontSize: '11.5px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+          title="퀵메모 카테고리(목록)로 이동"
+        >
+          <FolderOpen size={13} color="#D97706" />
+          <span>퀵메모 이동</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleOpenQuickMemo}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '5px',
+            padding: '6px 4px',
+            backgroundColor: '#FEF3C7',
+            border: '1px solid #FDE047',
+            borderRadius: '6px',
+            color: '#B45309',
+            fontSize: '11.5px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+          title="어디서든 즉시 기록하고 원래 위치로 복귀 (단축키: Alt+Q)"
+        >
+          <Zap size={13} fill="#F59E0B" color="#D97706" />
+          <span>⚡ 퀵메모 (Alt+Q)</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -3534,19 +3571,6 @@ export default function NotebookExplorer() {
                   <span style={styles.pane1Title}>카테고리</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
-                      onClick={handleOpenQuickMemo}
-                      style={{
-                        ...styles.quickAddBtn,
-                        backgroundColor: '#FEF3C7',
-                        borderColor: '#FDE047',
-                        color: '#B45309'
-                      }}
-                      title="⚡ 퀵메모 작성 (Alt+Q)"
-                    >
-                      <Zap size={13} fill="#F59E0B" color="#D97706" />
-                      <span>퀵메모</span>
-                    </button>
-                    <button
                       onClick={() => {
                         setIsAddingCategory(true);
                         setAddingParentId(null);
@@ -3775,19 +3799,6 @@ export default function NotebookExplorer() {
                 }}>
                   <span style={styles.pane1Title}>카테고리</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <button
-                      onClick={handleOpenQuickMemo}
-                      style={{
-                        ...styles.quickAddBtn,
-                        backgroundColor: '#FEF3C7',
-                        borderColor: '#FDE047',
-                        color: '#B45309'
-                      }}
-                      title="⚡ 퀵메모 작성 (Alt+Q)"
-                    >
-                      <Zap size={13} fill="#F59E0B" color="#D97706" />
-                      <span>퀵메모</span>
-                    </button>
                     <button
                       onClick={() => {
                         setIsAddingCategory(true);
