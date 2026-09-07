@@ -18,7 +18,9 @@ import {
   ChevronsUp,
   ChevronsDown,
   Triangle,
-  MoreVertical
+  MoreVertical,
+  GripVertical,
+  Copy
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -157,227 +159,351 @@ const blockMenuItemCancelStyle = {
 
 /**
  * 체크리스트 개별 항목 컴포넌트
- * 한글(IME) 조합 중 부모 리렌더링으로 인한 자모 분리/중복 입력 현상을 방지하기 위해 로컬 상태 및 디바운스를 적용합니다.
+ * 좌측 체크리스트와 동일하게 조회 모드, 인라인 수정 모드(저장/취소), 3점 메뉴(수정/복사/삭제/취소), 드래그 앤 드롭을 지원합니다.
  */
 function DetailChecklistItemRow({
   blockId,
   item,
   itemIdx,
   items,
+  isEditing,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
   onToggle,
-  onUpdateText,
-  onCommitAndAdd,
-  onDelete
+  onCopy,
+  onDelete,
+  openItemMenuId,
+  openItemMenuPos,
+  onOpenItemMenu,
+  onCloseItemMenu,
+  isDragged,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
 }) {
-  const [localText, setLocalText] = useState(item.text || '');
-  const isComposingRef = useRef(false);
-  const debounceTimerRef = useRef(null);
-  const inputRef = useRef(null);
+  const [draftText, setDraftText] = useState(item.text || '');
+  const textareaRef = useRef(null);
 
-  // 높이 자동 조절 함수
-  const adjustHeight = () => {
-    const el = inputRef.current;
+  useEffect(() => {
+    if (isEditing) {
+      setDraftText(item.text || '');
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 38)}px`;
+        }
+      }, 30);
+    }
+  }, [isEditing, item.text]);
+
+  const adjustHeight = (el) => {
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, 22)}px`;
-  };
-
-  useEffect(() => {
-    // 포커스 중일 때는 외부 텍스트로 덮어쓰지 않음
-    if (document.activeElement !== inputRef.current && !isComposingRef.current && item.text !== localText) {
-      setLocalText(item.text || '');
-    }
-  }, [item.text]);
-
-  useEffect(() => {
-    adjustHeight();
-  }, [localText]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, []);
-
-  const commitText = (newText) => {
-    if (newText !== item.text) {
-      onUpdateText(blockId, item.id, newText);
-    }
-  };
-
-  const handleChange = (e) => {
-    const val = e.target.value;
-    setLocalText(val);
-    adjustHeight();
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      if (!isComposingRef.current) {
-        commitText(val);
-      }
-    }, 400);
-  };
-
-  const handleCompositionStart = () => {
-    isComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = (e) => {
-    isComposingRef.current = false;
-    const val = e.target.value;
-    setLocalText(val);
-    adjustHeight();
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      commitText(val);
-    }, 400);
-  };
-
-  const handleBlur = (e) => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    commitText(e.target.value);
+    el.style.height = `${Math.max(el.scrollHeight, 38)}px`;
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // Shift + Enter: 줄바꿈 허용
-        return;
-      }
-      // Enter: 새 체크리스트 항목 추가
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      const textToSave = e.target.value;
-      setLocalText(textToSave);
-      isComposingRef.current = false;
-      onCommitAndAdd(blockId, item.id, textToSave);
-    } else if (e.key === 'Backspace' && !e.target.value && items.length > 1) {
+      onSaveEdit(blockId, item.id, draftText);
+    } else if (e.key === 'Escape') {
       e.preventDefault();
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      onDelete(blockId, item.id, false);
-      const prevItem = items[itemIdx - 1];
-      if (prevItem) {
-        setTimeout(() => {
-          const el = document.getElementById(`chk_input_${prevItem.id}`);
-          if (el) el.focus();
-        }, 50);
-      }
+      onCancelEdit(blockId, item);
     }
   };
 
   return (
     <div
       key={item.id}
+      draggable={!isEditing}
+      onDragStart={(e) => onDragStart(e, blockId, item.id)}
+      onDragOver={(e) => onDragOver(e, blockId, item.id)}
+      onDrop={(e) => onDrop(e, blockId, item.id)}
+      onDragEnd={onDragEnd}
       style={{
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: '8px',
-        padding: '5px 8px',
+        flexDirection: isEditing ? 'column' : 'row',
+        alignItems: isEditing ? 'stretch' : 'center',
+        justifyContent: 'space-between',
+        gap: '6px',
+        padding: isEditing ? '8px 10px' : '5px 8px',
         borderRadius: '6px',
-        border: '1px solid #E2E8F0',
-        backgroundColor: item.completed ? '#F8FAFC' : '#FFFFFF',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-        transition: 'background-color 0.15s'
+        border: isEditing
+          ? '1.5px solid #059669'
+          : item.completed
+            ? '1px solid #E2E8F0'
+            : '1px solid #CBD5E1',
+        backgroundColor: isEditing ? '#FFFFFF' : item.completed ? '#F8FAFC' : '#FFFFFF',
+        boxShadow: isDragOver
+          ? '0 -3px 0 0 #059669, 0 4px 12px rgba(5, 150, 105, 0.2)'
+          : isEditing
+            ? '0 0 0 1px #059669, 0 2px 6px rgba(5, 150, 105, 0.1)'
+            : '0 1px 2px rgba(0, 0, 0, 0.02)',
+        opacity: isDragged ? 0.4 : 1,
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        cursor: isEditing ? 'default' : 'pointer'
       }}
     >
-      {/* 사각형 녹색 체크박스 */}
-      <button
-        type="button"
-        onClick={() => onToggle(blockId, item.id)}
-        style={{
-          width: '20px',
-          height: '20px',
-          marginTop: '2px',
-          borderRadius: '4px',
-          backgroundColor: item.completed ? '#059669' : '#FFFFFF',
-          border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          padding: 0,
-          flexShrink: 0,
-          transition: 'all 0.15s ease'
-        }}
-        title={item.completed ? '완료 해제' : '완료 체크'}
-      >
-        {item.completed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-      </button>
+      {isEditing ? (
+        // [수정 모드 (저장/취소 제공, 줄바꿈 지원)]
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+          <textarea
+            ref={textareaRef}
+            rows={2}
+            value={draftText}
+            onChange={(e) => {
+              setDraftText(e.target.value);
+              adjustHeight(e.target);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="체크 항목 내용 입력... (Enter 줄바꿈, Ctrl+Enter 저장)"
+            style={{
+              width: '100%',
+              minHeight: '38px',
+              padding: '6px 8px',
+              borderRadius: '6px',
+              border: '1px solid #CBD5E1',
+              outline: 'none',
+              fontSize: '13px',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              color: '#0F172A',
+              fontFamily: 'inherit',
+              resize: 'none',
+              backgroundColor: '#FAFAFA'
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => onCancelEdit(blockId, item)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#64748B',
+                backgroundColor: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={13} /> 취소
+            </button>
+            <button
+              type="button"
+              onClick={() => onSaveEdit(blockId, item.id, draftText)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                backgroundColor: '#059669',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <Check size={13} /> 저장
+            </button>
+          </div>
+        </div>
+      ) : (
+        // [조회 모드 (드래그 핸들 + 체크박스 + 텍스트 + 3점 메뉴)]
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+          {/* 좌측: 드래그 핸들 + 체크박스 + 텍스트 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+            <span
+              style={{
+                cursor: 'grab',
+                display: 'inline-flex',
+                alignItems: 'center',
+                color: '#94A3B8',
+                flexShrink: 0
+              }}
+              title="드래그하여 순서 변경"
+            >
+              <GripVertical size={15} />
+            </span>
 
-      {/* 인라인 텍스트 입력 (textarea) */}
-      <textarea
-        ref={inputRef}
-        id={`chk_input_${item.id}`}
-        rows={1}
-        value={localText}
-        onChange={handleChange}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder="체크 항목 입력... (Shift+Enter 줄바꿈, Enter 항목 추가)"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          minHeight: '22px',
-          border: 'none',
-          outline: 'none',
-          fontSize: '13px',
-          fontWeight: 600,
-          lineHeight: '1.45',
-          fontFamily: 'inherit',
-          resize: 'none',
-          overflow: 'hidden',
-          color: item.completed ? '#94A3B8' : '#1E293B',
-          textDecoration: item.completed ? 'line-through' : 'none',
-          backgroundColor: 'transparent',
-          padding: '1px 0 0 0',
-          margin: 0
-        }}
-      />
+            {/* 체크박스 */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(blockId, item.id);
+              }}
+              style={{
+                width: '19px',
+                height: '19px',
+                borderRadius: '4px',
+                backgroundColor: item.completed ? '#059669' : '#FFFFFF',
+                border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+                flexShrink: 0,
+                transition: 'all 0.15s ease'
+              }}
+              title={item.completed ? '완료 해제' : '완료 체크'}
+            >
+              {item.completed && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
+            </button>
 
-      {/* 우측 완료 뱃지 */}
-      {item.completed && (
-        <span
-          style={{
-            backgroundColor: '#D1FAE5',
-            color: '#059669',
-            fontSize: '11px',
-            fontWeight: 700,
-            padding: '2px 8px',
-            borderRadius: '4px',
-            flexShrink: 0,
-            userSelect: 'none',
-            marginTop: '1px'
-          }}
-        >
-          ✓ 완료
-        </span>
+            {/* 텍스트 (더블클릭 시 수정) */}
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: '13px',
+                fontWeight: item.completed ? 400 : 600,
+                lineHeight: 1.5,
+                color: item.completed ? '#94A3B8' : '#1E293B',
+                textDecoration: item.completed ? 'line-through' : 'none',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                userSelect: 'text'
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onStartEdit(item);
+              }}
+              title="더블클릭하여 내용 수정"
+            >
+              {renderWithLinks(item.text || '(빈 항목)')}
+            </span>
+
+            {/* 완료 배지 */}
+            {item.completed && (
+              <span style={{
+                backgroundColor: '#D1FAE5',
+                color: '#059669',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '1px 6px',
+                borderRadius: '4px',
+                flexShrink: 0
+              }}>
+                ✓ 완료
+              </span>
+            )}
+          </div>
+
+          {/* 우측: 3점 메뉴 */}
+          <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={(e) => onOpenItemMenu(e, item.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                borderRadius: '5px',
+                border: 'none',
+                backgroundColor: openItemMenuId === item.id ? '#E2E8F0' : 'transparent',
+                color: openItemMenuId === item.id ? '#059669' : '#64748B',
+                cursor: 'pointer'
+              }}
+              title="메뉴"
+            >
+              <MoreVertical size={15} />
+            </button>
+
+            {openItemMenuId === item.id && (
+              <>
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 9998,
+                    backgroundColor: 'transparent'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseItemMenu();
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: openItemMenuPos?.top ?? 0,
+                    right: openItemMenuPos?.right ?? 0,
+                    zIndex: 9999,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)',
+                    border: '1px solid #CBD5E1',
+                    minWidth: '110px',
+                    padding: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onStartEdit(item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Edit2 size={13} color="#475569" />
+                    <span>수정</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCopy(blockId, item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Copy size={13} color="#475569" />
+                    <span>복사</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(blockId, item.id)}
+                    style={blockMenuItemDangerStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Trash2 size={13} color="#DC2626" />
+                    <span>삭제</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseItemMenu}
+                    style={blockMenuItemCancelStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <X size={13} color="#64748B" />
+                    <span>취소</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
-
-      {/* 항목 삭제 버튼 */}
-      <button
-        type="button"
-        className="no-print"
-        onClick={() => onDelete(blockId, item.id, true)}
-        title="항목 삭제"
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: '#94A3B8',
-          cursor: 'pointer',
-          padding: '2px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '4px',
-          marginTop: '1px'
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-      >
-        <Trash2 size={14} />
-      </button>
     </div>
   );
 }
@@ -423,8 +549,27 @@ export const DetailBlocksManager = ({
   const [openBlockMenuId, setOpenBlockMenuId] = useState(null);
   const [openBlockMenuPos, setOpenBlockMenuPos] = useState(null);
   const [collapsedBlockIds, setCollapsedBlockIds] = useState({});
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [openItemMenuId, setOpenItemMenuId] = useState(null);
+  const [openItemMenuPos, setOpenItemMenuPos] = useState(null);
+  const [draggedItemKey, setDraggedItemKey] = useState(null);
+  const [dragOverItemKey, setDragOverItemKey] = useState(null);
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (openItemMenuId) {
+          setOpenItemMenuId(null);
+        } else if (editingItemId) {
+          setEditingItemId(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [openItemMenuId, editingItemId]);
 
   const toggleBlockCollapse = (blockId) => {
     setCollapsedBlockIds((prev) => ({
@@ -513,59 +658,84 @@ export const DetailBlocksManager = ({
     if (onChangeAndSave) onChangeAndSave(next);
   };
 
-  // 체크리스트 항목 추가 (빈 항목 생성)
-  const handleAddChecklistItem = (blockId, afterItemId = null) => {
-    const newItem = {
-      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      text: '',
-      completed: false
-    };
-    const next = blocks.map((b) => {
-      if (b.id !== blockId) return b;
-      const items = [...(b.items || [])];
-      if (afterItemId) {
-        const idx = items.findIndex((it) => it.id === afterItemId);
-        if (idx !== -1) {
-          items.splice(idx + 1, 0, newItem);
-        } else {
-          items.push(newItem);
-        }
-      } else {
-        items.push(newItem);
-      }
-      return { ...b, items };
-    });
-    if (onChangeAndSave) onChangeAndSave(next);
-    setTimeout(() => {
-      const el = document.getElementById(`chk_input_${newItem.id}`);
-      if (el) el.focus();
-    }, 50);
+  // 체크리스트 개별 항목 3점 메뉴 열기
+  const handleOpenItemMenu = (e, itemId) => {
+    e.stopPropagation();
+    if (openItemMenuId === itemId) {
+      setOpenItemMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 150;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenItemMenuPos({ top, right });
+      setOpenItemMenuId(itemId);
+    }
   };
 
-  // 체크리스트 항목 텍스트 저장 및 새 항목 추가를 단일 작업으로 원자적(atomic) 처리
-  const handleCommitAndAddChecklistItem = (blockId, currentItemId, currentItemText) => {
+  const handleCloseItemMenu = () => {
+    setOpenItemMenuId(null);
+  };
+
+  // 체크리스트 개별 항목 수정 시작
+  const handleStartEditChecklistItem = (item) => {
+    setEditingItemId(item.id);
+    setOpenItemMenuId(null);
+  };
+
+  // 체크리스트 개별 항목 수정 저장
+  const handleSaveEditChecklistItem = (blockId, itemId, newText) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, text: newText } : it))
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(null);
+  };
+
+  // 체크리스트 개별 항목 수정 취소
+  const handleCancelEditChecklistItem = (blockId, item) => {
+    // 텍스트가 빈 상태로 방금 추가된 항목인 경우 자동 제거
+    if (!item.text || !item.text.trim()) {
+      const targetBlock = blocks.find((b) => b.id === blockId);
+      if (targetBlock && targetBlock.items && targetBlock.items.length > 1) {
+        const next = blocks.map((b) => {
+          if (b.id !== blockId) return b;
+          return {
+            ...b,
+            items: (b.items || []).filter((it) => it.id !== item.id)
+          };
+        });
+        if (onChangeAndSave) onChangeAndSave(next);
+      }
+    }
+    setEditingItemId(null);
+  };
+
+  // 체크리스트 개별 항목 복사
+  const handleCopyChecklistItem = (blockId, item) => {
+    setOpenItemMenuId(null);
     const newItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      text: '',
+      text: item.text || '',
       completed: false
     };
     const next = blocks.map((b) => {
       if (b.id !== blockId) return b;
       const currentItems = [...(b.items || [])];
-      const targetIdx = currentItems.findIndex((it) => it.id === currentItemId);
-      if (targetIdx !== -1) {
-        currentItems[targetIdx] = { ...currentItems[targetIdx], text: currentItemText };
-        currentItems.splice(targetIdx + 1, 0, newItem);
+      const idx = currentItems.findIndex((it) => it.id === item.id);
+      if (idx !== -1) {
+        currentItems.splice(idx + 1, 0, newItem);
       } else {
         currentItems.push(newItem);
       }
       return { ...b, items: currentItems };
     });
     if (onChangeAndSave) onChangeAndSave(next);
-    setTimeout(() => {
-      const el = document.getElementById(`chk_input_${newItem.id}`);
-      if (el) el.focus();
-    }, 60);
   };
 
   // 실제 체크리스트 항목 삭제 실행
@@ -579,34 +749,99 @@ export const DetailBlocksManager = ({
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
+    if (editingItemId === itemId) setEditingItemId(null);
   };
 
-  // 체크리스트 항목 삭제 (자체확인모달 연동)
-  const handleDeleteChecklistItem = (blockId, itemId, isExplicitClick = false) => {
+  // 체크리스트 항목 삭제 (모달 연동)
+  const handleDeleteChecklistItem = (blockId, itemId) => {
+    setOpenItemMenuId(null);
     const targetBlock = blocks.find((b) => b.id === blockId);
     const targetItem = targetBlock?.items?.find((it) => it.id === itemId);
 
-    // 백스페이스로 빈 줄을 지울 때는 입력 편의를 위해 모달 없이 즉시 삭제
-    if (!isExplicitClick && !targetItem?.text?.trim()) {
+    if (!targetItem?.text?.trim()) {
       executeDeleteChecklistItem(blockId, itemId);
       return;
     }
 
     if (openDeleteModal) {
-      const text = targetItem?.text?.trim();
-      let message = '이 체크 항목을 정말 삭제하시겠습니까?';
-      if (text) {
-        const preview = text.length > 30 ? text.slice(0, 30) + '...' : text;
-        message = `'${preview}' 항목을 정말 삭제하시겠습니까?`;
-      }
+      const text = targetItem.text.trim();
+      const preview = text.length > 30 ? text.slice(0, 30) + '...' : text;
       openDeleteModal(
         '체크 항목 삭제',
-        message,
+        `'${preview}' 항목을 정말 삭제하시겠습니까?`,
         () => executeDeleteChecklistItem(blockId, itemId)
       );
     } else {
       executeDeleteChecklistItem(blockId, itemId);
     }
+  };
+
+  // 드래그 앤 드롭 핸들러
+  const handleItemDragStart = (e, blockId, itemId) => {
+    e.stopPropagation();
+    setDraggedItemKey({ blockId, itemId });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleItemDragOver = (e, blockId, itemId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedItemKey?.blockId === blockId && draggedItemKey?.itemId !== itemId) {
+      setDragOverItemKey({ blockId, itemId });
+    }
+  };
+
+  const handleItemDrop = (e, blockId, targetItemId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (
+      !draggedItemKey ||
+      draggedItemKey.blockId !== blockId ||
+      draggedItemKey.itemId === targetItemId
+    ) {
+      setDraggedItemKey(null);
+      setDragOverItemKey(null);
+      return;
+    }
+
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const items = [...(b.items || [])];
+      const fromIdx = items.findIndex((it) => it.id === draggedItemKey.itemId);
+      const toIdx = items.findIndex((it) => it.id === targetItemId);
+      if (fromIdx === -1 || toIdx === -1) return b;
+
+      const [moved] = items.splice(fromIdx, 1);
+      items.splice(toIdx, 0, moved);
+      return { ...b, items };
+    });
+
+    if (onChangeAndSave) onChangeAndSave(next);
+    setDraggedItemKey(null);
+    setDragOverItemKey(null);
+  };
+
+  const handleItemDragEnd = () => {
+    setDraggedItemKey(null);
+    setDragOverItemKey(null);
+  };
+
+  // 체크리스트 항목 추가 (하단 [+ 항목 추가] 버튼 클릭 시)
+  const handleAddChecklistItem = (blockId) => {
+    const newItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: '',
+      completed: false
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: [...(b.items || []), newItem]
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(newItem.id);
   };
 
   // 체크리스트 블록 제목 저장
@@ -1113,12 +1348,59 @@ export const DetailBlocksManager = ({
                       item={item}
                       itemIdx={itemIdx}
                       items={items}
+                      isEditing={editingItemId === item.id}
+                      onStartEdit={handleStartEditChecklistItem}
+                      onSaveEdit={handleSaveEditChecklistItem}
+                      onCancelEdit={handleCancelEditChecklistItem}
                       onToggle={handleToggleChecklistItem}
-                      onUpdateText={handleUpdateChecklistItemText}
-                      onCommitAndAdd={handleCommitAndAddChecklistItem}
+                      onCopy={handleCopyChecklistItem}
                       onDelete={handleDeleteChecklistItem}
+                      openItemMenuId={openItemMenuId}
+                      openItemMenuPos={openItemMenuPos}
+                      onOpenItemMenu={handleOpenItemMenu}
+                      onCloseItemMenu={handleCloseItemMenu}
+                      isDragged={draggedItemKey?.blockId === block.id && draggedItemKey?.itemId === item.id}
+                      isDragOver={dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === item.id}
+                      onDragStart={handleItemDragStart}
+                      onDragOver={handleItemDragOver}
+                      onDrop={handleItemDrop}
+                      onDragEnd={handleItemDragEnd}
                     />
                   ))}
+
+                  {/* 새 체크 항목 추가 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => handleAddChecklistItem(block.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '7px 10px',
+                      marginTop: '2px',
+                      borderRadius: '6px',
+                      border: '1px dashed #A7F3D0',
+                      backgroundColor: '#F0FDF4',
+                      color: '#065F46',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#DCFCE7';
+                      e.currentTarget.style.borderColor = '#6EE7B7';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F0FDF4';
+                      e.currentTarget.style.borderColor = '#A7F3D0';
+                    }}
+                    title="새 체크 항목 추가"
+                  >
+                    <Plus size={14} />
+                    <span>체크 항목 추가</span>
+                  </button>
                 </div>
               )}
           </div>
