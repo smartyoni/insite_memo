@@ -3025,108 +3025,95 @@ export default function NotebookExplorer() {
       flexDirection: 'column',
       gap: '4px'
     }}>
-      {/* Top Row: 노트, 블로그, 사무실, 앱개발 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
-        <button
-          onClick={() => handleTabSwitch('explorer')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'explorer' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'explorer' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'explorer' ? 700 : 500
-          }}
-        >
-          <span>노트</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('blog')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'blog' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'blog' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'blog' ? 700 : 500
-          }}
-        >
-          <span>블로그</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('office')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'office' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'office' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'office' ? 700 : 500
-          }}
-        >
-          <span>사무실</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('balance')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'balance' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'balance' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'balance' ? 700 : 500
-          }}
-        >
-          <span>앱개발</span>
-        </button>
-      </div>
+      {/* Function Segmented Tabs (2 Rows x 4 Columns) */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '3px',
+          padding: '3px',
+          backgroundColor: '#D9E4F0',
+          borderRadius: '8px',
+          border: '1px solid #C4D5E7',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Top Row: 노트, 블로그, 사무실, 앱개발 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
+          {[
+            { id: 'explorer', label: '노트' },
+            { id: 'blog', label: '블로그' },
+            { id: 'office', label: '사무실' },
+            { id: 'balance', label: '앱개발' }
+          ].map((tab) => {
+            const isActive = activeMainTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabSwitch(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: '6px 0',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: isActive ? 700 : 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                  color: isActive ? '#1D4ED8' : '#4A607A',
+                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>
-        <button
-          onClick={() => handleTabSwitch('clipboard')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'clipboard' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'clipboard' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'clipboard' ? 700 : 500
-          }}
-        >
-          <span>계약</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('ad')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'ad' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'ad' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'ad' ? 700 : 500
-          }}
-        >
-          <span>광고</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('clip')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'clip' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'clip' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'clip' ? 700 : 500
-          }}
-        >
-          <span>북마크</span>
-        </button>
-        <button
-          onClick={() => handleTabSwitch('template')}
-          style={{
-            ...styles.mainModeTabBtn,
-            flex: 1,
-            backgroundColor: activeMainTab === 'template' ? '#2563EB' : 'transparent',
-            color: activeMainTab === 'template' ? '#FFFFFF' : '#4A607A',
-            fontWeight: activeMainTab === 'template' ? 700 : 500
-          }}
-        >
-          <span>템플릿</span>
-        </button>
+        {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
+          {[
+            { id: 'clipboard', label: '계약' },
+            { id: 'ad', label: '광고' },
+            { id: 'clip', label: '북마크' },
+            { id: 'template', label: '템플릿' }
+          ].map((tab) => {
+            const isActive = activeMainTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabSwitch(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: '6px 0',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: isActive ? 700 : 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                  color: isActive ? '#1D4ED8' : '#4A607A',
+                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Quick Memo Action Buttons: [이전] [퀵메모이동] [퀵메모] */}
