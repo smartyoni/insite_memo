@@ -352,6 +352,27 @@ function DetailChecklistItemRow({
   );
 }
 
+let shadowTextarea = null;
+
+const getShadowTextarea = () => {
+  if (typeof document === 'undefined') return null;
+  if (!shadowTextarea) {
+    shadowTextarea = document.createElement('textarea');
+    shadowTextarea.setAttribute('tabindex', '-1');
+    shadowTextarea.setAttribute('aria-hidden', 'true');
+    shadowTextarea.style.position = 'fixed';
+    shadowTextarea.style.top = '-9999px';
+    shadowTextarea.style.left = '-9999px';
+    shadowTextarea.style.height = '0';
+    shadowTextarea.style.overflow = 'hidden';
+    shadowTextarea.style.visibility = 'hidden';
+    shadowTextarea.style.pointerEvents = 'none';
+    shadowTextarea.style.zIndex = '-9999';
+    document.body.appendChild(shadowTextarea);
+  }
+  return shadowTextarea;
+};
+
 /**
  * 상세내용 상시 블록 관리 컴포넌트
  * 긴 내용 시 헤더 고정(Sticky Header), 본문 스크롤(maxHeight & overflowY) 지원
@@ -396,11 +417,45 @@ export const DetailBlocksManager = ({
     }
   };
 
-  // 텍스트에어리어 높이 자동 조절
+  // 텍스트에어리어 높이 자동 조절 (auto 리셋으로 인한 스크롤 튕김/하단 밀림 완전 방지)
   const adjustTextareaHeight = (el) => {
     if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+    const shadow = getShadowTextarea();
+    if (!shadow) {
+      el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+      return;
+    }
+
+    const clientWidth = el.clientWidth || el.getBoundingClientRect().width;
+    if (clientWidth > 0) {
+      const computed = window.getComputedStyle(el);
+      shadow.style.width = `${clientWidth}px`;
+      shadow.style.fontSize = computed.fontSize;
+      shadow.style.fontFamily = computed.fontFamily;
+      shadow.style.fontWeight = computed.fontWeight;
+      shadow.style.lineHeight = computed.lineHeight;
+      shadow.style.letterSpacing = computed.letterSpacing;
+      shadow.style.whiteSpace = computed.whiteSpace;
+      shadow.style.wordBreak = computed.wordBreak;
+      shadow.style.wordWrap = computed.wordWrap;
+      shadow.style.boxSizing = computed.boxSizing;
+      shadow.style.padding = computed.padding || '0';
+      shadow.style.border = 'none';
+
+      let val = el.value || '';
+      if (val.endsWith('\n')) {
+        val += ' ';
+      }
+      shadow.value = val;
+
+      const targetHeight = Math.max(shadow.scrollHeight, 46);
+      const newHeightStr = `${targetHeight}px`;
+      if (el.style.height !== newHeightStr) {
+        el.style.height = newHeightStr;
+      }
+    } else {
+      el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+    }
   };
 
   // 체크리스트 항목 텍스트 변경
@@ -1399,7 +1454,8 @@ export const DetailBlocksManager = ({
                       wordBreak: 'break-word',
                       boxSizing: 'border-box',
                       backgroundColor: 'transparent',
-                      display: 'block'
+                      display: 'block',
+                      overflow: 'hidden'
                     }}
                   />
                 </div>
