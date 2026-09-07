@@ -678,6 +678,7 @@ export default function NotebookExplorer() {
   const [isQuickMemoOpen, setIsQuickMemoOpen] = useState(false);
   const [quickMemoText, setQuickMemoText] = useState('');
   const [isSavingQuickMemo, setIsSavingQuickMemo] = useState(false);
+  const [quickMemoPrevNav, setQuickMemoPrevNav] = useState(null);
   const [quickMemoToast, setQuickMemoToast] = useState(false);
   const quickMemoToastTimerRef = useRef(null);
   const quickMemoTextareaRef = useRef(null);
@@ -2177,10 +2178,37 @@ export default function NotebookExplorer() {
 
   // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
   const handleNavigateToQuickMemo = () => {
+    // 퀵메모 이동 전의 위치를 저장 (현재가 퀵메모가 아닐 때만 기억)
+    if (!(activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id)) {
+      setQuickMemoPrevNav({
+        tab: activeMainTab,
+        catId: selectedCategoryId,
+        itemId: selectedItemId,
+        mobileView: isMobile ? mobileView : null
+      });
+    }
     if (activeMainTab !== 'explorer') {
       setActiveMainTab('explorer');
     }
     navigateToItems(QUICK_MEMO_CATEGORY.id);
+  };
+
+  const handleReturnFromQuickMemo = () => {
+    if (!quickMemoPrevNav) return;
+    const { tab, catId, itemId, mobileView: prevMobileView } = quickMemoPrevNav;
+    if (tab && tab !== activeMainTab) {
+      setActiveMainTab(tab);
+    }
+    if (catId) {
+      setSelectedCategoryId(catId);
+    }
+    if (itemId !== undefined) {
+      setSelectedItemId(itemId);
+    }
+    if (isMobile && prevMobileView) {
+      setMobileView(prevMobileView);
+    }
+    setQuickMemoPrevNav(null);
   };
 
   const handleOpenQuickMemo = () => {
@@ -3101,23 +3129,48 @@ export default function NotebookExplorer() {
         </button>
       </div>
 
-      {/* Quick Memo Action Buttons (2-Split: Left = Go to Quick Memo Category, Right = Quick Memo Popup) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', marginTop: '2px' }}>
+      {/* Quick Memo Action Buttons: [이전] [퀵메모이동] [퀵메모] */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', marginTop: '2px' }}>
         <button
           type="button"
-          onClick={handleNavigateToQuickMemo}
+          disabled={!quickMemoPrevNav}
+          onClick={handleReturnFromQuickMemo}
           style={{
             flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '5px',
-            padding: '6px 4px',
+            padding: '6px 2px',
+            backgroundColor: quickMemoPrevNav ? '#FEF3C7' : '#F1F5F9',
+            border: `1px solid ${quickMemoPrevNav ? '#F59E0B' : '#E2E8F0'}`,
+            borderRadius: '6px',
+            color: quickMemoPrevNav ? '#92400E' : '#94A3B8',
+            fontSize: '12px',
+            fontWeight: quickMemoPrevNav ? 700 : 500,
+            cursor: quickMemoPrevNav ? 'pointer' : 'not-allowed',
+            opacity: quickMemoPrevNav ? 1 : 0.6,
+            boxShadow: quickMemoPrevNav ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+          title={quickMemoPrevNav ? '이동 전 위치로 복귀' : '이전 위치 없음'}
+        >
+          <span>이전</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleNavigateToQuickMemo}
+          style={{
+            flex: 1.3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px 2px',
             backgroundColor: (activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id) ? '#FDE68A' : '#FEF3C7',
             border: `1px solid ${(activeMainTab === 'explorer' && selectedCategoryId === QUICK_MEMO_CATEGORY.id) ? '#F59E0B' : '#FDE047'}`,
             borderRadius: '6px',
             color: '#B45309',
-            fontSize: '11.5px',
+            fontSize: '12px',
             fontWeight: 700,
             cursor: 'pointer',
             boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
@@ -3126,8 +3179,7 @@ export default function NotebookExplorer() {
           }}
           title="퀵메모 카테고리(목록)로 이동"
         >
-          <FolderOpen size={13} color="#D97706" />
-          <span>퀵메모 이동</span>
+          <span>퀵메모이동</span>
         </button>
         <button
           type="button"
@@ -3137,23 +3189,21 @@ export default function NotebookExplorer() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '5px',
-            padding: '6px 4px',
+            padding: '6px 2px',
             backgroundColor: '#FEF3C7',
             border: '1px solid #FDE047',
             borderRadius: '6px',
             color: '#B45309',
-            fontSize: '11.5px',
+            fontSize: '12px',
             fontWeight: 700,
             cursor: 'pointer',
             boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap'
           }}
-          title="어디서든 즉시 기록하고 원래 위치로 복귀 (단축키: Alt+Q)"
+          title="퀵메모 작성 모달 열기 (단축키: Alt+Q)"
         >
-          <Zap size={13} fill="#F59E0B" color="#D97706" />
-          <span>⚡ 퀵메모 (Alt+Q)</span>
+          <span>퀵메모</span>
         </button>
       </div>
     </div>
