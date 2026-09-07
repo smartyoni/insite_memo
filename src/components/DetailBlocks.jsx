@@ -173,12 +173,24 @@ function DetailChecklistItemRow({
   const debounceTimerRef = useRef(null);
   const inputRef = useRef(null);
 
+  // 높이 자동 조절 함수
+  const adjustHeight = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 22)}px`;
+  };
+
   useEffect(() => {
     // 포커스 중일 때는 외부 텍스트로 덮어쓰지 않음
     if (document.activeElement !== inputRef.current && !isComposingRef.current && item.text !== localText) {
       setLocalText(item.text || '');
     }
   }, [item.text]);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [localText]);
 
   useEffect(() => {
     return () => {
@@ -195,6 +207,7 @@ function DetailChecklistItemRow({
   const handleChange = (e) => {
     const val = e.target.value;
     setLocalText(val);
+    adjustHeight();
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -212,6 +225,7 @@ function DetailChecklistItemRow({
     isComposingRef.current = false;
     const val = e.target.value;
     setLocalText(val);
+    adjustHeight();
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
       commitText(val);
@@ -225,6 +239,11 @@ function DetailChecklistItemRow({
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift + Enter: 줄바꿈 허용
+        return;
+      }
+      // Enter: 새 체크리스트 항목 추가
       e.preventDefault();
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       const textToSave = e.target.value;
@@ -250,7 +269,7 @@ function DetailChecklistItemRow({
       key={item.id}
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: '8px',
         padding: '5px 8px',
         borderRadius: '6px',
@@ -267,6 +286,7 @@ function DetailChecklistItemRow({
         style={{
           width: '20px',
           height: '20px',
+          marginTop: '2px',
           borderRadius: '4px',
           backgroundColor: item.completed ? '#059669' : '#FFFFFF',
           border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
@@ -283,28 +303,35 @@ function DetailChecklistItemRow({
         {item.completed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
       </button>
 
-      {/* 인라인 텍스트 입력 */}
-      <input
+      {/* 인라인 텍스트 입력 (textarea) */}
+      <textarea
         ref={inputRef}
         id={`chk_input_${item.id}`}
-        type="text"
+        rows={1}
         value={localText}
         onChange={handleChange}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        placeholder="체크 항목 입력... (Enter 다음 항목 추가)"
+        placeholder="체크 항목 입력... (Shift+Enter 줄바꿈, Enter 항목 추가)"
         style={{
           flex: 1,
           minWidth: 0,
+          minHeight: '22px',
           border: 'none',
           outline: 'none',
           fontSize: '13px',
           fontWeight: 600,
+          lineHeight: '1.45',
+          fontFamily: 'inherit',
+          resize: 'none',
+          overflow: 'hidden',
           color: item.completed ? '#94A3B8' : '#1E293B',
           textDecoration: item.completed ? 'line-through' : 'none',
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          padding: '1px 0 0 0',
+          margin: 0
         }}
       />
 
@@ -319,7 +346,8 @@ function DetailChecklistItemRow({
             padding: '2px 8px',
             borderRadius: '4px',
             flexShrink: 0,
-            userSelect: 'none'
+            userSelect: 'none',
+            marginTop: '1px'
           }}
         >
           ✓ 완료
@@ -341,7 +369,8 @@ function DetailChecklistItemRow({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '4px'
+          borderRadius: '4px',
+          marginTop: '1px'
         }}
         onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
         onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
