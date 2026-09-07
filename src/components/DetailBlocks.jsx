@@ -767,7 +767,7 @@ export const DetailBlocksManager = ({
                 flexDirection: 'column',
                 backgroundColor: '#FFFFFF',
                 borderRadius: '8px',
-                border: '1px solid #BBF7D0',
+                border: '1px solid #72A884',
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
                 overflow: 'hidden',
                 flexShrink: 0
@@ -780,8 +780,8 @@ export const DetailBlocksManager = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '6px 10px',
-                  backgroundColor: '#F0FDF4',
-                  borderBottom: isCollapsed ? 'none' : '1px solid #DCFCE7',
+                  backgroundColor: '#A8D5B8',
+                  borderBottom: isCollapsed ? 'none' : '1px solid #6B9E7D',
                   cursor: isEditingTitle ? 'default' : 'pointer',
                   userSelect: 'none',
                   position: 'sticky',
@@ -801,7 +801,7 @@ export const DetailBlocksManager = ({
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Folder size={14} color="#16A34A" style={{ flexShrink: 0 }} />
+                    <Folder size={14} color="#065F46" style={{ flexShrink: 0 }} />
                     <input
                       type="text"
                       value={draftChecklistTitle}
@@ -821,10 +821,10 @@ export const DetailBlocksManager = ({
                         flex: 1,
                         fontSize: '13px',
                         fontWeight: 700,
-                        color: '#14532D',
+                        color: '#052E16',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        border: '1px solid #16A34A',
+                        border: '1px solid #065F46',
                         outline: 'none',
                         backgroundColor: '#FFFFFF'
                       }}
@@ -836,7 +836,7 @@ export const DetailBlocksManager = ({
                         padding: '2px 8px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#16A34A',
+                        backgroundColor: '#065F46',
                         color: '#FFFFFF',
                         fontSize: '11px',
                         fontWeight: 600,
@@ -873,17 +873,17 @@ export const DetailBlocksManager = ({
                     }}
                   >
                     <span
-                      style={{ display: 'flex', alignItems: 'center', color: '#15803D' }}
+                      style={{ display: 'flex', alignItems: 'center', color: '#065F46' }}
                       title={isCollapsed ? '펼치기' : '접기'}
                     >
                       {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                     </span>
-                    <Folder size={14} color="#16A34A" style={{ flexShrink: 0 }} />
+                    <Folder size={14} color="#065F46" style={{ flexShrink: 0 }} />
                     <span
                       style={{
                         fontSize: '13px',
                         fontWeight: 700,
-                        color: '#166534',
+                        color: '#052E16',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
@@ -898,7 +898,7 @@ export const DetailBlocksManager = ({
                       {block.title && block.title.trim() ? block.title : '체크리스트'}
                     </span>
                     {isCollapsed && (
-                      <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>
+                      <span style={{ fontSize: '11px', color: '#065F46', fontWeight: 600 }}>
                         (접힘)
                       </span>
                     )}
@@ -955,7 +955,7 @@ export const DetailBlocksManager = ({
                           handleMoveToBottom(idx);
                         }}
                         disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#16A34A'; }}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#065F46'; }}
                         onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
                         style={{
                           display: 'inline-flex',
@@ -993,7 +993,7 @@ export const DetailBlocksManager = ({
                           handleMoveUp(idx);
                         }}
                         disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#16A34A'; }}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#065F46'; }}
                         onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
                         style={{
                           display: 'inline-flex',
@@ -1018,7 +1018,7 @@ export const DetailBlocksManager = ({
                           handleMoveDown(idx);
                         }}
                         disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#16A34A'; }}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#065F46'; }}
                         onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
                         style={{
                           display: 'inline-flex',
@@ -1052,8 +1052,8 @@ export const DetailBlocksManager = ({
                         height: '28px',
                         borderRadius: '6px',
                         border: 'none',
-                        backgroundColor: openBlockMenuId === block.id ? '#DCFCE7' : 'transparent',
-                        color: openBlockMenuId === block.id ? '#16A34A' : '#64748B',
+                        backgroundColor: openBlockMenuId === block.id ? '#99D0AA' : 'transparent',
+                        color: openBlockMenuId === block.id ? '#052E16' : '#64748B',
                         cursor: 'pointer'
                       }}
                       title="메뉴"
@@ -1555,7 +1555,7 @@ export const DetailBlocksManager = ({
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <Plus size={14} color="#16A34A" />
+                  <Plus size={14} color="#065F46" />
                   <span>추가</span>
                 </button>
                 <button
