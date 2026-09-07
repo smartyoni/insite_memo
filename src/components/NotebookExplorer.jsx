@@ -5280,10 +5280,10 @@ export default function NotebookExplorer() {
                                           padding: isMobile ? '5px 4px' : '7px 10px',
                                           marginTop: '0',
                                           marginBottom: isSecCollapsed ? '0' : '2px',
-                                          backgroundColor: '#EEF2F6',
-                                          border: '1px solid #CBD5E1',
+                                          backgroundColor: '#B3C8DD',
+                                          border: '1px solid #7B95AC',
                                           borderRadius: isMobile ? '5px' : '8px',
-                                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                                           cursor: isSecEditing ? 'default' : 'pointer',
                                           userSelect: 'none'
                                         }}
@@ -5315,7 +5315,7 @@ export default function NotebookExplorer() {
                                               style={{
                                                 fontSize: '13px',
                                                 fontWeight: 700,
-                                                color: '#1E293B',
+                                                color: '#0F172A',
                                                 padding: '2px 6px',
                                                 borderRadius: '4px',
                                                 border: '1px solid #2563EB',
@@ -5342,17 +5342,17 @@ export default function NotebookExplorer() {
                                         ) : (
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                                             <span
-                                              style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                                              style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
                                               title={isSecCollapsed ? '펼치기' : '접기'}
                                             >
                                               {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                             </span>
-                                            <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
-                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
+                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                               {group.section.text}
                                             </span>
                                             {isSecCollapsed && (
-                                              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
                                                 (접힘)
                                               </span>
                                             )}
@@ -6302,10 +6302,10 @@ onClick={() => {
                                         padding: isMobile ? '5px 4px' : '7px 10px',
                                         marginTop: '0',
                                         marginBottom: isSecCollapsed ? '0' : '2px',
-                                        backgroundColor: '#EEF2F6',
-                                        border: '1px solid #CBD5E1',
+                                        backgroundColor: '#B3C8DD',
+                                        border: '1px solid #7B95AC',
                                         borderRadius: isMobile ? '5px' : '8px',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                                         cursor: isSecEditing ? 'default' : 'pointer',
                                         userSelect: 'none'
                                       }}
@@ -6365,17 +6365,17 @@ onClick={() => {
                                       ) : (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                                           <span
-                                            style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                                            style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
                                             title={isSecCollapsed ? '펼치기' : '접기'}
                                           >
                                             {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                           </span>
-                                          <Folder size={14} color="#2563EB" style={{ flexShrink: 0 }} />
-                                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
+                                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {group.section.text}
                                           </span>
                                           {isSecCollapsed && (
-                                            <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
                                               (접힘)
                                             </span>
                                           )}
