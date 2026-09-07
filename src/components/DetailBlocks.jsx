@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CheckSquare,
   Folder,
+  FolderInput,
   ChevronDown,
   ChevronRight,
   ChevronsUp,
@@ -412,7 +413,8 @@ export const DetailBlocksManager = ({
   searchQuery = '',
   editingBlockId,
   setEditingBlockId,
-  openDeleteModal
+  openDeleteModal,
+  onOpenMoveModal
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -1615,6 +1617,35 @@ export const DetailBlocksManager = ({
                   <Edit2 size={14} color="#475569" />
                   <span>수정</span>
                 </button>
+                {onOpenMoveModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onOpenMoveModal(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#2563EB',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <FolderInput size={14} color="#2563EB" />
+                    <span>소속 이동</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1697,6 +1728,35 @@ export const DetailBlocksManager = ({
                   <Edit2 size={14} color="#475569" />
                   <span>수정</span>
                 </button>
+                {onOpenMoveModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onOpenMoveModal(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#2563EB',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <FolderInput size={14} color="#2563EB" />
+                    <span>소속 이동</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

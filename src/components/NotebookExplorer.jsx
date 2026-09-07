@@ -780,6 +780,14 @@ export default function NotebookExplorer() {
   const deleteConfirmBtnRef = useRef(null);
   const isDeletingRef = useRef(false);
 
+  // Detail Block Move Modal State
+  const [moveBlockModalState, setMoveBlockModalState] = useState({
+    isOpen: false,
+    sourceCheckId: null,
+    block: null,
+    targetCheckId: null
+  });
+
   const openDeleteModal = (title, message, onConfirm) => {
     setDeleteModalState({
       isOpen: true,
@@ -1883,6 +1891,122 @@ export default function NotebookExplorer() {
     handleSaveChecklistDetail(selectedChecklistId, updated);
   };
 
+  const handleOpenMoveBlockModal = (block) => {
+    if (!activeItem || !block) return;
+    const currentId = selectedChecklistId || '__main__';
+    const candidates = rawChecklists.filter((c) => !c.isSection && c.id !== currentId);
+    const defaultTarget = candidates.length > 0 ? candidates[0].id : null;
+
+    setMoveBlockModalState({
+      isOpen: true,
+      sourceCheckId: currentId,
+      block,
+      targetCheckId: defaultTarget
+    });
+  };
+
+  const handleCloseMoveBlockModal = () => {
+    setMoveBlockModalState({
+      isOpen: false,
+      sourceCheckId: null,
+      block: null,
+      targetCheckId: null
+    });
+  };
+
+  const handleExecuteMoveBlock = async () => {
+    const { sourceCheckId, targetCheckId, block } = moveBlockModalState;
+    if (!activeItem || !block || !targetCheckId || sourceCheckId === targetCheckId) {
+      handleCloseMoveBlockModal();
+      return;
+    }
+
+    try {
+      // 1. 출처 블록 가져오기 (현재 화면에서 보고 있는 경우 checklistDetailBlocks가 최신일 수 있음)
+      let sourceBlocks = [];
+      if (sourceCheckId === selectedChecklistId) {
+        sourceBlocks = [...checklistDetailBlocks];
+      } else if (sourceCheckId === '__main__') {
+        sourceBlocks = parseDetailBlocks(activeItem.body || '', activeItem.detailBlocks);
+      } else {
+        const srcItem = baseChecklists.find((c) => c.id === sourceCheckId);
+        sourceBlocks = parseDetailBlocks(srcItem?.detail || '', srcItem?.detailBlocks);
+      }
+
+      // 2. 대상 블록 가져오기
+      let targetBlocks = [];
+      if (targetCheckId === selectedChecklistId) {
+        targetBlocks = [...checklistDetailBlocks];
+      } else if (targetCheckId === '__main__') {
+        targetBlocks = parseDetailBlocks(activeItem.body || '', activeItem.detailBlocks);
+      } else {
+        const tgtItem = baseChecklists.find((c) => c.id === targetCheckId);
+        targetBlocks = parseDetailBlocks(tgtItem?.detail || '', tgtItem?.detailBlocks);
+      }
+
+      // 3. 출처에서 블록 제거
+      const updatedSourceBlocks = sourceBlocks.filter((b) => b.id !== block.id);
+      const finalSourceBlocks = updatedSourceBlocks.length > 0 ? updatedSourceBlocks : [
+        { id: `b_init_${Date.now()}`, type: 'text', title: '', content: '' }
+      ];
+
+      // 4. 대상에 블록 추가
+      const isTargetEmpty = targetBlocks.length === 1 &&
+        targetBlocks[0].type === 'text' &&
+        !targetBlocks[0].title?.trim() &&
+        !targetBlocks[0].content?.trim();
+
+      const finalTargetBlocks = isTargetEmpty ? [block] : [...targetBlocks, block];
+
+      const sourcePlainText = blocksToPlainText(finalSourceBlocks);
+      const targetPlainText = blocksToPlainText(finalTargetBlocks);
+
+      // 5. Firestore 업데이트 페이로드 구성
+      const updatePayload = {
+        updatedAt: serverTimestamp()
+      };
+
+      if (sourceCheckId === '__main__') {
+        updatePayload.body = sourcePlainText;
+        updatePayload.detailBlocks = finalSourceBlocks;
+      }
+      if (targetCheckId === '__main__') {
+        updatePayload.body = targetPlainText;
+        updatePayload.detailBlocks = finalTargetBlocks;
+      }
+
+      const updatedChecklists = baseChecklists.map((c) => {
+        if (c.id === sourceCheckId) {
+          return { ...c, detail: sourcePlainText, detailBlocks: finalSourceBlocks };
+        }
+        if (c.id === targetCheckId) {
+          return { ...c, detail: targetPlainText, detailBlocks: finalTargetBlocks };
+        }
+        return c;
+      });
+      updatePayload.checklists = updatedChecklists;
+
+      await updateDoc(doc(db, 'items', activeItem.id), updatePayload);
+
+      // 6. 상태 동기화
+      if (selectedChecklistId === sourceCheckId) {
+        setChecklistDetailBlocks(finalSourceBlocks);
+        setChecklistDetailDraft(sourcePlainText);
+      } else if (selectedChecklistId === targetCheckId) {
+        setChecklistDetailBlocks(finalTargetBlocks);
+        setChecklistDetailDraft(targetPlainText);
+      }
+
+      setShowSavedToast(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+
+      handleCloseMoveBlockModal();
+    } catch (err) {
+      console.error('Error moving detail block:', err);
+      alert('블록 소속 이동 중 오류가 발생했습니다: ' + err.message);
+    }
+  };
 
   // Sync draft state when active item changes
   useEffect(() => {
@@ -1995,6 +2119,12 @@ export default function NotebookExplorer() {
 
       // 2. 일반 ESC 동작
       if (e.key === 'Escape') {
+        if (moveBlockModalState.isOpen) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCloseMoveBlockModal();
+          return;
+        }
         if (movingCategory) {
           setMovingCategory(null);
         } else if (openCatMenuId) {
@@ -5889,6 +6019,7 @@ onClick={() => {
                                   editingBlockId={editingBlockId}
                                   setEditingBlockId={setEditingBlockId}
                                   openDeleteModal={openDeleteModal}
+                                  onOpenMoveModal={handleOpenMoveBlockModal}
                                 />
                               </div>
                             ) : (
@@ -6123,6 +6254,7 @@ onClick={() => {
                                     editingBlockId={editingBlockId}
                                     setEditingBlockId={setEditingBlockId}
                                     openDeleteModal={openDeleteModal}
+                                    onOpenMoveModal={handleOpenMoveBlockModal}
                                   />
                                 </div>
                               );
@@ -7191,6 +7323,7 @@ onClick={() => {
                                   editingBlockId={editingBlockId}
                                   setEditingBlockId={setEditingBlockId}
                                   openDeleteModal={openDeleteModal}
+                                  onOpenMoveModal={handleOpenMoveBlockModal}
                                 />
                               </>
                             );
@@ -7483,6 +7616,166 @@ onClick={() => {
                 style={styles.btnModalDelete}
               >
                 삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Block Move Modal */}
+      {moveBlockModalState.isOpen && (
+        <div style={styles.modalOverlay} onClick={handleCloseMoveBlockModal}>
+          <div
+            style={{
+              ...styles.modalContent,
+              maxWidth: '440px',
+              width: isMobile ? '92%' : '420px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FolderInput size={18} color="#2563EB" />
+                </div>
+                <h3 style={styles.modalTitle}>블록 소속 이동</h3>
+              </div>
+              <button onClick={handleCloseMoveBlockModal} style={styles.modalCloseBtn} title="닫기">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              {/* 이동 대상 블록 미리보기 카드 */}
+              <div style={{
+                padding: '10px 12px',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                marginBottom: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700 }}>
+                  {moveBlockModalState.block?.type === 'checklist' ? (
+                    <span style={{ color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
+                      ☑️ 체크리스트 블록
+                    </span>
+                  ) : (
+                    <span style={{ color: '#1D4ED8', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px' }}>
+                      📝 텍스트 블록
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#1E293B',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {moveBlockModalState.block?.title || (
+                    moveBlockModalState.block?.type === 'checklist'
+                      ? (moveBlockModalState.block?.items?.[0]?.text || '체크리스트')
+                      : (moveBlockModalState.block?.content?.split('\n')[0] || '(내용 없음)')
+                  )}
+                </div>
+              </div>
+
+              <p style={{ ...styles.modalMessage, marginBottom: '8px', fontWeight: 600, color: '#334155' }}>
+                이동할 대상 체크리스트를 선택하세요:
+              </p>
+
+              {(() => {
+                const candidates = rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId);
+                if (candidates.length === 0) {
+                  return (
+                    <div style={{ padding: '14px', textAlign: 'center', color: '#94A3B8', fontSize: '13px', backgroundColor: '#F8FAFC', borderRadius: '8px' }}>
+                      이동할 수 있는 다른 체크리스트가 없습니다. 먼저 좌측에서 새 체크리스트를 추가해 주세요.
+                    </div>
+                  );
+                }
+
+                return (
+                  <select
+                    value={moveBlockModalState.targetCheckId || ''}
+                    onChange={(e) => setMoveBlockModalState(prev => ({ ...prev, targetCheckId: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #2563EB',
+                      backgroundColor: '#FFFFFF',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      outline: 'none',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {/* 기본 내용 (현재 소속이 아닐 때) */}
+                    {moveBlockModalState.sourceCheckId !== '__main__' && (
+                      <option value="__main__">📝 [기본 내용]</option>
+                    )}
+
+                    {/* 체크리스트 그룹별 항목들 */}
+                    {checklistGroups.map((grp, gIdx) => {
+                      const validItems = grp.items.filter((it) => it.id !== '__main__' && !it.isSection && it.id !== moveBlockModalState.sourceCheckId);
+                      if (validItems.length === 0) return null;
+
+                      if (grp.section && grp.section.text) {
+                        return (
+                          <optgroup key={`opt_grp_${gIdx}`} label={`📁 ${grp.section.text}`}>
+                            {validItems.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.completed ? '✓ ' : '□ '} {c.text}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      }
+
+                      return (
+                        <optgroup key={`opt_ungrp_${gIdx}`} label="일반 체크리스트">
+                          {validItems.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.completed ? '✓ ' : '□ '} {c.text}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </select>
+                );
+              })()}
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button type="button" onClick={handleCloseMoveBlockModal} style={styles.btnModalCancel}>
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteMoveBlock}
+                disabled={!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0}
+                style={{
+                  ...styles.btnPrimary,
+                  padding: '7px 16px',
+                  backgroundColor: (!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0) ? '#94A3B8' : '#2563EB',
+                  cursor: (!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                이동하기
               </button>
             </div>
           </div>
