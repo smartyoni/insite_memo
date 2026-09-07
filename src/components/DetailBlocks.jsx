@@ -37,15 +37,18 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
         const rawItems = Array.isArray(b.items) && b.items.length > 0
           ? b.items
           : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
+        const parsedItems = rawItems.map((it, i) => ({
+          id: it.id || `item_${Date.now()}_${i}`,
+          text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : ''),
+          completed: Boolean(it.completed)
+        }));
+        const uncompleted = parsedItems.filter((it) => !it.completed);
+        const completed = parsedItems.filter((it) => it.completed);
         return {
           id: b.id || `chk_${Date.now()}_${idx}`,
           type: 'checklist',
           title: typeof b.title === 'string' ? b.title : '체크리스트',
-          items: rawItems.map((it, i) => ({
-            id: it.id || `item_${Date.now()}_${i}`,
-            text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : ''),
-            completed: Boolean(it.completed)
-          }))
+          items: [...uncompleted, ...completed]
         };
       }
       return {
@@ -646,13 +649,18 @@ export const DetailBlocksManager = ({
     if (onChangeAndSave) onChangeAndSave(next);
   };
 
-  // 체크리스트 항목 체크/해제 토글
+  // 체크리스트 항목 체크/해제 토글 (완료된 항목은 아래로 자동 이동)
   const handleToggleChecklistItem = (blockId, itemId) => {
     const next = blocks.map((b) => {
       if (b.id !== blockId) return b;
+      const updated = (b.items || []).map((it) =>
+        it.id === itemId ? { ...it, completed: !it.completed } : it
+      );
+      const uncompleted = updated.filter((it) => !it.completed);
+      const completed = updated.filter((it) => it.completed);
       return {
         ...b,
-        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, completed: !it.completed } : it))
+        items: [...uncompleted, ...completed]
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
@@ -826,7 +834,7 @@ export const DetailBlocksManager = ({
     setDragOverItemKey(null);
   };
 
-  // 체크리스트 항목 추가 (하단 [+ 항목 추가] 버튼 클릭 시)
+  // 체크리스트 항목 추가 (하단 [+ 항목 추가] 버튼 클릭 시, 미완료 목록의 끝에 추가)
   const handleAddChecklistItem = (blockId) => {
     const newItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -835,9 +843,12 @@ export const DetailBlocksManager = ({
     };
     const next = blocks.map((b) => {
       if (b.id !== blockId) return b;
+      const currentItems = b.items || [];
+      const uncompleted = currentItems.filter((it) => !it.completed);
+      const completed = currentItems.filter((it) => it.completed);
       return {
         ...b,
-        items: [...(b.items || []), newItem]
+        items: [...uncompleted, newItem, ...completed]
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
