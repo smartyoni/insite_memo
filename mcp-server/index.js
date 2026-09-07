@@ -31,17 +31,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const FIXED_INBOXES = [
-  { id: "inbox", name: "In-box (탐색기)", scope: "explorer", isFixed: true },
-  { id: "blog_inbox", name: "In-box (블로그)", scope: "blog", isFixed: true },
-  { id: "clipboard_inbox", name: "In-box (클립보드)", scope: "clipboard", isFixed: true },
-  { id: "balance_inbox", name: "In-box (잔액/가계부)", scope: "balance", isFixed: true },
-  { id: "clip_inbox", name: "In-box (스크랩)", scope: "clip", isFixed: true },
-  { id: "office_inbox", name: "In-box (업무)", scope: "office", isFixed: true },
-  { id: "ad_inbox", name: "In-box (광고/마케팅)", scope: "ad", isFixed: true }
+const FIXED_CATEGORIES = [
+  { id: "quick_memo", name: "퀵메모 (탐색기)", scope: "explorer", isFixed: true }
 ];
 
-const FIXED_INBOX_IDS = FIXED_INBOXES.map((b) => b.id);
+const FIXED_CATEGORY_IDS = FIXED_CATEGORIES.map((b) => b.id);
+const FIXED_INBOX_IDS = ["inbox", "blog_inbox", "clipboard_inbox", "balance_inbox", "clip_inbox", "office_inbox", "ad_inbox"];
 
 function formatTimestamp(ts) {
   if (!ts) return null;
@@ -66,6 +61,9 @@ const scopeNameMap = {
 };
 
 function computeCategoryPath(cat, allCategories) {
+  if (cat.id === "quick_memo") {
+    return "노트 > 퀵메모";
+  }
   if (FIXED_INBOX_IDS.includes(cat.id)) {
     const sName = scopeNameMap[cat.scope || "explorer"] || "노트";
     return `${sName} > In-box`;
@@ -109,9 +107,9 @@ server.tool(
         };
       });
 
-      // Include fixed inboxes
+      // Include fixed categories
       const combined = [
-        ...FIXED_INBOXES.map((b) => ({ ...b, parentId: null })),
+        ...FIXED_CATEGORIES.map((b) => ({ ...b, parentId: null })),
         ...list
       ];
 
@@ -202,10 +200,10 @@ server.tool(
     newName: z.string().describe("새 카테고리 이름")
   },
   async ({ categoryId, newName }) => {
-    if (FIXED_INBOX_IDS.includes(categoryId)) {
+    if (FIXED_CATEGORY_IDS.includes(categoryId) || FIXED_INBOX_IDS.includes(categoryId)) {
       return {
         isError: true,
-        content: [{ type: "text", text: "고정 In-box 카테고리의 이름은 변경할 수 없습니다." }]
+        content: [{ type: "text", text: "고정 카테고리의 이름은 변경할 수 없습니다." }]
       };
     }
     try {
@@ -239,10 +237,10 @@ server.tool(
     parentId: z.string().nullable().optional().describe("새 상위 카테고리 ID (최상위는 null, 선택)")
   },
   async ({ categoryId, name, parentId }) => {
-    if (FIXED_INBOX_IDS.includes(categoryId)) {
+    if (FIXED_CATEGORY_IDS.includes(categoryId) || FIXED_INBOX_IDS.includes(categoryId)) {
       return {
         isError: true,
-        content: [{ type: "text", text: "고정 In-box 카테고리는 수정할 수 없습니다." }]
+        content: [{ type: "text", text: "고정 카테고리는 수정할 수 없습니다." }]
       };
     }
     try {
@@ -281,16 +279,16 @@ server.tool(
 // 5. memo_delete_category
 server.tool(
   "memo_delete_category",
-  "카테고리를 삭제합니다. 하위 폴더 및 메모도 옵시디언 방식으로 함께 일괄 삭제되거나 In-box로 이동됩니다.",
+  "카테고리를 삭제합니다. 하위 폴더 및 메모도 옵시디언 방식으로 함께 일괄 삭제되거나 퀵메모로 이동됩니다.",
   {
     categoryId: z.string().describe("삭제할 카테고리 ID"),
-    deleteMemos: z.boolean().optional().default(true).describe("하위 메모 함께 삭제 여부 (기본값 true: 일괄 삭제, false: In-box로 이동)")
+    deleteMemos: z.boolean().optional().default(true).describe("하위 메모 함께 삭제 여부 (기본값 true: 일괄 삭제, false: 퀵메모로 이동)")
   },
   async ({ categoryId, deleteMemos }) => {
-    if (FIXED_INBOX_IDS.includes(categoryId)) {
+    if (FIXED_CATEGORY_IDS.includes(categoryId) || FIXED_INBOX_IDS.includes(categoryId)) {
       return {
         isError: true,
-        content: [{ type: "text", text: "고정 In-box 카테고리는 삭제할 수 없습니다." }]
+        content: [{ type: "text", text: "고정 카테고리는 삭제할 수 없습니다." }]
       };
     }
     try {
@@ -324,7 +322,7 @@ server.tool(
           if (deleteMemos) {
             batch.delete(itemDoc.ref);
           } else {
-            batch.update(itemDoc.ref, { categoryId: "inbox" });
+            batch.update(itemDoc.ref, { categoryId: "quick_memo" });
           }
           totalMemosHandled++;
         });
@@ -340,7 +338,7 @@ server.tool(
               deletedCategoriesCount: targetCategoryIds.length,
               deletedCategoryIds: targetCategoryIds,
               memosHandled: totalMemosHandled,
-              action: deleteMemos ? "deleted" : "moved_to_inbox"
+              action: deleteMemos ? "deleted" : "moved_to_quick_memo"
             }, null, 2)
           }
         ]
@@ -454,7 +452,7 @@ server.tool(
     title: z.string().describe("메모 제목"),
     body: z.string().optional().default("").describe("메모 본문"),
     subBody: z.string().optional().default("").describe("보충 노트 또는 체크리스트 (줄바꿈 구분)"),
-    categoryId: z.string().optional().default("inbox").describe("저장할 카테고리 ID (기본값: 'inbox')")
+    categoryId: z.string().optional().default("quick_memo").describe("저장할 카테고리 ID (기본값: 'quick_memo')")
   },
   async ({ title, body, subBody, categoryId }) => {
     try {
@@ -463,7 +461,7 @@ server.tool(
         title: title.trim(),
         body: body || "",
         subBody: subBody || "",
-        categoryId: categoryId || "inbox",
+        categoryId: categoryId || "quick_memo",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };

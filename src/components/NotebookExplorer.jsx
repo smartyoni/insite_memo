@@ -30,7 +30,6 @@ import {
   Save,
   RotateCcw,
   ArrowLeft,
-  Inbox,
   Zap,
   Bookmark,
   CheckSquare,
@@ -219,16 +218,9 @@ export function getTagStyle(tagName, customBadgesList = null) {
 }
 // CalendarView import removed
 
-// Fixed In-box category definitions
-const INBOX_CATEGORY = { id: 'inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'explorer' };
-const BLOG_INBOX_CATEGORY = { id: 'blog_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'blog' };
-const CLIPBOARD_INBOX_CATEGORY = { id: 'clipboard_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clipboard' };
-const BALANCE_INBOX_CATEGORY = { id: 'balance_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'balance' };
-const CLIP_INBOX_CATEGORY = { id: 'clip_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'clip' };
-const OFFICE_INBOX_CATEGORY = { id: 'office_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'office' };
-const AD_INBOX_CATEGORY = { id: 'ad_inbox', name: 'In-box', order: -99999, isFixed: true, scope: 'ad' };
-
-const FIXED_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox', 'office_inbox', 'ad_inbox'];
+// Legacy In-box IDs for fallback and migration handling
+const LEGACY_INBOX_IDS = ['inbox', 'blog_inbox', 'clipboard_inbox', 'balance_inbox', 'clip_inbox', 'office_inbox', 'ad_inbox'];
+const FIXED_INBOX_IDS = LEGACY_INBOX_IDS;
 
 // Fixed Trash category definitions
 const TRASH_CATEGORY = { id: 'trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'explorer' };
@@ -244,7 +236,7 @@ const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_tras
 // Fixed Quick-memo category definition (Only in explorer/note tab)
 const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990, isFixed: true, isQuickMemo: true, scope: 'explorer' };
 
-const ALL_FIXED_CATEGORY_IDS = [...FIXED_INBOX_IDS, ...FIXED_TRASH_IDS, 'quick_memo'];
+const ALL_FIXED_CATEGORY_IDS = [...FIXED_TRASH_IDS, 'quick_memo'];
 
 const getScopeForTab = (tab) => {
   if (tab === 'blog') return 'blog';
@@ -256,15 +248,26 @@ const getScopeForTab = (tab) => {
   return 'explorer';
 };
 
-const getInboxIdForTab = (tab) => {
-  if (tab === 'blog') return 'blog_inbox';
-  if (tab === 'clipboard') return 'clipboard_inbox';
-  if (tab === 'balance') return 'balance_inbox';
-  if (tab === 'clip') return 'clip_inbox';
-  if (tab === 'office') return 'office_inbox';
-  if (tab === 'ad') return 'ad_inbox';
-  return 'inbox';
+const getDefaultCategoryIdForTab = (tab, catList = []) => {
+  if (tab === 'explorer') return 'quick_memo';
+  const scope = getScopeForTab(tab);
+  const scopeCategories = (catList || []).filter(c => {
+    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
+    return c.scope === scope;
+  });
+  if (scopeCategories.length > 0) {
+    const roots = scopeCategories.filter(c => !c.parentId);
+    if (roots.length > 0) {
+      roots.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true }));
+      return roots[0].id;
+    }
+    scopeCategories.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true }));
+    return scopeCategories[0].id;
+  }
+  return '';
 };
+
+const getInboxIdForTab = (tab, catList = []) => getDefaultCategoryIdForTab(tab, catList);
 
 const getTrashIdForTab = (tab) => {
   if (tab === 'blog') return 'blog_trash';
@@ -274,16 +277,6 @@ const getTrashIdForTab = (tab) => {
   if (tab === 'office') return 'office_trash';
   if (tab === 'ad') return 'ad_trash';
   return 'trash';
-};
-
-const getFixedCategoryForTab = (tab) => {
-  if (tab === 'blog') return BLOG_INBOX_CATEGORY;
-  if (tab === 'clipboard') return CLIPBOARD_INBOX_CATEGORY;
-  if (tab === 'balance') return BALANCE_INBOX_CATEGORY;
-  if (tab === 'clip') return CLIP_INBOX_CATEGORY;
-  if (tab === 'office') return OFFICE_INBOX_CATEGORY;
-  if (tab === 'ad') return AD_INBOX_CATEGORY;
-  return INBOX_CATEGORY;
 };
 
 const getFixedTrashCategoryForTab = (tab) => {
@@ -347,7 +340,13 @@ export default function NotebookExplorer() {
   // Data states
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(() => initialNavLoc?.selectedCategoryId || 'inbox');
+  const [selectedCategoryId, setSelectedCategoryId] = useState(() => {
+    const saved = initialNavLoc?.selectedCategoryId;
+    if (saved && !LEGACY_INBOX_IDS.includes(saved)) {
+      return saved;
+    }
+    return (initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab) ? 'quick_memo' : '';
+  });
   const [selectedItemId, setSelectedItemId] = useState(() => initialNavLoc?.selectedItemId || null);
 
   // Item List Sort Order State (Default: 'asc' for ascending order)
@@ -370,12 +369,8 @@ export default function NotebookExplorer() {
     if (categoryId === 'quick_memo') {
       return '노트 > 퀵메모';
     }
-    const foundFixed = [
-      INBOX_CATEGORY, BLOG_INBOX_CATEGORY, CLIPBOARD_INBOX_CATEGORY, 
-      BALANCE_INBOX_CATEGORY, CLIP_INBOX_CATEGORY, OFFICE_INBOX_CATEGORY, AD_INBOX_CATEGORY
-    ].find(c => c.id === categoryId);
-    if (foundFixed) {
-      return `${scopeMap[foundFixed.scope] || '노트'} > In-box`;
+    if (LEGACY_INBOX_IDS.includes(categoryId)) {
+      return 'In-box';
     }
     const found = categories.find(c => c.id === categoryId);
     if (!found) return '기타';
@@ -430,9 +425,8 @@ export default function NotebookExplorer() {
   };
 
   const getHierarchicalCategoryOptions = (scope, excludeId = null) => {
-    const fixed = getFixedCategoryForTab(activeMainTab);
     const scopeCategories = categories.filter(c => {
-      if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
+      if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
       if (scope === 'explorer') return !c.scope || c.scope === 'explorer';
       return c.scope === scope;
     });
@@ -470,7 +464,7 @@ export default function NotebookExplorer() {
     traverse(tree);
 
     return [
-      { id: fixed.id, name: fixed.name, displayName: `📥 ${fixed.name}`, level: 0 },
+      ...(scope === 'explorer' ? [{ id: 'quick_memo', name: '퀵메모', displayName: '⚡ 퀵메모', level: 0 }] : []),
       ...flatList
     ];
   };
@@ -513,11 +507,10 @@ export default function NotebookExplorer() {
   };
 
   // Combine fixed In-box at top, user categories in middle (가나다순), fixed Trash category at bottom
-  const currentFixedCategory = getFixedCategoryForTab(activeMainTab);
   const currentFixedTrashCategory = getFixedTrashCategoryForTab(activeMainTab);
   const currentScope = getScopeForTab(activeMainTab);
   const filteredCategories = categories.filter((c) => {
-    if (ALL_FIXED_CATEGORY_IDS.includes(c.id)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
     if (currentScope === 'explorer') {
       return !c.scope || c.scope === 'explorer';
     }
@@ -525,7 +518,6 @@ export default function NotebookExplorer() {
   });
 
   const allCategories = [
-    currentFixedCategory,
     ...(activeMainTab === 'explorer' ? [QUICK_MEMO_CATEGORY] : []),
     ...filteredCategories
       .sort((a, b) => {
@@ -661,7 +653,13 @@ export default function NotebookExplorer() {
   const autoEditItemIdRef = useRef(null);
   const shouldFocusTitleRef = useRef(false);
 
-  const [draftCategoryId, setDraftCategoryId] = useState('inbox');
+  const [draftCategoryId, setDraftCategoryId] = useState(() => {
+    const saved = initialNavLoc?.selectedCategoryId;
+    if (saved && !LEGACY_INBOX_IDS.includes(saved)) {
+      return saved;
+    }
+    return (initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab) ? 'quick_memo' : '';
+  });
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [draftSubBody, setDraftSubBody] = useState('');
@@ -1023,6 +1021,22 @@ export default function NotebookExplorer() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Ensure valid selectedCategoryId when categories or tab change
+  useEffect(() => {
+    if (categories.length === 0) return;
+    const isFixed = ALL_FIXED_CATEGORY_IDS.includes(selectedCategoryId);
+    const currentTabScope = getScopeForTab(activeMainTab);
+    const isValid = isFixed || categories.some(
+      (c) => c.id === selectedCategoryId && (currentTabScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === currentTabScope)
+    );
+    if (!isValid || LEGACY_INBOX_IDS.includes(selectedCategoryId)) {
+      const defId = getDefaultCategoryIdForTab(activeMainTab, categories);
+      if (defId) {
+        setSelectedCategoryId(defId);
+      }
+    }
+  }, [categories, activeMainTab, selectedCategoryId]);
 
   // 2. Subscribe to Items (Default order: ascending)
   useEffect(() => {
@@ -2022,7 +2036,7 @@ export default function NotebookExplorer() {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
       setDraftSubBody(activeItem.subBody || '');
-      setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftCategoryId(activeItem.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories));
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
@@ -2045,7 +2059,7 @@ export default function NotebookExplorer() {
       setDraftTitle('');
       setDraftBody('');
       setDraftSubBody('');
-      setDraftCategoryId('inbox');
+      setDraftCategoryId(getDefaultCategoryIdForTab(activeMainTab, categories));
       setDraftTemplateId(null);
       setDraftTemplateValues({});
       setDraftChecklists(null);
@@ -2303,7 +2317,7 @@ export default function NotebookExplorer() {
 
       setDeletingCategoryId(null);
       if (allTargetCatIds.includes(selectedCategoryId)) {
-        setSelectedCategoryId(getInboxIdForTab(activeMainTab));
+        setSelectedCategoryId(getDefaultCategoryIdForTab(activeMainTab, categories));
       }
     } catch (err) {
       console.error('Error deleting category tree and child items:', err);
@@ -2496,24 +2510,24 @@ export default function NotebookExplorer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeMainTab, activeCategory, activeItem]);
 
-  // ---------------- Quick Add Note (Fast Entry to In-box) ----------------
+  // ---------------- Quick Add Note (Fast Entry) ----------------
   const handleQuickAddNote = async () => {
-    const targetInboxId = getInboxIdForTab(activeMainTab);
+    const targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
-        categoryId: targetInboxId,
+        categoryId: targetCatId,
         title: '',
         body: '',
         subBody: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      setSelectedCategoryId(targetInboxId);
+      setSelectedCategoryId(targetCatId);
       autoEditItemIdRef.current = newRef.id;
       shouldFocusTitleRef.current = true;
       navigateToDetail(newRef.id);
-      setDraftCategoryId(targetInboxId);
+      setDraftCategoryId(targetCatId);
       setDraftTitle('');
       setDraftBody('');
       setDraftSubBody('');
@@ -2532,16 +2546,20 @@ export default function NotebookExplorer() {
   // ---------------- Item Handlers ----------------
   const handleAddItem = async () => {
     const activeScope = getScopeForTab(activeMainTab);
-    const activeInboxId = getInboxIdForTab(activeMainTab);
+    const scopeCategories = categories.filter(c => {
+      if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
+      if (activeScope === 'explorer') return !c.scope || c.scope === 'explorer';
+      return c.scope === activeScope;
+    });
     let targetCatId = selectedCategoryId;
     
     // Validate targetCatId belongs to active scope
     const isValidTarget = targetCatId && (
-      targetCatId === activeInboxId ||
-      categories.some(c => c.id === targetCatId && (activeScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === activeScope))
+      (activeMainTab === 'explorer' && targetCatId === 'quick_memo') ||
+      scopeCategories.some(c => c.id === targetCatId)
     );
     if (!isValidTarget) {
-      targetCatId = activeInboxId;
+      targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
     }
     try {
       const newRef = doc(collection(db, 'items'));
@@ -2593,9 +2611,9 @@ export default function NotebookExplorer() {
     try {
       const itemToTrash = items.find((i) => i.id === itemId);
       const trashId = getTrashIdForTab(activeMainTab);
-      const originalCatId = (itemToTrash && itemToTrash.categoryId && !FIXED_TRASH_IDS.includes(itemToTrash.categoryId))
+      const originalCatId = (itemToTrash && itemToTrash.categoryId && !FIXED_TRASH_IDS.includes(itemToTrash.categoryId) && !LEGACY_INBOX_IDS.includes(itemToTrash.categoryId))
         ? itemToTrash.categoryId
-        : getInboxIdForTab(activeMainTab);
+        : getDefaultCategoryIdForTab(activeMainTab, categories);
 
       await updateDoc(doc(db, 'items', itemId), {
         isDeleted: true,
@@ -2620,9 +2638,10 @@ export default function NotebookExplorer() {
   const handleRestoreItem = async (item) => {
     if (!item) return;
     try {
-      const targetCategoryId = item.originalCategoryId || getInboxIdForTab(activeMainTab);
-      const isValidCat = FIXED_INBOX_IDS.includes(targetCategoryId) || categories.some((c) => c.id === targetCategoryId);
-      const restoreCatId = isValidCat ? targetCategoryId : getInboxIdForTab(activeMainTab);
+      const fallbackCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
+      const targetCategoryId = (item.originalCategoryId && !LEGACY_INBOX_IDS.includes(item.originalCategoryId)) ? item.originalCategoryId : fallbackCatId;
+      const isValidCat = (activeMainTab === 'explorer' && targetCategoryId === 'quick_memo') || categories.some((c) => c.id === targetCategoryId);
+      const restoreCatId = isValidCat ? targetCategoryId : fallbackCatId;
 
       await updateDoc(doc(db, 'items', item.id), {
         isDeleted: false,
@@ -3090,7 +3109,7 @@ export default function NotebookExplorer() {
       const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : (blocksPlainText || draftBody);
 
       const finalTitle = draftTitle.trim() || activeItem?.title || '새 메모';
-      const finalCategoryId = draftCategoryId || activeItem?.categoryId || 'inbox';
+      const finalCategoryId = draftCategoryId || activeItem?.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories);
       const updatePayload = {
         title: finalTitle,
         body: finalBody,
@@ -3130,7 +3149,7 @@ export default function NotebookExplorer() {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
       setDraftSubBody(activeItem.subBody || '');
-      setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftCategoryId(activeItem.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories));
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
@@ -3149,7 +3168,7 @@ export default function NotebookExplorer() {
       setDraftTitle(activeItem.title || '');
       setDraftBody(activeItem.body || '');
       setDraftSubBody(activeItem.subBody || '');
-      setDraftCategoryId(activeItem.categoryId || 'inbox');
+      setDraftCategoryId(activeItem.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories));
       setDraftTemplateId(activeItem.templateId || null);
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(activeItem.checklists || []);
@@ -3165,13 +3184,13 @@ export default function NotebookExplorer() {
   const handleTabSwitch = (targetTab) => {
     setActiveMainTab(targetTab);
     const targetScope = getScopeForTab(targetTab);
-    const targetInboxId = getInboxIdForTab(targetTab);
     const targetTrashId = getTrashIdForTab(targetTab);
     const isCurrentCatValid = categories.some(
       c => c.id === selectedCategoryId && (targetScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === targetScope)
-    );
-    if (!isCurrentCatValid && selectedCategoryId !== targetInboxId && selectedCategoryId !== targetTrashId) {
-      setSelectedCategoryId(targetInboxId);
+    ) || (targetTab === 'explorer' && selectedCategoryId === 'quick_memo');
+    if (!isCurrentCatValid && selectedCategoryId !== targetTrashId) {
+      const fallbackId = getDefaultCategoryIdForTab(targetTab, categories);
+      setSelectedCategoryId(fallbackId);
       setSelectedItemId(null);
     }
     if (isMobile) {
@@ -3796,50 +3815,6 @@ export default function NotebookExplorer() {
               )}
 
               <div style={styles.paneContent}>
-                {/* Fixed In-box Category */}
-                {(() => {
-                  const isSelected = currentFixedCategory.id === selectedCategoryId;
-                  const count = items.filter((item) => {
-                    if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
-                    if (currentFixedCategory.id === 'inbox') return !item.categoryId || item.categoryId === 'inbox';
-                    return item.categoryId === currentFixedCategory.id;
-                  }).length;
-
-                  return (
-                    <div
-                      key={currentFixedCategory.id}
-                      onClick={() => navigateToItems(currentFixedCategory.id)}
-                      style={{
-                        ...styles.catRow,
-                        backgroundColor: isSelected ? '#D8E6F5' : 'transparent',
-                        color: isSelected ? '#1E3A5F' : '#4A607A',
-                        fontWeight: isSelected ? 600 : 400,
-                        paddingLeft: '6px',
-                        paddingRight: '6px',
-                        paddingTop: '6px',
-                        paddingBottom: '6px',
-                        gap: '6px'
-                      }}
-                    >
-                      <span style={{ width: 14, height: 14, flexShrink: 0 }} />
-                      <Inbox size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
-                          {currentFixedCategory.name}
-                        </span>
-                        <span style={{
-                          fontSize: '11px',
-                          color: isSelected ? '#2563EB' : '#7C95B1',
-                          fontWeight: isSelected ? 700 : 500,
-                          flexShrink: 0
-                        }}>
-                          ({count})
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
                 {/* Fixed Quick-memo Category (Only in explorer/note tab) */}
                 {activeMainTab === 'explorer' && (() => {
                   const isSelected = QUICK_MEMO_CATEGORY.id === selectedCategoryId;
@@ -4265,12 +4240,7 @@ export default function NotebookExplorer() {
                               if (!isEditing && !isDeleting) {
                                 if (isSearchActive) {
                                   const itemCat = categories.find(c => c.id === item.categoryId);
-                                  const itemFixedCat = [
-                                    INBOX_CATEGORY, BLOG_INBOX_CATEGORY, CLIPBOARD_INBOX_CATEGORY, 
-                                    BALANCE_INBOX_CATEGORY, CLIP_INBOX_CATEGORY, OFFICE_INBOX_CATEGORY, AD_INBOX_CATEGORY
-                                  ].find(c => c.id === item.categoryId);
-                                  
-                                  const targetScope = itemFixedCat ? itemFixedCat.scope : (itemCat ? (itemCat.scope || 'explorer') : 'explorer');
+                                  const targetScope = item.categoryId === 'quick_memo' ? 'explorer' : (itemCat ? (itemCat.scope || 'explorer') : 'explorer');
                                   const scopeToTabMap = {
                                     explorer: 'explorer',
                                     blog: 'blog',
