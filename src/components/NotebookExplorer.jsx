@@ -677,7 +677,6 @@ export default function NotebookExplorer() {
   const [isQuickMemoOpen, setIsQuickMemoOpen] = useState(false);
   const [quickMemoText, setQuickMemoText] = useState('');
   const [isSavingQuickMemo, setIsSavingQuickMemo] = useState(false);
-  const [quickMemoContext, setQuickMemoContext] = useState('');
   const [quickMemoToast, setQuickMemoToast] = useState(false);
   const quickMemoToastTimerRef = useRef(null);
   const quickMemoTextareaRef = useRef(null);
@@ -2177,25 +2176,6 @@ export default function NotebookExplorer() {
 
   // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
   const handleOpenQuickMemo = () => {
-    const scopeMap = {
-      explorer: '노트',
-      blog: '블로그',
-      clipboard: '계약',
-      balance: '앱개발',
-      clip: '북마크',
-      office: '사무실',
-      ad: '광고',
-      template: '템플릿'
-    };
-    const currentTabName = scopeMap[activeMainTab] || '노트';
-    const contextParts = [currentTabName];
-    if (activeCategory && !ALL_FIXED_CATEGORY_IDS.includes(activeCategory.id)) {
-      contextParts.push(activeCategory.name);
-    }
-    if (activeItem && activeItem.title && activeItem.title.trim()) {
-      contextParts.push(activeItem.title.trim());
-    }
-    setQuickMemoContext(contextParts.join(' > '));
     setQuickMemoText('');
     setIsQuickMemoOpen(true);
     setTimeout(() => {
@@ -2232,9 +2212,8 @@ export default function NotebookExplorer() {
       const summaryText = summaryLines.length > 70 ? `${summaryLines.slice(0, 70)}...` : summaryLines;
       const checkItemTitle = `[${timeStr}] ${summaryText}`;
 
-      // 세부 원문 + 작업 출처 정보
-      const contextFooter = quickMemoContext ? `\n\n────────────────\n📌 작성 위치: ${quickMemoContext}` : '';
-      const fullMemoBody = `${text}${contextFooter}`;
+      // 세부 원문
+      const fullMemoBody = text;
 
       const newChecklistId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const newChecklistItem = {
@@ -7723,35 +7702,8 @@ onClick={() => {
               </button>
             </div>
 
-            {/* Context Badge & Textarea */}
+            {/* Textarea */}
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {quickMemoContext && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11.5px',
-                    color: '#64748B',
-                    backgroundColor: '#F1F5F9',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid #E2E8F0',
-                    width: 'fit-content',
-                    maxWidth: '100%',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                  title={`작성 당시 위치: ${quickMemoContext}`}
-                >
-                  <span style={{ fontWeight: 600, color: '#475569' }}>📌 작성 위치:</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {quickMemoContext}
-                  </span>
-                </div>
-              )}
-
               <textarea
                 ref={quickMemoTextareaRef}
                 value={quickMemoText}
