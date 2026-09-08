@@ -3696,6 +3696,12 @@ export default function NotebookExplorer() {
           onClick={() => {
             if (!isEditing) navigateToItems(node.id);
           }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (ALL_FIXED_CATEGORY_IDS.includes(node.id)) return;
+            setEditingCategoryId(node.id);
+            setEditingCategoryName(node.name);
+          }}
           style={{
             ...styles.catRow,
             backgroundColor: isDropTarget ? '#EFF6FF' : isSelected ? '#D8E6F5' : 'transparent',
@@ -3708,6 +3714,7 @@ export default function NotebookExplorer() {
             paddingTop: '6px',
             paddingBottom: '6px',
             gap: '6px',
+            userSelect: 'none',
             transition: 'background-color 0.15s, border-color 0.15s'
           }}
         >
@@ -3715,6 +3722,7 @@ export default function NotebookExplorer() {
           {hasChildren ? (
             <button
               onClick={(e) => toggleFolder(node.id, e)}
+              onDoubleClick={(e) => e.stopPropagation()}
               style={{
                 background: 'none',
                 border: 'none',
@@ -3743,6 +3751,7 @@ export default function NotebookExplorer() {
               type="text"
               value={editingCategoryName}
               onChange={(e) => setEditingCategoryName(e.target.value)}
+              onFocus={(e) => e.target.select()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUpdateCategoryName(node.id);
                 if (e.key === 'Escape') setEditingCategoryId(null);
@@ -3750,9 +3759,13 @@ export default function NotebookExplorer() {
               onBlur={() => handleUpdateCategoryName(node.id)}
               style={styles.inputDarkInline}
               onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div
+              style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}
+              title="더블클릭하여 카테고리명 수정"
+            >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
                 {node.name}
               </span>
@@ -3771,6 +3784,7 @@ export default function NotebookExplorer() {
             <div
               style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
               onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
             >
               {/* 3점 메뉴 */}
               <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
