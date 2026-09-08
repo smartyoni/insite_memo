@@ -199,6 +199,46 @@ export function saveStoredNavLocation(loc) {
   } catch (e) {}
 }
 
+export function getStoredCollapsedSections(itemId) {
+  if (!itemId) return {};
+  try {
+    const allSaved = JSON.parse(localStorage.getItem('memo_collapsed_sections') || '{}');
+    return allSaved[itemId] || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveStoredCollapsedSections(itemId, sections) {
+  if (!itemId) return;
+  try {
+    const allSaved = JSON.parse(localStorage.getItem('memo_collapsed_sections') || '{}');
+    allSaved[itemId] = sections;
+    localStorage.setItem('memo_collapsed_sections', JSON.stringify(allSaved));
+  } catch (e) {}
+}
+
+export function getStoredDetailCollapsedBlocks(itemId, checkId) {
+  if (!itemId) return {};
+  try {
+    const allSaved = JSON.parse(localStorage.getItem('memo_collapsed_detail_blocks') || '{}');
+    const key = `${itemId}_${checkId || '__main__'}`;
+    return allSaved[key] || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveStoredDetailCollapsedBlocks(itemId, checkId, blocksMap) {
+  if (!itemId) return;
+  try {
+    const allSaved = JSON.parse(localStorage.getItem('memo_collapsed_detail_blocks') || '{}');
+    const key = `${itemId}_${checkId || '__main__'}`;
+    allSaved[key] = blocksMap;
+    localStorage.setItem('memo_collapsed_detail_blocks', JSON.stringify(allSaved));
+  } catch (e) {}
+}
+
 export function getTagStyle(tagName, customBadgesList = null) {
   if (!tagName) return null;
   const foundDefault = DEFAULT_TAGS.find(t => t.name === tagName);
@@ -726,8 +766,12 @@ export default function NotebookExplorer() {
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
-  const [collapsedSections, setCollapsedSections] = useState({});
-  const [detailCollapsedBlockIds, setDetailCollapsedBlockIds] = useState({});
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    return getStoredCollapsedSections(initialNavLoc?.selectedItemId);
+  });
+  const [detailCollapsedBlockIds, setDetailCollapsedBlockIds] = useState(() => {
+    return getStoredDetailCollapsedBlocks(initialNavLoc?.selectedItemId, initialNavLoc?.selectedChecklistId || '__main__');
+  });
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
   const [newGroupNameInput, setNewGroupNameInput] = useState('');
   const [groupModalPos, setGroupModalPos] = useState(null);
@@ -1535,7 +1579,7 @@ export default function NotebookExplorer() {
     }
 
     // 그룹이 접혀있다면 자동 펼치기
-    setCollapsedSections((prev) => ({ ...prev, [sectionId]: false }));
+    updateCollapsedSections((prev) => ({ ...prev, [sectionId]: false }));
 
     if (isEditMode) {
       setDraftChecklists(updated);
@@ -1558,8 +1602,28 @@ export default function NotebookExplorer() {
     }
   };
 
+  const updateCollapsedSections = (updater) => {
+    setCollapsedSections((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (activeItem?.id) {
+        saveStoredCollapsedSections(activeItem.id, next);
+      }
+      return next;
+    });
+  };
+
+  const updateDetailCollapsedBlockIds = (updater) => {
+    setDetailCollapsedBlockIds((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (activeItem?.id) {
+        saveStoredDetailCollapsedBlocks(activeItem.id, selectedChecklistId || '__main__', next);
+      }
+      return next;
+    });
+  };
+
   const toggleSectionCollapse = (sectionId) => {
-    setCollapsedSections((prev) => ({
+    updateCollapsedSections((prev) => ({
       ...prev,
       [sectionId]: !prev[sectionId]
     }));
@@ -1570,7 +1634,7 @@ export default function NotebookExplorer() {
   }, [checklistGroups]);
 
   const handleExpandAllSections = () => {
-    setCollapsedSections({});
+    updateCollapsedSections({});
   };
 
   const handleCollapseAllSections = () => {
@@ -1580,11 +1644,11 @@ export default function NotebookExplorer() {
         newCollapsed[g.section.id] = true;
       }
     });
-    setCollapsedSections(newCollapsed);
+    updateCollapsedSections(newCollapsed);
   };
 
   const handleExpandAllDetailBlocks = () => {
-    setDetailCollapsedBlockIds({});
+    updateDetailCollapsedBlockIds({});
   };
 
   const handleCollapseAllDetailBlocks = () => {
@@ -1594,7 +1658,7 @@ export default function NotebookExplorer() {
         newCollapsed[b.id] = true;
       }
     });
-    setDetailCollapsedBlockIds(newCollapsed);
+    updateDetailCollapsedBlockIds(newCollapsed);
   };
 
   const handleMoveGroup = async (sectionId, direction) => {
@@ -2103,6 +2167,11 @@ export default function NotebookExplorer() {
     setEditingBlockId(null);
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
+    if (activeItem?.id) {
+      setCollapsedSections(getStoredCollapsedSections(activeItem.id));
+    } else {
+      setCollapsedSections({});
+    }
   }, [selectedItemId]);
 
   // Auto-focus title input when entering edit mode for newly created item
@@ -2141,7 +2210,7 @@ export default function NotebookExplorer() {
     }
     setEditingBlockId(null);
     setIsEditingChecklistDetail(false);
-    setDetailCollapsedBlockIds({});
+    setDetailCollapsedBlockIds(getStoredDetailCollapsedBlocks(activeItem?.id, selectedChecklistId || '__main__'));
   }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
 
   // ESC & Enter key handler for modals & detail edit mode
@@ -6050,7 +6119,7 @@ export default function NotebookExplorer() {
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
                                   collapsedBlockIds={detailCollapsedBlockIds}
-                                  setCollapsedBlockIds={setDetailCollapsedBlockIds}
+                                  setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                 />
                               </div>
                             ) : (
@@ -6365,7 +6434,7 @@ export default function NotebookExplorer() {
                                     openDeleteModal={openDeleteModal}
                                     onOpenMoveModal={handleOpenMoveBlockModal}
                                     collapsedBlockIds={detailCollapsedBlockIds}
-                                    setCollapsedBlockIds={setDetailCollapsedBlockIds}
+                                    setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                   />
                                 </div>
                               );
@@ -7618,7 +7687,7 @@ onClick={() => {
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
                                   collapsedBlockIds={detailCollapsedBlockIds}
-                                  setCollapsedBlockIds={setDetailCollapsedBlockIds}
+                                  setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                 />
                               </>
                             );
