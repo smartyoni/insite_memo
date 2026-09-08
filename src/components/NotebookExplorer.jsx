@@ -623,10 +623,13 @@ export default function NotebookExplorer() {
 
   // Drag & drop and mobile move modal states
   const [draggedCategoryId, setDraggedCategoryId] = useState(null);
+  const [draggedItemId, setDraggedItemId] = useState(null);
   const [dragOverCategoryId, setDragOverCategoryId] = useState(null);
   const [isDragOverRoot, setIsDragOverRoot] = useState(false);
   const [movingCategory, setMovingCategory] = useState(null);
   const [targetMoveParentId, setTargetMoveParentId] = useState('');
+  const [movingItem, setMovingItem] = useState(null);
+  const [targetMoveItemCategoryId, setTargetMoveItemCategoryId] = useState('');
 
   // Item inline editing states (Pane 2)
   const [editingItemId, setEditingItemId] = useState(null);
@@ -3636,7 +3639,14 @@ export default function NotebookExplorer() {
             setIsDragOverRoot(false);
           }}
           onDragOver={(e) => {
-            if (canMoveCategory(draggedCategoryId, node.id)) {
+            if (draggedCategoryId && canMoveCategory(draggedCategoryId, node.id)) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = 'move';
+              if (dragOverCategoryId !== node.id) {
+                setDragOverCategoryId(node.id);
+              }
+            } else if (draggedItemId) {
               e.preventDefault();
               e.stopPropagation();
               e.dataTransfer.dropEffect = 'move';
@@ -3654,10 +3664,26 @@ export default function NotebookExplorer() {
           onDrop={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const sourceId = draggedCategoryId || e.dataTransfer.getData('text/plain');
             setDragOverCategoryId(null);
+
+            if (draggedItemId) {
+              const itemId = draggedItemId;
+              setDraggedItemId(null);
+              try {
+                await updateDoc(doc(db, 'items', itemId), {
+                  categoryId: node.id,
+                  updatedAt: serverTimestamp()
+                });
+                setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
+              } catch (err) {
+                console.error('Error moving item to category:', err);
+              }
+              return;
+            }
+
+            const sourceId = draggedCategoryId || e.dataTransfer.getData('text/plain');
             setDraggedCategoryId(null);
-            if (!canMoveCategory(sourceId, node.id)) return;
+            if (!sourceId || !canMoveCategory(sourceId, node.id)) return;
             try {
               await updateDoc(doc(db, 'categories', sourceId), {
                 parentId: node.id
@@ -4034,6 +4060,7 @@ export default function NotebookExplorer() {
                 {/* Fixed Quick-memo Category (Only in explorer/note tab) */}
                 {activeMainTab === 'explorer' && (() => {
                   const isSelected = QUICK_MEMO_CATEGORY.id === selectedCategoryId;
+                  const isDropTarget = dragOverCategoryId === QUICK_MEMO_CATEGORY.id;
                   const count = items.filter((item) => {
                     if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
                     return item.categoryId === QUICK_MEMO_CATEGORY.id;
@@ -4042,10 +4069,44 @@ export default function NotebookExplorer() {
                   return (
                     <div
                       key={QUICK_MEMO_CATEGORY.id}
+                      onDragOver={(e) => {
+                        if (draggedItemId) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverCategoryId !== QUICK_MEMO_CATEGORY.id) {
+                            setDragOverCategoryId(QUICK_MEMO_CATEGORY.id);
+                          }
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        e.stopPropagation();
+                        if (dragOverCategoryId === QUICK_MEMO_CATEGORY.id) {
+                          setDragOverCategoryId(null);
+                        }
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverCategoryId(null);
+                        if (draggedItemId) {
+                          const itemId = draggedItemId;
+                          setDraggedItemId(null);
+                          try {
+                            await updateDoc(doc(db, 'items', itemId), {
+                              categoryId: QUICK_MEMO_CATEGORY.id,
+                              updatedAt: serverTimestamp()
+                            });
+                          } catch (err) {
+                            console.error('Error moving item to quick memo:', err);
+                          }
+                        }
+                      }}
                       onClick={() => navigateToItems(QUICK_MEMO_CATEGORY.id)}
                       style={{
                         ...styles.catRow,
-                        backgroundColor: isSelected ? '#FEF3C7' : 'transparent',
+                        backgroundColor: isDropTarget ? '#FEF08A' : isSelected ? '#FEF3C7' : 'transparent',
+                        border: isDropTarget ? '1.5px dashed #D97706' : '1px solid transparent',
                         color: isSelected ? '#92400E' : '#4A607A',
                         fontWeight: isSelected ? 700 : 500,
                         paddingLeft: '6px',
@@ -4505,6 +4566,17 @@ export default function NotebookExplorer() {
                         return (
                           <div
                             key={item.id}
+                            draggable={!isTrashSelected && !isEditing}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              e.dataTransfer.setData('text/plain', item.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                              setDraggedItemId(item.id);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedItemId(null);
+                              setDragOverCategoryId(null);
+                            }}
                             onClick={() => {
                               if (!isEditing && !isDeleting) {
                                 if (isSearchActive) {
@@ -4531,6 +4603,8 @@ export default function NotebookExplorer() {
                               ...styles.itemCard,
                               backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
                               borderColor: isSelected ? '#3F7A63' : '#ECEBE7',
+                              opacity: draggedItemId === item.id ? 0.4 : 1,
+                              cursor: isTrashSelected ? 'pointer' : 'grab',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '4px'
@@ -4596,20 +4670,33 @@ export default function NotebookExplorer() {
                                     </button>
                                   </>
                                 ) : (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openDeleteModal(
-                                        '휴지통으로 이동',
-                                        `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
-                                        () => handleMoveToTrash(item.id)
-                                      );
-                                    }}
-                                    style={styles.actionBtnLight}
-                                    title="휴지통으로 이동"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMovingItem(item);
+                                        setTargetMoveItemCategoryId(item.categoryId || '');
+                                      }}
+                                      style={styles.actionBtnLight}
+                                      title="다른 카테고리로 이동"
+                                    >
+                                      <FolderInput size={13} color="#2563EB" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteModal(
+                                          '휴지통으로 이동',
+                                          `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
+                                          () => handleMoveToTrash(item.id)
+                                        );
+                                      }}
+                                      style={styles.actionBtnLight}
+                                      title="휴지통으로 이동"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -8401,6 +8488,119 @@ onClick={() => {
                     setMovingCategory(null);
                   } catch (err) {
                     console.error('Error moving category:', err);
+                  }
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Item Modal */}
+      {movingItem && (
+        <div
+          style={{
+            ...styles.modalOverlay,
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setMovingItem(null)}
+        >
+          <div
+            style={{
+              ...styles.modalContent,
+              width: isMobile ? '90%' : '380px',
+              maxWidth: '400px',
+              border: '1px solid #E2E8F0',
+              margin: 0
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FolderInput size={18} color="#2563EB" />
+                </div>
+                <h3 style={styles.modalTitle}>메모 이동</h3>
+              </div>
+              <button onClick={() => setMovingItem(null)} style={styles.modalCloseBtn} title="닫기">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <p style={{ ...styles.modalMessage, marginBottom: '14px' }}>
+                <strong>'{movingItem.title || '제목 없음'}'</strong> 메모를 이동할 카테고리를 선택하세요:
+              </p>
+              <select
+                value={targetMoveItemCategoryId}
+                onChange={(e) => setTargetMoveItemCategoryId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13.5px',
+                  color: '#1E293B',
+                  outline: 'none',
+                  backgroundColor: '#F8FAFC'
+                }}
+              >
+                {activeMainTab === 'explorer' && (
+                  <option value="quick_memo">⚡ 퀵메모</option>
+                )}
+                {getHierarchicalCategoryOptions(currentScope)
+                  .filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.displayName || c.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button onClick={() => setMovingItem(null)} style={styles.btnModalCancel}>
+                취소
+              </button>
+              <button
+                onClick={async () => {
+                  if (!targetMoveItemCategoryId) return;
+                  try {
+                    await updateDoc(doc(db, 'items', movingItem.id), {
+                      categoryId: targetMoveItemCategoryId,
+                      updatedAt: serverTimestamp()
+                    });
+                    if (targetMoveItemCategoryId !== 'quick_memo') {
+                      setExpandedFolders((prev) => ({ ...prev, [targetMoveItemCategoryId]: true }));
+                    }
+                    setMovingItem(null);
+                  } catch (err) {
+                    console.error('Error moving item:', err);
                   }
                 }}
                 style={{
