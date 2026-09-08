@@ -592,6 +592,13 @@ export default function NotebookExplorer() {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [deletingCategoryId, setDeletingCategoryId] = useState(null);
 
+  // Item inline adding states
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const itemScrollRef = useRef(null);
+  const itemInputRef = useRef(null);
+  const isSubmittingItemRef = useRef(false);
+
   // Folder collapse/expand state (persisted to localStorage)
   const [expandedFolders, setExpandedFolders] = useState(() => {
     try {
@@ -1033,11 +1040,19 @@ export default function NotebookExplorer() {
   // Navigation Helpers
   const navigateToItems = (catId) => {
     setSelectedCategoryId(catId);
+    setIsAddingItem(false);
+    setNewItemTitle('');
     if (isMobile) {
       setMobileView('items');
       window.history.pushState({ view: 'items' }, '');
     }
   };
+
+  useEffect(() => {
+    if (isAddingItem && itemInputRef.current) {
+      itemInputRef.current.focus();
+    }
+  }, [isAddingItem]);
 
   const navigateToDetail = (itemId) => {
     setSelectedItemId(itemId);
@@ -2718,7 +2733,28 @@ export default function NotebookExplorer() {
   };
 
   // ---------------- Item Handlers ----------------
-  const handleAddItem = async () => {
+  const handleAddItem = () => {
+    setIsAddingItem(true);
+    setNewItemTitle('');
+    setTimeout(() => {
+      if (itemScrollRef.current) {
+        itemScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (itemInputRef.current) {
+        itemInputRef.current.focus();
+      }
+    }, 50);
+  };
+
+  const handleConfirmAddItem = async () => {
+    if (isSubmittingItemRef.current) return;
+    const trimmedTitle = newItemTitle.trim();
+    if (!trimmedTitle) {
+      setIsAddingItem(false);
+      setNewItemTitle('');
+      return;
+    }
+    isSubmittingItemRef.current = true;
     const activeScope = getScopeForTab(activeMainTab);
     const scopeCategories = categories.filter(c => {
       if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
@@ -2739,7 +2775,7 @@ export default function NotebookExplorer() {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
         categoryId: targetCatId,
-        title: '',
+        title: trimmedTitle,
         body: '',
         subBody: '',
         detailBlocks: [],
@@ -2747,11 +2783,11 @@ export default function NotebookExplorer() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      autoEditItemIdRef.current = newRef.id;
-      shouldFocusTitleRef.current = true;
+      setIsAddingItem(false);
+      setNewItemTitle('');
       navigateToDetail(newRef.id);
       setDraftCategoryId(targetCatId);
-      setDraftTitle('');
+      setDraftTitle(trimmedTitle);
       setDraftBody('');
       setDraftSubBody('');
       setDraftTemplateId(null);
@@ -2760,9 +2796,13 @@ export default function NotebookExplorer() {
       setSelectedChecklistId(null);
       setChecklistDetailDraft('');
       setChecklistDetailBlocks([]);
-      setIsEditMode(true);
+      setIsEditMode(false);
     } catch (err) {
       console.error('Error adding item:', err);
+      setIsAddingItem(false);
+      setNewItemTitle('');
+    } finally {
+      isSubmittingItemRef.current = false;
     }
   };
 
@@ -4314,6 +4354,15 @@ export default function NotebookExplorer() {
                       {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {!isTrashSelected && (
+                        <button
+                          onClick={handleAddItem}
+                          style={styles.iconBtnLight}
+                          title="목록 추가"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      )}
                       {isTrashSelected && displayedItems.length > 0 && (
                         <button
                           onClick={() => {
@@ -4398,8 +4447,52 @@ export default function NotebookExplorer() {
                   </div>
                 </div>
 
-                <div style={styles.paneContent}>
-                  {displayedItems.length === 0 ? (
+                <div style={styles.paneContent} ref={itemScrollRef}>
+                  {/* Inline input for creating new item */}
+                  {isAddingItem && (
+                    <div style={{
+                      padding: '8px 10px',
+                      marginBottom: '8px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '8px',
+                      border: '1.5px solid #2563EB',
+                      boxShadow: '0 2px 5px rgba(37,99,235,0.12)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <input
+                        ref={itemInputRef}
+                        autoFocus
+                        type="text"
+                        value={newItemTitle}
+                        onChange={(e) => setNewItemTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (e.nativeEvent.isComposing) return;
+                            handleConfirmAddItem();
+                          }
+                          if (e.key === 'Escape') {
+                            setIsAddingItem(false);
+                            setNewItemTitle('');
+                          }
+                        }}
+                        onBlur={handleConfirmAddItem}
+                        placeholder="새 목록명 입력..."
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          outline: 'none',
+                          fontSize: '13.5px',
+                          fontWeight: 600,
+                          color: '#1E293B',
+                          backgroundColor: 'transparent'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {displayedItems.length === 0 && !isAddingItem ? (
                     <div style={styles.emptyStateText}>
                       {isSearchActive ? '검색 결과와 일치하는 메모가 없습니다.' : '등록된 메모가 없습니다.'}
                     </div>
