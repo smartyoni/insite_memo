@@ -6645,6 +6645,41 @@ export default function NotebookExplorer() {
                                             </div>
                                           );
                                         })}
+                                      {/* 그룹 하단 체크 항목 추가 버튼 (그룹화 된 체크리스트에만 적용) */}
+                                      {!isItemInTrash && group.section && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            padding: '7px 10px',
+                                            marginTop: '4px',
+                                            borderRadius: '6px',
+                                            border: '1px dashed #93C5FD',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1D4ED8',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#DBEAFE';
+                                            e.currentTarget.style.borderColor = '#60A5FA';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                            e.currentTarget.style.borderColor = '#93C5FD';
+                                          }}
+                                          title="이 그룹에 체크 항목 추가"
+                                        >
+                                          <Plus size={14} />
+                                          <span>체크 항목 추가</span>
+                                        </button>
+                                      )}
                                       </div>
                                     )}
                                   </div>
@@ -7869,6 +7904,42 @@ onClick={() => {
                                           </div>
                                         );
                                       })}
+
+                                      {/* 그룹 하단 체크 항목 추가 버튼 (그룹화 된 체크리스트에만 적용) */}
+                                      {!isItemInTrash && group.section && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            padding: '7px 10px',
+                                            marginTop: '4px',
+                                            borderRadius: '6px',
+                                            border: '1px dashed #93C5FD',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1D4ED8',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#DBEAFE';
+                                            e.currentTarget.style.borderColor = '#60A5FA';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                            e.currentTarget.style.borderColor = '#93C5FD';
+                                          }}
+                                          title="이 그룹에 체크 항목 추가"
+                                        >
+                                          <Plus size={14} />
+                                          <span>체크 항목 추가</span>
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
