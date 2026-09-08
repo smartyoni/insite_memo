@@ -2810,13 +2810,19 @@ export default function NotebookExplorer() {
   };
 
   const handleUpdateItemTitle = async (itemId) => {
-    if (!editingItemTitle.trim()) {
+    const trimmed = editingItemTitle.trim();
+    if (!trimmed) {
+      setEditingItemId(null);
+      return;
+    }
+    const currentItem = items.find((it) => it.id === itemId);
+    if (currentItem && currentItem.title === trimmed) {
       setEditingItemId(null);
       return;
     }
     try {
       await updateDoc(doc(db, 'items', itemId), {
-        title: editingItemTitle.trim(),
+        title: trimmed,
         updatedAt: serverTimestamp()
       });
       setEditingItemId(null);
@@ -4613,6 +4619,12 @@ export default function NotebookExplorer() {
                                 navigateToDetail(item.id);
                               }
                             }}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              if (isTrashSelected) return;
+                              setEditingItemId(item.id);
+                              setEditingItemTitle(item.title || '');
+                            }}
                             style={{
                               ...styles.itemCard,
                               backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
@@ -4621,17 +4633,22 @@ export default function NotebookExplorer() {
                               cursor: isTrashSelected ? 'pointer' : 'grab',
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '4px'
+                              gap: '4px',
+                              userSelect: 'none'
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}
+                                title={isTrashSelected ? undefined : "더블클릭하여 목록명 수정"}
+                              >
                                 {isEditing ? (
                                   <input
                                     autoFocus
                                     type="text"
                                     value={editingItemTitle}
                                     onChange={(e) => setEditingItemTitle(e.target.value)}
+                                    onFocus={(e) => e.target.select()}
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') handleUpdateItemTitle(item.id);
                                       if (e.key === 'Escape') setEditingItemId(null);
@@ -4639,6 +4656,7 @@ export default function NotebookExplorer() {
                                     onBlur={() => handleUpdateItemTitle(item.id)}
                                     style={styles.inputLightInline}
                                     onClick={(e) => e.stopPropagation()}
+                                    onDoubleClick={(e) => e.stopPropagation()}
                                   />
                                 ) : (
                                   <span style={{
@@ -4655,7 +4673,11 @@ export default function NotebookExplorer() {
                                 )}
                               </div>
 
-                              <div style={styles.actionGroup}>
+                              <div
+                                style={styles.actionGroup}
+                                onClick={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.stopPropagation()}
+                              >
                                 {isTrashSelected ? (
                                   <>
                                     <button
