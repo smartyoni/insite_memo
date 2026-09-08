@@ -1326,7 +1326,18 @@ export default function NotebookExplorer() {
 
   const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
   const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
-  const hasBlocks = Boolean(Array.isArray(activeItem?.detailBlocks) && activeItem.detailBlocks.some((b) => (b.title && b.title.trim()) || (b.content && b.content.trim()) || (Array.isArray(b.items) && b.items.length > 0)));
+  const hasBlocks = Boolean(
+    Array.isArray(activeItem?.detailBlocks) &&
+    activeItem.detailBlocks.some((b) => {
+      if (!b) return false;
+      if (b.type === 'checklist') {
+        const hasCustomTitle = b.title && b.title.trim() && b.title.trim() !== '체크리스트';
+        const hasValidItems = Array.isArray(b.items) && b.items.some((it) => it && typeof it.text === 'string' && it.text.trim().length > 0);
+        return Boolean(hasCustomTitle || hasValidItems);
+      }
+      return Boolean((b.title && b.title.trim().length > 0) || (b.content && b.content.trim().length > 0));
+    })
+  );
   const hasLegacyBody = Boolean((activeItem?.body && activeItem.body.trim().length > 0) || hasBlocks);
 
   // Compute active item checklists (with legacy subBody fallback)
@@ -2184,7 +2195,18 @@ export default function NotebookExplorer() {
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
       const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
-      const hasItemBlocks = Boolean(Array.isArray(activeItem.detailBlocks) && activeItem.detailBlocks.some((b) => (b.title && b.title.trim()) || (b.content && b.content.trim()) || (Array.isArray(b.items) && b.items.length > 0)));
+      const hasItemBlocks = Boolean(
+        Array.isArray(activeItem.detailBlocks) &&
+        activeItem.detailBlocks.some((b) => {
+          if (!b) return false;
+          if (b.type === 'checklist') {
+            const hasCustomTitle = b.title && b.title.trim() && b.title.trim() !== '체크리스트';
+            const hasValidItems = Array.isArray(b.items) && b.items.some((it) => it && typeof it.text === 'string' && it.text.trim().length > 0);
+            return Boolean(hasCustomTitle || hasValidItems);
+          }
+          return Boolean((b.title && b.title.trim().length > 0) || (b.content && b.content.trim().length > 0));
+        })
+      );
       const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || hasItemBlocks);
       const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
       const isSavedChecklistValid = Boolean(
@@ -2663,20 +2685,6 @@ export default function NotebookExplorer() {
   // ---------------- Quick Add Note (Fast Entry) ----------------
   const handleQuickAddNote = async () => {
     const targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
-    const initialDefaultBlocks = [
-      {
-        id: `chk_init_${Date.now()}`,
-        type: 'checklist',
-        title: '체크리스트',
-        items: [
-          {
-            id: `item_${Date.now()}_0`,
-            text: '',
-            completed: false
-          }
-        ]
-      }
-    ];
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -2684,7 +2692,8 @@ export default function NotebookExplorer() {
         title: '',
         body: '',
         subBody: '',
-        detailBlocks: initialDefaultBlocks,
+        detailBlocks: [],
+        checklists: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -2699,9 +2708,9 @@ export default function NotebookExplorer() {
       setDraftTemplateId(null);
       setDraftTemplateValues({});
       setDraftChecklists([]);
-      setSelectedChecklistId('__main__');
+      setSelectedChecklistId(null);
       setChecklistDetailDraft('');
-      setChecklistDetailBlocks(initialDefaultBlocks);
+      setChecklistDetailBlocks([]);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding quick note:', err);
@@ -2726,20 +2735,6 @@ export default function NotebookExplorer() {
     if (!isValidTarget) {
       targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
     }
-    const initialDefaultBlocks = [
-      {
-        id: `chk_init_${Date.now()}`,
-        type: 'checklist',
-        title: '체크리스트',
-        items: [
-          {
-            id: `item_${Date.now()}_0`,
-            text: '',
-            completed: false
-          }
-        ]
-      }
-    ];
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -2747,7 +2742,8 @@ export default function NotebookExplorer() {
         title: '',
         body: '',
         subBody: '',
-        detailBlocks: initialDefaultBlocks,
+        detailBlocks: [],
+        checklists: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -2761,9 +2757,9 @@ export default function NotebookExplorer() {
       setDraftTemplateId(null);
       setDraftTemplateValues({});
       setDraftChecklists([]);
-      setSelectedChecklistId('__main__');
+      setSelectedChecklistId(null);
       setChecklistDetailDraft('');
-      setChecklistDetailBlocks(initialDefaultBlocks);
+      setChecklistDetailBlocks([]);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding item:', err);
@@ -5418,7 +5414,7 @@ export default function NotebookExplorer() {
                                 }}
                                 title="템플릿 선택"
                               >
-                                <option value="">기본 텍스트 박스</option>
+                                <option value="">기본 서식</option>
                                 {templates.map((tpl) => (
                                   <option key={tpl.id} value={tpl.id}>
                                     📋 {tpl.title}
@@ -6218,7 +6214,7 @@ export default function NotebookExplorer() {
                                         onClick={() => setDraftTemplateId(null)}
                                         style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
                                       >
-                                        기본 텍스트박스로 변경
+                                        기본 서식으로 변경
                                       </button>
                                     </div>
 
