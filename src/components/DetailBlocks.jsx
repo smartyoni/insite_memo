@@ -185,7 +185,9 @@ function DetailChecklistItemRow({
   onDragStart,
   onDragOver,
   onDrop,
-  onDragEnd
+  onDragEnd,
+  otherChecklistBlocks = [],
+  onMoveToBlock
 }) {
   const [draftText, setDraftText] = useState(item.text || '');
   const textareaRef = useRef(null);
@@ -491,6 +493,41 @@ function DetailChecklistItemRow({
                     <Trash2 size={13} color="#DC2626" />
                     <span>삭제</span>
                   </button>
+
+                  {Array.isArray(otherChecklistBlocks) && otherChecklistBlocks.length > 0 && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, padding: '3px 8px' }}>
+                        다른 그룹으로 이동:
+                      </div>
+                      {otherChecklistBlocks.map((targetBlock) => (
+                        <button
+                          key={targetBlock.id}
+                          type="button"
+                          onClick={() => {
+                            onCloseItemMenu();
+                            if (onMoveToBlock) {
+                              onMoveToBlock(blockId, targetBlock.id, item.id);
+                            }
+                          }}
+                          style={{
+                            ...blockMenuItemStyle,
+                            gap: '6px',
+                            color: '#065F46',
+                            padding: '4px 8px 4px 12px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title={`'${targetBlock.title || '체크리스트'}' 그룹으로 이동`}
+                        >
+                          <Folder size={12} color="#059669" style={{ flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {targetBlock.title && targetBlock.title.trim() ? targetBlock.title : '체크리스트'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={onCloseItemMenu}
@@ -789,40 +826,109 @@ export const DetailBlocksManager = ({
     e.stopPropagation();
     setDraggedItemKey({ blockId, itemId });
     e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ blockId, itemId }));
+    } catch {
+      // ignore
+    }
   };
 
   const handleItemDragOver = (e, blockId, itemId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (draggedItemKey?.blockId === blockId && draggedItemKey?.itemId !== itemId) {
+    if (!draggedItemKey) return;
+    if (!(draggedItemKey.blockId === blockId && draggedItemKey.itemId === itemId)) {
       setDragOverItemKey({ blockId, itemId });
     }
   };
 
-  const handleItemDrop = (e, blockId, targetItemId) => {
+  const handleBlockDragOver = (e, blockId) => {
+    if (!draggedItemKey) return;
     e.preventDefault();
     e.stopPropagation();
-    if (
-      !draggedItemKey ||
-      draggedItemKey.blockId !== blockId ||
-      draggedItemKey.itemId === targetItemId
-    ) {
+    if (dragOverItemKey?.blockId !== blockId || dragOverItemKey?.itemId !== null) {
+      setDragOverItemKey({ blockId, itemId: null });
+    }
+  };
+
+  const handleItemDrop = (e, targetBlockId, targetItemId = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedItemKey) {
       setDraggedItemKey(null);
       setDragOverItemKey(null);
       return;
     }
 
-    const next = blocks.map((b) => {
-      if (b.id !== blockId) return b;
-      const items = [...(b.items || [])];
-      const fromIdx = items.findIndex((it) => it.id === draggedItemKey.itemId);
-      const toIdx = items.findIndex((it) => it.id === targetItemId);
-      if (fromIdx === -1 || toIdx === -1) return b;
+    const { blockId: sourceBlockId, itemId: draggedItemId } = draggedItemKey;
 
-      const [moved] = items.splice(fromIdx, 1);
-      items.splice(toIdx, 0, moved);
-      return { ...b, items };
-    });
+    // 자기 자신과 동일한 위치로의 드롭은 무시
+    if (sourceBlockId === targetBlockId && draggedItemId === targetItemId) {
+      setDraggedItemKey(null);
+      setDragOverItemKey(null);
+      return;
+    }
+
+    const sourceBlock = blocks.find((b) => b.id === sourceBlockId);
+    if (!sourceBlock || !Array.isArray(sourceBlock.items)) {
+      setDraggedItemKey(null);
+      setDragOverItemKey(null);
+      return;
+    }
+
+    const draggedItem = sourceBlock.items.find((it) => it.id === draggedItemId);
+    if (!draggedItem) {
+      setDraggedItemKey(null);
+      setDragOverItemKey(null);
+      return;
+    }
+
+    let next = [];
+
+    if (sourceBlockId === targetBlockId) {
+      // 1. 같은 블록 내 순서 변경
+      next = blocks.map((b) => {
+        if (b.id !== targetBlockId) return b;
+        const items = [...(b.items || [])];
+        const fromIdx = items.findIndex((it) => it.id === draggedItemId);
+        const toIdx = targetItemId ? items.findIndex((it) => it.id === targetItemId) : items.length - 1;
+        if (fromIdx === -1) return b;
+
+        const [moved] = items.splice(fromIdx, 1);
+        if (toIdx === -1) {
+          items.push(moved);
+        } else {
+          items.splice(toIdx, 0, moved);
+        }
+        return { ...b, items };
+      });
+    } else {
+      // 2. 다른 블록(그룹)으로 이동!
+      next = blocks.map((b) => {
+        if (b.id === sourceBlockId) {
+          return {
+            ...b,
+            items: (b.items || []).filter((it) => it.id !== draggedItemId)
+          };
+        }
+        if (b.id === targetBlockId) {
+          const items = [...(b.items || [])];
+          if (targetItemId) {
+            const toIdx = items.findIndex((it) => it.id === targetItemId);
+            if (toIdx !== -1) {
+              items.splice(toIdx, 0, draggedItem);
+            } else {
+              items.push(draggedItem);
+            }
+          } else {
+            // 블록 헤더 또는 빈 공간에 드롭한 경우 끝에 추가
+            items.push(draggedItem);
+          }
+          return { ...b, items };
+        }
+        return b;
+      });
+    }
 
     if (onChangeAndSave) onChangeAndSave(next);
     setDraggedItemKey(null);
@@ -832,6 +938,33 @@ export const DetailBlocksManager = ({
   const handleItemDragEnd = () => {
     setDraggedItemKey(null);
     setDragOverItemKey(null);
+  };
+
+  // 메뉴를 통한 블록(그룹) 간 이동 함수
+  const handleMoveItemToBlock = (sourceBlockId, targetBlockId, itemId) => {
+    if (!sourceBlockId || !targetBlockId || sourceBlockId === targetBlockId) return;
+    const sourceBlock = blocks.find((b) => b.id === sourceBlockId);
+    if (!sourceBlock || !Array.isArray(sourceBlock.items)) return;
+    const itemToMove = sourceBlock.items.find((it) => it.id === itemId);
+    if (!itemToMove) return;
+
+    const next = blocks.map((b) => {
+      if (b.id === sourceBlockId) {
+        return {
+          ...b,
+          items: (b.items || []).filter((it) => it.id !== itemId)
+        };
+      }
+      if (b.id === targetBlockId) {
+        return {
+          ...b,
+          items: [...(b.items || []), itemToMove]
+        };
+      }
+      return b;
+    });
+
+    if (onChangeAndSave) onChangeAndSave(next);
   };
 
   // 체크리스트 항목 추가 (하단 [+ 항목 추가] 버튼 클릭 시, 미완료 목록의 끝에 추가)
@@ -1035,23 +1168,36 @@ export const DetailBlocksManager = ({
           const isFirstBlock = idx === 0;
           const isLastBlock = idx === blocks.length - 1;
           const isCollapsed = Boolean(collapsedBlockIds[block.id]);
+          const isBlockDragOver = dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === null;
 
           return (
             <div
               key={block.id || `checklist_${idx}`}
+              onDragOver={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleBlockDragOver(e, block.id);
+                }
+              }}
+              onDrop={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleItemDrop(e, block.id, null);
+                }
+              }}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#FFFFFF',
                 borderRadius: '8px',
-                border: '1px solid #72A884',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                border: isBlockDragOver ? '2px dashed #059669' : '1px solid #72A884',
+                boxShadow: isBlockDragOver ? '0 0 0 2px rgba(5, 150, 105, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 overflow: 'hidden',
                 flexShrink: 0
               }}
             >
               {/* 체크리스트 그룹 헤더 바 */}
               <div
+                onDragOver={(e) => handleBlockDragOver(e, block.id)}
+                onDrop={(e) => handleItemDrop(e, block.id, null)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1349,7 +1495,18 @@ export const DetailBlocksManager = ({
                     backgroundColor: '#FFFFFF',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: '4px',
+                    minHeight: '20px'
+                  }}
+                  onDragOver={(e) => {
+                    if (e.target === e.currentTarget) {
+                      handleBlockDragOver(e, block.id);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (e.target === e.currentTarget) {
+                      handleItemDrop(e, block.id, null);
+                    }
                   }}
                 >
                   {items.map((item, itemIdx) => (
@@ -1376,6 +1533,8 @@ export const DetailBlocksManager = ({
                       onDragOver={handleItemDragOver}
                       onDrop={handleItemDrop}
                       onDragEnd={handleItemDragEnd}
+                      otherChecklistBlocks={blocks.filter((b) => b.type === 'checklist' && b.id !== block.id)}
+                      onMoveToBlock={handleMoveItemToBlock}
                     />
                   ))}
 
