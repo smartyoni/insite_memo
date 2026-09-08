@@ -1326,7 +1326,7 @@ export default function NotebookExplorer() {
 
   const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
   const activeTpl = hasTpl ? templates.find(t => t.id === activeItem.templateId) : null;
-  const hasBlocks = Boolean(Array.isArray(activeItem?.detailBlocks) && activeItem.detailBlocks.length > 0);
+  const hasBlocks = Boolean(Array.isArray(activeItem?.detailBlocks) && activeItem.detailBlocks.some((b) => (b.title && b.title.trim()) || (b.content && b.content.trim()) || (Array.isArray(b.items) && b.items.length > 0)));
   const hasLegacyBody = Boolean((activeItem?.body && activeItem.body.trim().length > 0) || hasBlocks);
 
   // Compute active item checklists (with legacy subBody fallback)
@@ -2140,7 +2140,8 @@ export default function NotebookExplorer() {
       setDraftTemplateValues(activeItem.templateValues || {});
       setDraftChecklists(null);
       const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
-      const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || (Array.isArray(activeItem.detailBlocks) && activeItem.detailBlocks.length > 0));
+      const hasItemBlocks = Boolean(Array.isArray(activeItem.detailBlocks) && activeItem.detailBlocks.some((b) => (b.title && b.title.trim()) || (b.content && b.content.trim()) || (Array.isArray(b.items) && b.items.length > 0)));
+      const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || hasItemBlocks);
       const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
       const isSavedChecklistValid = Boolean(
         selectedChecklistId && (
