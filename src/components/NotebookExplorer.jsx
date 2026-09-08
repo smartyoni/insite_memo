@@ -1564,6 +1564,24 @@ export default function NotebookExplorer() {
     }));
   };
 
+  const hasChecklistSections = React.useMemo(() => {
+    return checklistGroups.some((g) => g.section?.id);
+  }, [checklistGroups]);
+
+  const handleExpandAllSections = () => {
+    setCollapsedSections({});
+  };
+
+  const handleCollapseAllSections = () => {
+    const newCollapsed = {};
+    checklistGroups.forEach((g) => {
+      if (g.section?.id) {
+        newCollapsed[g.section.id] = true;
+      }
+    });
+    setCollapsedSections(newCollapsed);
+  };
+
   const handleMoveGroup = async (sectionId, direction) => {
     setOpenGroupMenuId(null);
     if (!sectionId) return;
@@ -6299,6 +6317,84 @@ export default function NotebookExplorer() {
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
+                            {/* 체크리스트 그룹 전체 펼치기 / 전체 접기 컴팩트 기호 버튼 */}
+                            {!isItemInTrash && hasChecklistSections && (
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  backgroundColor: '#F8FAFC',
+                                  borderRadius: '6px',
+                                  border: '1px solid #CBD5E1',
+                                  padding: '1px 2px',
+                                  gap: '1px',
+                                  height: isMobile ? '28px' : '30px'
+                                }}
+                                className="no-print"
+                                title="체크리스트 그룹 전체 펼치기 / 전체 접기"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={handleExpandAllSections}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: isMobile ? '22px' : '24px',
+                                    height: '100%',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                    e.currentTarget.style.color = '#2563EB';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = '#475569';
+                                  }}
+                                  title="그룹 모두 펼치기 (︾)"
+                                >
+                                  <ChevronsDown size={14} />
+                                </button>
+                                <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+                                <button
+                                  type="button"
+                                  onClick={handleCollapseAllSections}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: isMobile ? '22px' : '24px',
+                                    height: '100%',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: '#475569',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                    e.currentTarget.style.color = '#2563EB';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = '#475569';
+                                  }}
+                                  title="그룹 모두 접기 (︽)"
+                                >
+                                  <ChevronsUp size={14} />
+                                </button>
+                              </div>
+                            )}
+
                             {!isItemInTrash && (
                               <button
                                 type="button"
