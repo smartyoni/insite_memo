@@ -5448,7 +5448,15 @@ export default function NotebookExplorer() {
                                               {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                             </span>
                                             <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
-                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <span
+                                              onDoubleClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingCheckId(group.section.id);
+                                                setEditingCheckText(group.section.text);
+                                              }}
+                                              title="더블클릭하여 그룹 이름 수정"
+                                              style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                            >
                                               {group.section.text}
                                             </span>
                                             {isSecCollapsed && (
@@ -5780,6 +5788,12 @@ export default function NotebookExplorer() {
                                                       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                                         e.preventDefault();
                                                         handleSaveEditChecklist(checkItem.id);
+                                                      } else if (e.key === 'Escape') {
+                                                        e.preventDefault();
+                                                        if (!checkItem.text && !editingCheckText.trim()) {
+                                                          handleDeleteChecklist(checkItem.id);
+                                                        }
+                                                        setEditingCheckId(null);
                                                       }
                                                     }}
                                                     style={styles.checklistEditTextarea}
@@ -5788,7 +5802,7 @@ export default function NotebookExplorer() {
                                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
                                                     <button
                                                       type="button"
-onClick={() => {
+                                                      onClick={() => {
                                                         if (!checkItem.text && !editingCheckText.trim()) {
                                                           handleDeleteChecklist(checkItem.id);
                                                         }
@@ -5846,13 +5860,24 @@ onClick={() => {
                                                       )}
                                                     </button>
                                                     <span
+                                                      onDoubleClick={(e) => {
+                                                        if (checkItem.id !== '__main__') {
+                                                          e.stopPropagation();
+                                                          setSelectedChecklistId(checkItem.id);
+                                                          setEditingCheckId(checkItem.id);
+                                                          setEditingCheckText(checkItem.text);
+                                                          setEditingCheckTag(checkItem.tag || '');
+                                                        }
+                                                      }}
+                                                      title={checkItem.id !== '__main__' ? "더블클릭하여 내용 수정" : undefined}
                                                       style={{
                                                         ...styles.checkitemText,
                                                         flex: 1,
                                                         minWidth: 0,
                                                         textDecoration: checkItem.completed ? 'line-through' : 'none',
                                                         color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
-                                                        fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
+                                                        fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500),
+                                                        cursor: checkItem.id !== '__main__' ? 'text' : 'pointer'
                                                       }}
                                                     >
                                                       {renderWithLinks(checkItem.text)}
@@ -6473,9 +6498,17 @@ onClick={() => {
                                             {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                           </span>
                                           <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
-                                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {group.section.text}
-                                          </span>
+                                          <span
+                                             onDoubleClick={(e) => {
+                                               e.stopPropagation();
+                                               setEditingCheckId(group.section.id);
+                                               setEditingCheckText(group.section.text);
+                                             }}
+                                             title="더블클릭하여 그룹 이름 수정"
+                                             style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                           >
+                                             {group.section.text}
+                                           </span>
                                           {isSecCollapsed && (
                                             <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
                                               (접힘)
@@ -6806,6 +6839,12 @@ onClick={() => {
                                                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                                       e.preventDefault();
                                                       handleSaveEditChecklist(checkItem.id);
+                                                    } else if (e.key === 'Escape') {
+                                                      e.preventDefault();
+                                                      if (!checkItem.text && !editingCheckText.trim()) {
+                                                        handleDeleteChecklist(checkItem.id);
+                                                      }
+                                                      setEditingCheckId(null);
                                                     }
                                                   }}
                                                   style={styles.checklistEditTextarea}
@@ -6873,13 +6912,24 @@ onClick={() => {
                                                     )}
                                                   </button>
                                                   <span
+                                                    onDoubleClick={(e) => {
+                                                      if (checkItem.id !== '__main__') {
+                                                        e.stopPropagation();
+                                                        setSelectedChecklistId(checkItem.id);
+                                                        setEditingCheckId(checkItem.id);
+                                                        setEditingCheckText(checkItem.text);
+                                                        setEditingCheckTag(checkItem.tag || '');
+                                                      }
+                                                    }}
+                                                    title={checkItem.id !== '__main__' ? "더블클릭하여 내용 수정" : undefined}
                                                     style={{
                                                       ...styles.checkitemText,
                                                       flex: 1,
                                                       minWidth: 0,
                                                       textDecoration: checkItem.completed ? 'line-through' : 'none',
                                                       color: checkItem.completed ? '#94A3B8' : (isSelected ? '#1E40AF' : '#1E293B'),
-                                                      fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500)
+                                                      fontWeight: isSelected ? 700 : (checkItem.completed ? 400 : 500),
+                                                      cursor: checkItem.id !== '__main__' ? 'text' : 'pointer'
                                                     }}
                                                   >
                                                     {renderWithLinks(checkItem.text)}
