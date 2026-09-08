@@ -1605,8 +1605,9 @@ export default function NotebookExplorer() {
   const updateCollapsedSections = (updater) => {
     setCollapsedSections((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      if (activeItem?.id) {
-        saveStoredCollapsedSections(activeItem.id, next);
+      const targetId = activeItem?.id || selectedItemId;
+      if (targetId) {
+        saveStoredCollapsedSections(targetId, next);
       }
       return next;
     });
@@ -1615,8 +1616,9 @@ export default function NotebookExplorer() {
   const updateDetailCollapsedBlockIds = (updater) => {
     setDetailCollapsedBlockIds((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      if (activeItem?.id) {
-        saveStoredDetailCollapsedBlocks(activeItem.id, selectedChecklistId || '__main__', next);
+      const targetId = activeItem?.id || selectedItemId;
+      if (targetId) {
+        saveStoredDetailCollapsedBlocks(targetId, selectedChecklistId || '__main__', next);
       }
       return next;
     });
@@ -2167,8 +2169,8 @@ export default function NotebookExplorer() {
     setEditingBlockId(null);
     setIsEditMode(false);
     setIsEditingChecklistDetail(false);
-    if (activeItem?.id) {
-      setCollapsedSections(getStoredCollapsedSections(activeItem.id));
+    if (selectedItemId) {
+      setCollapsedSections(getStoredCollapsedSections(selectedItemId));
     } else {
       setCollapsedSections({});
     }
