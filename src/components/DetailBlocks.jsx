@@ -72,13 +72,19 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
     ];
   }
 
-  // 기본 빈 블록 1개
+  // 기본 빈 블록 1개: 체크리스트 기본 생성
   return [
     {
-      id: `b_init_${Date.now()}`,
-      type: 'text',
-      title: '',
-      content: ''
+      id: `chk_init_${Date.now()}`,
+      type: 'checklist',
+      title: '체크리스트',
+      items: [
+        {
+          id: `item_${Date.now()}_0`,
+          text: '',
+          completed: false
+        }
+      ]
     }
   ];
 };
@@ -93,7 +99,8 @@ export const blocksToPlainText = (blocks) => {
     .map((b) => {
       if (b.type === 'checklist') {
         const parts = [];
-        if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
+        const hasValidItem = (b.items || []).some((it) => it && typeof it.text === 'string' && it.text.trim());
+        if (b.title && b.title.trim() && hasValidItem) parts.push(`[${b.title.trim()}]`);
         (b.items || []).forEach((it) => {
           const mark = it.completed ? '[v]' : '[ ]';
           if (it.text && it.text.trim()) parts.push(`${mark} ${it.text.trim()}`);
@@ -1083,10 +1090,16 @@ export const DetailBlocksManager = ({
     const next = blocks.filter((_, i) => i !== index);
     if (next.length === 0) {
       next.push({
-        id: `b_${Date.now()}`,
-        type: 'text',
-        title: '',
-        content: ''
+        id: `chk_init_${Date.now()}`,
+        type: 'checklist',
+        title: '체크리스트',
+        items: [
+          {
+            id: `item_${Date.now()}_0`,
+            text: '',
+            completed: false
+          }
+        ]
       });
     }
     if (onChangeAndSave) {

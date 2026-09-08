@@ -1510,16 +1510,32 @@ export default function NotebookExplorer() {
 
   const handleAddChecklist = async () => {
     if (!activeItem || !newChecklistText.trim()) return;
+    const defaultCheckBlocks = [
+      {
+        id: `chk_${Date.now()}_0`,
+        type: 'checklist',
+        title: '체크리스트',
+        items: [
+          {
+            id: `item_${Date.now()}_0`,
+            text: '',
+            completed: false
+          }
+        ]
+      }
+    ];
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
       completed: false,
-      detail: ''
+      detail: '',
+      detailBlocks: defaultCheckBlocks
     };
     const updated = [...baseChecklists, newItem];
     setNewChecklistText('');
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
+    setChecklistDetailBlocks(defaultCheckBlocks);
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -1555,11 +1571,26 @@ export default function NotebookExplorer() {
 
   const handleAddChecklistToGroup = async (sectionId) => {
     if (!activeItem || !sectionId) return;
+    const defaultCheckBlocks = [
+      {
+        id: `chk_${Date.now()}_0`,
+        type: 'checklist',
+        title: '체크리스트',
+        items: [
+          {
+            id: `item_${Date.now()}_0`,
+            text: '',
+            completed: false
+          }
+        ]
+      }
+    ];
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: '',
       completed: false,
-      detail: ''
+      detail: '',
+      detailBlocks: defaultCheckBlocks
     };
 
     const secIdx = baseChecklists.findIndex((c) => c.id === sectionId);
@@ -1586,7 +1617,7 @@ export default function NotebookExplorer() {
     }
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
-    setChecklistDetailBlocks([]);
+    setChecklistDetailBlocks(defaultCheckBlocks);
     setEditingCheckId(newItem.id);
     setEditingCheckText('');
     setEditingCheckTag('');
@@ -2060,14 +2091,27 @@ export default function NotebookExplorer() {
       // 3. 출처에서 블록 제거
       const updatedSourceBlocks = sourceBlocks.filter((b) => b.id !== block.id);
       const finalSourceBlocks = updatedSourceBlocks.length > 0 ? updatedSourceBlocks : [
-        { id: `b_init_${Date.now()}`, type: 'text', title: '', content: '' }
+        {
+          id: `chk_init_${Date.now()}`,
+          type: 'checklist',
+          title: '체크리스트',
+          items: [
+            {
+              id: `item_${Date.now()}_0`,
+              text: '',
+              completed: false
+            }
+          ]
+        }
       ];
 
       // 4. 대상에 블록 추가
-      const isTargetEmpty = targetBlocks.length === 1 &&
-        targetBlocks[0].type === 'text' &&
-        !targetBlocks[0].title?.trim() &&
-        !targetBlocks[0].content?.trim();
+      const isTargetEmpty = targetBlocks.length === 1 && (
+        (targetBlocks[0].type === 'text' && !targetBlocks[0].title?.trim() && !targetBlocks[0].content?.trim()) ||
+        (targetBlocks[0].type === 'checklist' &&
+          (!targetBlocks[0].title || targetBlocks[0].title === '체크리스트') &&
+          (!targetBlocks[0].items || targetBlocks[0].items.length === 0 || (targetBlocks[0].items.length === 1 && !targetBlocks[0].items[0].text?.trim())))
+      );
 
       const finalTargetBlocks = isTargetEmpty ? [block] : [...targetBlocks, block];
 
@@ -2619,6 +2663,20 @@ export default function NotebookExplorer() {
   // ---------------- Quick Add Note (Fast Entry) ----------------
   const handleQuickAddNote = async () => {
     const targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
+    const initialDefaultBlocks = [
+      {
+        id: `chk_init_${Date.now()}`,
+        type: 'checklist',
+        title: '체크리스트',
+        items: [
+          {
+            id: `item_${Date.now()}_0`,
+            text: '',
+            completed: false
+          }
+        ]
+      }
+    ];
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -2626,6 +2684,7 @@ export default function NotebookExplorer() {
         title: '',
         body: '',
         subBody: '',
+        detailBlocks: initialDefaultBlocks,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -2642,7 +2701,7 @@ export default function NotebookExplorer() {
       setDraftChecklists([]);
       setSelectedChecklistId('__main__');
       setChecklistDetailDraft('');
-      setChecklistDetailBlocks([]);
+      setChecklistDetailBlocks(initialDefaultBlocks);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding quick note:', err);
@@ -2667,6 +2726,20 @@ export default function NotebookExplorer() {
     if (!isValidTarget) {
       targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
     }
+    const initialDefaultBlocks = [
+      {
+        id: `chk_init_${Date.now()}`,
+        type: 'checklist',
+        title: '체크리스트',
+        items: [
+          {
+            id: `item_${Date.now()}_0`,
+            text: '',
+            completed: false
+          }
+        ]
+      }
+    ];
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -2674,6 +2747,7 @@ export default function NotebookExplorer() {
         title: '',
         body: '',
         subBody: '',
+        detailBlocks: initialDefaultBlocks,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -2689,7 +2763,7 @@ export default function NotebookExplorer() {
       setDraftChecklists([]);
       setSelectedChecklistId('__main__');
       setChecklistDetailDraft('');
-      setChecklistDetailBlocks([]);
+      setChecklistDetailBlocks(initialDefaultBlocks);
       setIsEditMode(true);
     } catch (err) {
       console.error('Error adding item:', err);
