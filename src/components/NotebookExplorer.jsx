@@ -727,6 +727,7 @@ export default function NotebookExplorer() {
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [detailCollapsedBlockIds, setDetailCollapsedBlockIds] = useState({});
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
   const [newGroupNameInput, setNewGroupNameInput] = useState('');
   const [groupModalPos, setGroupModalPos] = useState(null);
@@ -1582,6 +1583,20 @@ export default function NotebookExplorer() {
     setCollapsedSections(newCollapsed);
   };
 
+  const handleExpandAllDetailBlocks = () => {
+    setDetailCollapsedBlockIds({});
+  };
+
+  const handleCollapseAllDetailBlocks = () => {
+    const newCollapsed = {};
+    (checklistDetailBlocks || []).forEach((b) => {
+      if (b && b.id) {
+        newCollapsed[b.id] = true;
+      }
+    });
+    setDetailCollapsedBlockIds(newCollapsed);
+  };
+
   const handleMoveGroup = async (sectionId, direction) => {
     setOpenGroupMenuId(null);
     if (!sectionId) return;
@@ -2126,6 +2141,7 @@ export default function NotebookExplorer() {
     }
     setEditingBlockId(null);
     setIsEditingChecklistDetail(false);
+    setDetailCollapsedBlockIds({});
   }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
 
   // ESC & Enter key handler for modals & detail edit mode
@@ -6033,6 +6049,8 @@ export default function NotebookExplorer() {
                                   setEditingBlockId={setEditingBlockId}
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
+                                  collapsedBlockIds={detailCollapsedBlockIds}
+                                  setCollapsedBlockIds={setDetailCollapsedBlockIds}
                                 />
                               </div>
                             ) : (
@@ -6228,6 +6246,84 @@ export default function NotebookExplorer() {
                                       ☑️ {selectedCheckItem.text} 상세내용
                                     </span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="no-print">
+                                      {/* 텍스트박스 및 체크리스트 그룹 전체 펼치기 / 전체 접기 컴팩트 버튼 */}
+                                      {checklistDetailBlocks && checklistDetailBlocks.length > 0 && (
+                                        <div
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            backgroundColor: '#F8FAFC',
+                                            borderRadius: '6px',
+                                            border: '1px solid #CBD5E1',
+                                            padding: '1px 2px',
+                                            gap: '1px',
+                                            height: isMobile ? '28px' : '30px'
+                                          }}
+                                          className="no-print"
+                                          title="텍스트 박스 및 체크리스트 그룹 전체 펼치기 / 전체 접기"
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={handleExpandAllDetailBlocks}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: isMobile ? '22px' : '24px',
+                                              height: '100%',
+                                              borderRadius: '4px',
+                                              border: 'none',
+                                              backgroundColor: 'transparent',
+                                              color: '#475569',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                              e.currentTarget.style.color = '#2563EB';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = 'transparent';
+                                              e.currentTarget.style.color = '#475569';
+                                            }}
+                                            title="모든 블록 펼치기 (︾)"
+                                          >
+                                            <ChevronsDown size={14} />
+                                          </button>
+                                          <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+                                          <button
+                                            type="button"
+                                            onClick={handleCollapseAllDetailBlocks}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: isMobile ? '22px' : '24px',
+                                              height: '100%',
+                                              borderRadius: '4px',
+                                              border: 'none',
+                                              backgroundColor: 'transparent',
+                                              color: '#475569',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                              e.currentTarget.style.color = '#2563EB';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = 'transparent';
+                                              e.currentTarget.style.color = '#475569';
+                                            }}
+                                            title="모든 블록 접기 (︽)"
+                                          >
+                                            <ChevronsUp size={14} />
+                                          </button>
+                                        </div>
+                                      )}
+
                                       <button
                                         type="button"
                                         onClick={handleAddNewTextBlock}
@@ -6268,6 +6364,8 @@ export default function NotebookExplorer() {
                                     setEditingBlockId={setEditingBlockId}
                                     openDeleteModal={openDeleteModal}
                                     onOpenMoveModal={handleOpenMoveBlockModal}
+                                    collapsedBlockIds={detailCollapsedBlockIds}
+                                    setCollapsedBlockIds={setDetailCollapsedBlockIds}
                                   />
                                 </div>
                               );
@@ -7397,6 +7495,85 @@ onClick={() => {
                                         ✓ 저장됨
                                       </span>
                                     )}
+
+                                    {/* 텍스트박스 및 체크리스트 그룹 전체 펼치기 / 전체 접기 컴팩트 버튼 */}
+                                    {checklistDetailBlocks && checklistDetailBlocks.length > 0 && (
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          backgroundColor: '#F8FAFC',
+                                          borderRadius: '6px',
+                                          border: '1px solid #CBD5E1',
+                                          padding: '1px 2px',
+                                          gap: '1px',
+                                          height: isMobile ? '28px' : '30px'
+                                        }}
+                                        className="no-print"
+                                        title="텍스트 박스 및 체크리스트 그룹 전체 펼치기 / 전체 접기"
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={handleExpandAllDetailBlocks}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: isMobile ? '22px' : '24px',
+                                            height: '100%',
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: 'transparent',
+                                            color: '#475569',
+                                            cursor: 'pointer',
+                                            padding: 0,
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                            e.currentTarget.style.color = '#2563EB';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                            e.currentTarget.style.color = '#475569';
+                                          }}
+                                          title="모든 블록 펼치기 (︾)"
+                                        >
+                                          <ChevronsDown size={14} />
+                                        </button>
+                                        <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+                                        <button
+                                          type="button"
+                                          onClick={handleCollapseAllDetailBlocks}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: isMobile ? '22px' : '24px',
+                                            height: '100%',
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: 'transparent',
+                                            color: '#475569',
+                                            cursor: 'pointer',
+                                            padding: 0,
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                            e.currentTarget.style.color = '#2563EB';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                            e.currentTarget.style.color = '#475569';
+                                          }}
+                                          title="모든 블록 접기 (︽)"
+                                        >
+                                          <ChevronsUp size={14} />
+                                        </button>
+                                      </div>
+                                    )}
+
                                     <button
                                       type="button"
                                       onClick={handleAddNewTextBlock}
@@ -7440,6 +7617,8 @@ onClick={() => {
                                   setEditingBlockId={setEditingBlockId}
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
+                                  collapsedBlockIds={detailCollapsedBlockIds}
+                                  setCollapsedBlockIds={setDetailCollapsedBlockIds}
                                 />
                               </>
                             );

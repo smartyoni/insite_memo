@@ -580,7 +580,9 @@ export const DetailBlocksManager = ({
   editingBlockId,
   setEditingBlockId,
   openDeleteModal,
-  onOpenMoveModal
+  onOpenMoveModal,
+  collapsedBlockIds: externalCollapsedBlockIds,
+  setCollapsedBlockIds: externalSetCollapsedBlockIds
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -588,7 +590,9 @@ export const DetailBlocksManager = ({
   const [draftChecklistTitle, setDraftChecklistTitle] = useState('');
   const [openBlockMenuId, setOpenBlockMenuId] = useState(null);
   const [openBlockMenuPos, setOpenBlockMenuPos] = useState(null);
-  const [collapsedBlockIds, setCollapsedBlockIds] = useState({});
+  const [internalCollapsedBlockIds, setInternalCollapsedBlockIds] = useState({});
+  const collapsedBlockIds = externalCollapsedBlockIds !== undefined ? externalCollapsedBlockIds : internalCollapsedBlockIds;
+  const setCollapsedBlockIds = externalSetCollapsedBlockIds || setInternalCollapsedBlockIds;
   const [editingItemId, setEditingItemId] = useState(null);
   const [openItemMenuId, setOpenItemMenuId] = useState(null);
   const [openItemMenuPos, setOpenItemMenuPos] = useState(null);
