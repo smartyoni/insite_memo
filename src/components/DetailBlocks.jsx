@@ -1345,13 +1345,66 @@ export const DetailBlocksManager = ({
                   </div>
                 )}
 
-                {/* 우측: 위치이동 화살표 2단 세트 & 3점 메뉴 */}
+                {/* 세그먼트 탭 컨트롤: [체크항목추가] | [위치이동 세트] | [3점메뉴] */}
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    height: '26px',
+                    flexShrink: 0
+                  }}
+                  className="no-print"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="no-print">
+                  {/* 1. 체크 항목 추가 버튼 (가장위 가장아래 기호의 좌측) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddChecklistItem(block.id);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '26px',
+                      height: '100%',
+                      border: 'none',
+                      borderRight: '1px solid #E2E8F0',
+                      backgroundColor: 'transparent',
+                      color: '#059669',
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ECFDF5';
+                      e.currentTarget.style.color = '#047857';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#059669';
+                    }}
+                    title="체크 항목 추가"
+                  >
+                    <Plus size={15} strokeWidth={2.5} />
+                  </button>
+
+                  {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      borderRight: '1px solid #E2E8F0',
+                      height: '100%',
+                      padding: '0 2px',
+                      gap: '1px'
+                    }}
+                  >
                     {/* 가장 위 / 가장 아래 이동 (좌측) */}
                     <div
                       style={{
@@ -1359,8 +1412,8 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '22px',
-                        height: '26px'
+                        width: '20px',
+                        height: '100%'
                       }}
                     >
                       <button
@@ -1370,23 +1423,23 @@ export const DetailBlocksManager = ({
                           handleMoveToTop(idx);
                         }}
                         disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#059669'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isFirstBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
                         title="가장 위로 이동"
                       >
-                        <ChevronsUp size={13} />
+                        <ChevronsUp size={13} strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
@@ -1395,23 +1448,23 @@ export const DetailBlocksManager = ({
                           handleMoveToBottom(idx);
                         }}
                         disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#065F46'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#059669'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isLastBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
                         title="가장 아래로 이동"
                       >
-                        <ChevronsDown size={13} />
+                        <ChevronsDown size={13} strokeWidth={2.5} />
                       </button>
                     </div>
 
@@ -1422,8 +1475,8 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '22px',
-                        height: '26px'
+                        width: '20px',
+                        height: '100%'
                       }}
                     >
                       <button
@@ -1433,17 +1486,17 @@ export const DetailBlocksManager = ({
                           handleMoveUp(idx);
                         }}
                         disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#065F46'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#059669'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isFirstBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
@@ -1458,17 +1511,17 @@ export const DetailBlocksManager = ({
                           handleMoveDown(idx);
                         }}
                         disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#065F46'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#059669'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isLastBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
@@ -1479,8 +1532,8 @@ export const DetailBlocksManager = ({
                     </div>
                   </div>
 
-                  {/* 3점 메뉴 (가장 우측) */}
-                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                  {/* 3. 3점 메뉴 (가장 우측) */}
+                  <div style={{ position: 'relative', height: '100%' }}>
                     <button
                       type="button"
                       onClick={(e) => handleOpenBlockMenu(e, block.id)}
@@ -1488,17 +1541,24 @@ export const DetailBlocksManager = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '6px',
+                        width: '26px',
+                        height: '100%',
                         border: 'none',
-                        backgroundColor: openBlockMenuId === block.id ? '#99D0AA' : 'transparent',
-                        color: openBlockMenuId === block.id ? '#052E16' : '#64748B',
-                        cursor: 'pointer'
+                        backgroundColor: openBlockMenuId === block.id ? '#DCFCE7' : 'transparent',
+                        color: openBlockMenuId === block.id ? '#059669' : '#1E293B',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                       title="메뉴"
                     >
-                      <MoreVertical size={16} />
+                      <MoreVertical size={16} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>
@@ -1555,39 +1615,7 @@ export const DetailBlocksManager = ({
                     />
                   ))}
 
-                  {/* 새 체크 항목 추가 버튼 */}
-                  <button
-                    type="button"
-                    onClick={() => handleAddChecklistItem(block.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '7px 10px',
-                      marginTop: '2px',
-                      borderRadius: '6px',
-                      border: '1px dashed #A7F3D0',
-                      backgroundColor: '#F0FDF4',
-                      color: '#065F46',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#DCFCE7';
-                      e.currentTarget.style.borderColor = '#6EE7B7';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F0FDF4';
-                      e.currentTarget.style.borderColor = '#A7F3D0';
-                    }}
-                    title="새 체크 항목 추가"
-                  >
-                    <Plus size={14} />
-                    <span>체크 항목 추가</span>
-                  </button>
+
                 </div>
               )}
           </div>
@@ -1749,23 +1777,42 @@ export const DetailBlocksManager = ({
                 </div>
               )}
 
-              {/* 우측: 위치이동 화살표 2단 세트 & 3점 메뉴 (수정 중이 아닐 때) */}
+              {/* 우측 세그먼트 탭: 위치이동 & 3점 메뉴 (수정 중이 아닐 때) */}
               {!isEditingThisBlock && (
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    height: '26px',
+                    flexShrink: 0
+                  }}
+                  className="no-print"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="no-print">
-                    {/* 가장 위 / 가장 아래 이동 (좌측) */}
+                  {/* 위치이동 버튼 세트 */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      borderRight: '1px solid #E2E8F0',
+                      height: '100%',
+                      padding: '0 2px',
+                      gap: '1px'
+                    }}
+                  >
+                    {/* 가장 위 / 가장 아래 이동 */}
                     <div
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '22px',
-                        height: '26px'
+                        width: '20px',
+                        height: '100%'
                       }}
                     >
                       <button
@@ -1776,22 +1823,22 @@ export const DetailBlocksManager = ({
                         }}
                         disabled={isFirstBlock}
                         onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isFirstBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
                         title="가장 위로 이동"
                       >
-                        <ChevronsUp size={13} />
+                        <ChevronsUp size={13} strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
@@ -1801,34 +1848,34 @@ export const DetailBlocksManager = ({
                         }}
                         disabled={isLastBlock}
                         onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isLastBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
                         title="가장 아래로 이동"
                       >
-                        <ChevronsDown size={13} />
+                        <ChevronsDown size={13} strokeWidth={2.5} />
                       </button>
                     </div>
 
-                    {/* 한 칸 위 / 아래로 이동 (우측) */}
+                    {/* 한 칸 위 / 아래로 이동 */}
                     <div
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '22px',
-                        height: '26px'
+                        width: '20px',
+                        height: '100%'
                       }}
                     >
                       <button
@@ -1839,16 +1886,16 @@ export const DetailBlocksManager = ({
                         }}
                         disabled={isFirstBlock}
                         onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#64748B',
+                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isFirstBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
@@ -1864,16 +1911,16 @@ export const DetailBlocksManager = ({
                         }}
                         disabled={isLastBlock}
                         onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#64748B'; }}
+                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '13px',
+                          height: '12px',
                           border: 'none',
                           backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#64748B',
+                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
                           cursor: isLastBlock ? 'not-allowed' : 'pointer',
                           padding: 0
                         }}
@@ -1884,8 +1931,8 @@ export const DetailBlocksManager = ({
                     </div>
                   </div>
 
-                  {/* 3점 메뉴 (추가 버튼 없음: 수정, 삭제, 취소) */}
-                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                  {/* 3점 메뉴 */}
+                  <div style={{ position: 'relative', height: '100%' }}>
                     <button
                       type="button"
                       onClick={(e) => handleOpenBlockMenu(e, block.id)}
@@ -1893,17 +1940,24 @@ export const DetailBlocksManager = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '6px',
+                        width: '26px',
+                        height: '100%',
                         border: 'none',
                         backgroundColor: openBlockMenuId === block.id ? '#E2E8F0' : 'transparent',
-                        color: openBlockMenuId === block.id ? '#2563EB' : '#64748B',
-                        cursor: 'pointer'
+                        color: openBlockMenuId === block.id ? '#2563EB' : '#1E293B',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                       title="메뉴"
                     >
-                      <MoreVertical size={16} />
+                      <MoreVertical size={16} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>

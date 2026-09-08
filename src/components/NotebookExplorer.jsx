@@ -6126,11 +6126,66 @@ export default function NotebookExplorer() {
 
                                         {!isSecEditing && (
                                           <div
-                                            style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              backgroundColor: '#FFFFFF',
+                                              border: '1px solid #CBD5E1',
+                                              borderRadius: '6px',
+                                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                                              height: isMobile ? '24px' : '26px',
+                                              flexShrink: 0
+                                            }}
+                                            className="no-print"
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '1px' : '2px' }} className="no-print">
+                                            {/* 1. 체크항목 추가 버튼 (가장위 가장아래 기호의 좌측) */}
+                                            {!isItemInTrash && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleAddChecklistToGroup(group.section.id);
+                                                }}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: '100%',
+                                                  border: 'none',
+                                                  borderRight: '1px solid #E2E8F0',
+                                                  backgroundColor: 'transparent',
+                                                  color: '#2563EB',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                                  e.currentTarget.style.color = '#1D4ED8';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                                  e.currentTarget.style.color = '#2563EB';
+                                                }}
+                                                title="이 그룹에 체크 항목 추가"
+                                              >
+                                                <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                              </button>
+                                            )}
+
+                                            {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                                            <div
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                borderRight: '1px solid #E2E8F0',
+                                                height: '100%',
+                                                padding: '0 2px',
+                                                gap: '1px'
+                                              }}
+                                            >
                                               {/* 가장 위 / 가장 아래 이동 (좌측) */}
                                               <div
                                                 style={{
@@ -6138,8 +6193,8 @@ export default function NotebookExplorer() {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
-                                                  height: isMobile ? '24px' : '26px'
+                                                  width: isMobile ? '18px' : '20px',
+                                                  height: '100%'
                                                 }}
                                               >
                                                 <button
@@ -6150,22 +6205,22 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isFirstGroup}
                                                   onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isFirstGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
                                                   title="그룹 가장 위로 이동"
                                                 >
-                                                  <ChevronsUp size={isMobile ? 12 : 13} />
+                                                  <ChevronsUp size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -6175,22 +6230,22 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isLastGroup}
                                                   onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isLastGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
                                                   title="그룹 가장 아래로 이동"
                                                 >
-                                                  <ChevronsDown size={isMobile ? 12 : 13} />
+                                                  <ChevronsDown size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                                 </button>
                                               </div>
 
@@ -6201,8 +6256,8 @@ export default function NotebookExplorer() {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
-                                                  height: isMobile ? '24px' : '26px'
+                                                  width: isMobile ? '18px' : '20px',
+                                                  height: '100%'
                                                 }}
                                               >
                                                 <button
@@ -6213,16 +6268,16 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isFirstGroup}
                                                   onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isFirstGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
@@ -6238,16 +6293,16 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isLastGroup}
                                                   onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isLastGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
@@ -6258,8 +6313,8 @@ export default function NotebookExplorer() {
                                               </div>
                                             </div>
 
-                                            {/* Group 3-dot Menu (가장 우측) */}
-                                            <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                            {/* 3. Group 3-dot Menu (가장 우측) */}
+                                            <div style={{ position: 'relative', height: '100%' }}>
                                               <button
                                                 type="button"
                                                 onClick={(e) => handleOpenGroupMenu(e, group.section.id)}
@@ -6267,17 +6322,24 @@ export default function NotebookExplorer() {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '28px',
-                                                  height: isMobile ? '24px' : '28px',
-                                                  borderRadius: '6px',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: '100%',
                                                   border: 'none',
                                                   backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
-                                                  color: openGroupMenuId === group.section.id ? '#2563EB' : '#64748B',
-                                                  cursor: 'pointer'
+                                                  color: openGroupMenuId === group.section.id ? '#2563EB' : '#1E293B',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  if (openGroupMenuId !== group.section.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  if (openGroupMenuId !== group.section.id) e.currentTarget.style.backgroundColor = 'transparent';
                                                 }}
                                                 title="그룹 메뉴"
                                               >
-                                                <MoreVertical size={isMobile ? 15 : 16} />
+                                                <MoreVertical size={isMobile ? 15 : 16} strokeWidth={2.5} />
                                               </button>
 
                                               {openGroupMenuId === group.section.id && (
@@ -6645,41 +6707,7 @@ export default function NotebookExplorer() {
                                             </div>
                                           );
                                         })}
-                                      {/* 그룹 하단 체크 항목 추가 버튼 (그룹화 된 체크리스트에만 적용) */}
-                                      {!isItemInTrash && group.section && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px',
-                                            padding: '7px 10px',
-                                            marginTop: '4px',
-                                            borderRadius: '6px',
-                                            border: '1px dashed #93C5FD',
-                                            backgroundColor: '#EFF6FF',
-                                            color: '#1D4ED8',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#DBEAFE';
-                                            e.currentTarget.style.borderColor = '#60A5FA';
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                            e.currentTarget.style.borderColor = '#93C5FD';
-                                          }}
-                                          title="이 그룹에 체크 항목 추가"
-                                        >
-                                          <Plus size={14} />
-                                          <span>체크 항목 추가</span>
-                                        </button>
-                                      )}
+
                                       </div>
                                     )}
                                   </div>
@@ -7385,13 +7413,68 @@ export default function NotebookExplorer() {
                                       )}
 
                                       {/* 우측: 완료 배지 & 수정/삭제 & 드래그 핸들 */}
-                                      {!isSecEditing && (
-                                        <div
-                                          style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px', flexShrink: 0 }}
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                            {/* 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '1px' : '2px' }} className="no-print">
+                                        {!isSecEditing && (
+                                          <div
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              backgroundColor: '#FFFFFF',
+                                              border: '1px solid #CBD5E1',
+                                              borderRadius: '6px',
+                                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                                              height: isMobile ? '24px' : '26px',
+                                              flexShrink: 0
+                                            }}
+                                            className="no-print"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            {/* 1. 체크항목 추가 버튼 (가장위 가장아래 기호의 좌측) */}
+                                            {!isItemInTrash && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleAddChecklistToGroup(group.section.id);
+                                                }}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: '100%',
+                                                  border: 'none',
+                                                  borderRight: '1px solid #E2E8F0',
+                                                  backgroundColor: 'transparent',
+                                                  color: '#2563EB',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                                  e.currentTarget.style.color = '#1D4ED8';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                                  e.currentTarget.style.color = '#2563EB';
+                                                }}
+                                                title="이 그룹에 체크 항목 추가"
+                                              >
+                                                <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                              </button>
+                                            )}
+
+                                            {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
+                                            <div
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                borderRight: '1px solid #E2E8F0',
+                                                height: '100%',
+                                                padding: '0 2px',
+                                                gap: '1px'
+                                              }}
+                                            >
                                               {/* 가장 위 / 가장 아래 이동 (좌측) */}
                                               <div
                                                 style={{
@@ -7399,8 +7482,8 @@ export default function NotebookExplorer() {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
-                                                  height: isMobile ? '24px' : '26px'
+                                                  width: isMobile ? '18px' : '20px',
+                                                  height: '100%'
                                                 }}
                                               >
                                                 <button
@@ -7411,22 +7494,22 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isFirstGroup}
                                                   onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isFirstGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
                                                   title="그룹 가장 위로 이동"
                                                 >
-                                                  <ChevronsUp size={isMobile ? 12 : 13} />
+                                                  <ChevronsUp size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -7436,22 +7519,22 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isLastGroup}
                                                   onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isLastGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
                                                   title="그룹 가장 아래로 이동"
                                                 >
-                                                  <ChevronsDown size={isMobile ? 12 : 13} />
+                                                  <ChevronsDown size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                                 </button>
                                               </div>
 
@@ -7462,8 +7545,8 @@ export default function NotebookExplorer() {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
-                                                  height: isMobile ? '24px' : '26px'
+                                                  width: isMobile ? '18px' : '20px',
+                                                  height: '100%'
                                                 }}
                                               >
                                                 <button
@@ -7474,16 +7557,16 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isFirstGroup}
                                                   onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isFirstGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
@@ -7499,16 +7582,16 @@ export default function NotebookExplorer() {
                                                   }}
                                                   disabled={isLastGroup}
                                                   onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#64748B'; }}
+                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '12px' : '13px',
+                                                    height: isMobile ? '11px' : '12px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#64748B',
+                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
                                                     cursor: isLastGroup ? 'not-allowed' : 'pointer',
                                                     padding: 0
                                                   }}
@@ -7519,28 +7602,34 @@ export default function NotebookExplorer() {
                                               </div>
                                             </div>
 
-                                          {/* Group 3-dot Menu (가장 우측) */}
-                                          <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => handleOpenGroupMenu(e, group.section.id)}
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: isMobile ? '24px' : '28px',
-                                                height: isMobile ? '24px' : '28px',
-                                                borderRadius: '6px',
-                                                border: 'none',
-                                                backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
-                                                color: openGroupMenuId === group.section.id ? '#2563EB' : '#64748B',
-                                                cursor: 'pointer'
-                                              }}
-                                              title="그룹 메뉴"
-                                            >
-                                              <MoreVertical size={isMobile ? 15 : 16} />
-                                            </button>
-
+                                            {/* 3. Group 3-dot Menu (가장 우측) */}
+                                            <div style={{ position: 'relative', height: '100%' }}>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => handleOpenGroupMenu(e, group.section.id)}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '24px' : '26px',
+                                                  height: '100%',
+                                                  border: 'none',
+                                                  backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
+                                                  color: openGroupMenuId === group.section.id ? '#2563EB' : '#1E293B',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  if (openGroupMenuId !== group.section.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  if (openGroupMenuId !== group.section.id) e.currentTarget.style.backgroundColor = 'transparent';
+                                                }}
+                                                title="그룹 메뉴"
+                                              >
+                                                <MoreVertical size={isMobile ? 15 : 16} strokeWidth={2.5} />
+                                              </button>
                                             {openGroupMenuId === group.section.id && (
                                               <>
                                                 <div
@@ -7905,41 +7994,7 @@ onClick={() => {
                                         );
                                       })}
 
-                                      {/* 그룹 하단 체크 항목 추가 버튼 (그룹화 된 체크리스트에만 적용) */}
-                                      {!isItemInTrash && group.section && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px',
-                                            padding: '7px 10px',
-                                            marginTop: '4px',
-                                            borderRadius: '6px',
-                                            border: '1px dashed #93C5FD',
-                                            backgroundColor: '#EFF6FF',
-                                            color: '#1D4ED8',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#DBEAFE';
-                                            e.currentTarget.style.borderColor = '#60A5FA';
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                            e.currentTarget.style.borderColor = '#93C5FD';
-                                          }}
-                                          title="이 그룹에 체크 항목 추가"
-                                        >
-                                          <Plus size={14} />
-                                          <span>체크 항목 추가</span>
-                                        </button>
-                                      )}
+
                                     </div>
                                   )}
                                 </div>
