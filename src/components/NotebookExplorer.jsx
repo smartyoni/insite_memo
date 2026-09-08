@@ -751,6 +751,17 @@ export default function NotebookExplorer() {
   const [noteBulkChecklistInputs, setNoteBulkChecklistInputs] = useState({}); // { [fieldId]: boolean }
   const [noteBulkChecklistTexts, setNoteBulkChecklistTexts] = useState({}); // { [fieldId]: string }
 
+  // Template 2 Dedicated States
+  const [templates2, setTemplates2] = useState([]);
+  const [selectedTemplate2IdInTab, setSelectedTemplate2IdInTab] = useState(null); // templateId or 'NEW'
+  const [tpl2DraftTitle, setTpl2DraftTitle] = useState('');
+  const [tpl2DraftChecklists, setTpl2DraftChecklists] = useState([]); // [{ id, text, completed, detailBlocks }]
+  const [selectedTpl2ChecklistId, setSelectedTpl2ChecklistId] = useState(null);
+  const [newTpl2ChecklistText, setNewTpl2ChecklistText] = useState('');
+  const [isSavingTpl2, setIsSavingTpl2] = useState(false);
+  const [showTemplate2Modal, setShowTemplate2Modal] = useState(false);
+  const [template2ApplyMode, setTemplate2ApplyMode] = useState('replace'); // 'replace' | 'append'
+
   // Drag and Drop States for Template Canvas Blocks and Intra-Group Items
   const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
   const [dragOverBlockIndex, setDragOverBlockIndex] = useState(null);
@@ -1127,6 +1138,21 @@ export default function NotebookExplorer() {
       setTemplates(list);
     }, (err) => {
       console.error("Firestore templates snapshot error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2.6. Subscribe to Templates2 in Firestore
+  useEffect(() => {
+    const q = query(collection(db, 'templates2'), orderBy('updatedAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+      setTemplates2(list);
+    }, (err) => {
+      console.error("Firestore templates2 snapshot error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -3327,6 +3353,206 @@ export default function NotebookExplorer() {
     );
   };
 
+  // ==================== Template 2 Handlers ====================
+  const handleCreateNewTemplate2InTab = () => {
+    const initCheckId = `chk_${Date.now()}_1`;
+    setSelectedTemplate2IdInTab('NEW');
+    setTpl2DraftTitle('');
+    setTpl2DraftChecklists([
+      {
+        id: initCheckId,
+        text: '1. 첫 번째 체크 항목',
+        completed: false,
+        detailBlocks: [
+          {
+            id: `chk_${Date.now()}_sub`,
+            type: 'checklist',
+            title: '세부 체크리스트',
+            items: [
+              { id: `item_${Date.now()}_1`, text: '세부 항목 1', completed: false }
+            ]
+          }
+        ]
+      }
+    ]);
+    setSelectedTpl2ChecklistId(initCheckId);
+    setNewTpl2ChecklistText('');
+  };
+
+  const handleSelectTemplate2InTab = (tpl) => {
+    setSelectedTemplate2IdInTab(tpl.id);
+    setTpl2DraftTitle(tpl.title || '');
+    const checks = Array.isArray(tpl.checklists) ? tpl.checklists : [];
+    setTpl2DraftChecklists(checks);
+    setSelectedTpl2ChecklistId(checks[0]?.id || null);
+    setNewTpl2ChecklistText('');
+  };
+
+  const handleAddTpl2UpperChecklist = () => {
+    if (!newTpl2ChecklistText.trim()) return;
+    const newId = `chk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newItem = {
+      id: newId,
+      text: newTpl2ChecklistText.trim(),
+      completed: false,
+      detailBlocks: [
+        {
+          id: `chk_${Date.now()}_sub`,
+          type: 'checklist',
+          title: '세부 체크리스트',
+          items: [
+            { id: `item_${Date.now()}_1`, text: '', completed: false }
+          ]
+        }
+      ]
+    };
+    setTpl2DraftChecklists((prev) => [...prev, newItem]);
+    setSelectedTpl2ChecklistId(newId);
+    setNewTpl2ChecklistText('');
+  };
+
+  const handleDeleteTpl2UpperChecklist = (id) => {
+    setTpl2DraftChecklists((prev) => {
+      const filtered = prev.filter((c) => c.id !== id);
+      if (selectedTpl2ChecklistId === id) {
+        setSelectedTpl2ChecklistId(filtered[0]?.id || null);
+      }
+      return filtered;
+    });
+  };
+
+  const handleUpdateTpl2UpperChecklistText = (id, newText) => {
+    setTpl2DraftChecklists((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, text: newText } : c))
+    );
+  };
+
+  const handleSaveTpl2DetailBlocks = (targetCheckId, newBlocks) => {
+    setTpl2DraftChecklists((prev) =>
+      prev.map((c) => (c.id === targetCheckId ? { ...c, detailBlocks: newBlocks } : c))
+    );
+  };
+
+  const handleSaveTemplate2FromCanvas = async () => {
+    if (!tpl2DraftTitle.trim()) {
+      alert('템플릿2 이름을 입력해 주세요.');
+      return;
+    }
+    if (tpl2DraftChecklists.length === 0) {
+      alert('상위 체크리스트 항목을 최소 1개 이상 작성해 주세요.');
+      return;
+    }
+
+    setIsSavingTpl2(true);
+    try {
+      const docId = (selectedTemplate2IdInTab && selectedTemplate2IdInTab !== 'NEW')
+        ? selectedTemplate2IdInTab
+        : `tpl2_${Date.now()}`;
+
+      const tplData = {
+        id: docId,
+        title: tpl2DraftTitle.trim(),
+        checklists: tpl2DraftChecklists,
+        updatedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'templates2', docId), tplData);
+      setSelectedTemplate2IdInTab(docId);
+      setShowSavedToast(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+    } catch (err) {
+      console.error('템플릿2 저장 오류:', err);
+      alert('템플릿2 저장에 실패했습니다.');
+    } finally {
+      setIsSavingTpl2(false);
+    }
+  };
+
+  const handleDeleteTemplate2InTab = (id) => {
+    openDeleteModal(
+      '템플릿2 삭제',
+      '정말 이 템플릿2를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'templates2', id));
+          if (selectedTemplate2IdInTab === id) {
+            setSelectedTemplate2IdInTab(null);
+            setTpl2DraftTitle('');
+            setTpl2DraftChecklists([]);
+            setSelectedTpl2ChecklistId(null);
+          }
+        } catch (err) {
+          console.error('템플릿2 삭제 오류:', err);
+          alert('템플릿2 삭제에 실패했습니다.');
+        }
+      }
+    );
+  };
+
+  const handleApplyTemplate2ToItem = async (tpl2, mode = 'replace') => {
+    if (!activeItem || !tpl2) return;
+    try {
+      const clonedChecklists = (tpl2.checklists || []).map((chk, cIdx) => {
+        const newChkId = `chk_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`;
+        const clonedBlocks = (chk.detailBlocks || []).map((b, bIdx) => ({
+          ...b,
+          id: `b_${Date.now()}_${cIdx}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
+          items: Array.isArray(b.items)
+            ? b.items.map((it, itIdx) => ({
+                ...it,
+                id: `it_${Date.now()}_${cIdx}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
+                completed: false
+              }))
+            : []
+        }));
+        return {
+          id: newChkId,
+          text: chk.text || '',
+          completed: false,
+          detailBlocks: clonedBlocks,
+          detail: blocksToPlainText(clonedBlocks)
+        };
+      });
+
+      let finalChecklists = [];
+      if (mode === 'append') {
+        const existing = Array.isArray(activeItem.checklists) ? activeItem.checklists : [];
+        finalChecklists = [...existing, ...clonedChecklists];
+      } else {
+        finalChecklists = clonedChecklists;
+      }
+
+      await updateDoc(doc(db, 'items', activeItem.id), {
+        checklists: finalChecklists,
+        updatedAt: new Date().toISOString()
+      });
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === activeItem.id ? { ...item, checklists: finalChecklists } : item
+        )
+      );
+
+      if (finalChecklists.length > 0) {
+        const firstTarget = mode === 'append' && activeItem.checklists?.length
+          ? finalChecklists[activeItem.checklists.length]
+          : finalChecklists[0];
+        setSelectedChecklistId(firstTarget?.id || '__main__');
+        setChecklistDetailBlocks(firstTarget?.detailBlocks || []);
+      }
+
+      setShowTemplate2Modal(false);
+      setShowSavedToast(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+    } catch (err) {
+      console.error('템플릿2 적용 오류:', err);
+      alert('템플릿2를 적용하지 못했습니다.');
+    }
+  };
+
+
   const handleSaveDetail = async () => {
     if (!selectedItemId) return;
     try {
@@ -3456,7 +3682,7 @@ export default function NotebookExplorer() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Top Row: 노트, 블로그, 사무실, 앱개발 */}
+        {/* Top Row: 노트, 블로그, 사무실, 앱개발, (여백 슬롯) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'explorer', label: '노트' },
@@ -3492,15 +3718,27 @@ export default function NotebookExplorer() {
               </button>
             );
           })}
+          {/* 1열 5번째 비어있는 슬롯 (옵션 1: 자연스러운 여백 슬롯) */}
+          <div
+            style={{
+              flex: 1,
+              padding: '6px 0',
+              borderRadius: '6px',
+              backgroundColor: 'transparent',
+              pointerEvents: 'none',
+              userSelect: 'none'
+            }}
+          />
         </div>
 
-        {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
+        {/* Bottom Row: 계약, 광고, 북마크, 템플릿1, 템플릿2 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'clipboard', label: '계약' },
             { id: 'ad', label: '광고' },
             { id: 'clip', label: '북마크' },
-            { id: 'template', label: '템플릿' }
+            { id: 'template', label: '템플릿1' },
+            { id: 'template2', label: '템플릿2' }
           ].map((tab) => {
             const isActive = activeMainTab === tab.id;
             return (
@@ -3976,12 +4214,12 @@ export default function NotebookExplorer() {
                 <div style={{ ...styles.pane1Header, justifyContent: 'space-between' }}>
                   <span style={{ ...styles.pane1Title, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Layout size={16} color="#2563EB" />
-                    템플릿 목록 ({templates.length})
+                    템플릿1 목록 ({templates.length})
                   </span>
                   <button
                     onClick={handleCreateNewTemplateInTab}
                     style={styles.iconBtnDark}
-                    title="새 템플릿 만들기"
+                    title="새 템플릿1 만들기"
                   >
                     <Plus size={18} />
                   </button>
@@ -3991,7 +4229,7 @@ export default function NotebookExplorer() {
               <div style={{ ...styles.paneContent, padding: '10px' }}>
                 {templates.length === 0 ? (
                   <div style={{ padding: '24px 12px', textAlign: 'center', color: '#7C95B1', fontSize: '13px' }}>
-                    등록된 템플릿이 없습니다.<br />위 <strong>[+]</strong> 버튼을 눌러 새 템플릿을 만들어보세요.
+                    등록된 템플릿1이 없습니다.<br />위 <strong>[+]</strong> 버튼을 눌러 새 템플릿을 만들어보세요.
                   </div>
                 ) : (
                   templates.map((tpl) => {
@@ -4044,11 +4282,100 @@ export default function NotebookExplorer() {
                   borderTop: '1px solid #D4E3F3',
                   justifyContent: 'space-between'
                 }}>
-                  <span style={styles.pane1Title}>템플릿 목록 ({templates.length})</span>
+                  <span style={styles.pane1Title}>템플릿1 목록 ({templates.length})</span>
                   <button
                     onClick={handleCreateNewTemplateInTab}
                     style={styles.iconBtnDark}
-                    title="새 템플릿 만들기"
+                    title="새 템플릿1 만들기"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : activeMainTab === 'template2' ? (
+            <>
+              {!isMobile && (
+                <div style={{ ...styles.pane1Header, justifyContent: 'space-between' }}>
+                  <span style={{ ...styles.pane1Title, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Layout size={16} color="#7C3AED" />
+                    템플릿2 목록 ({templates2.length})
+                  </span>
+                  <button
+                    onClick={handleCreateNewTemplate2InTab}
+                    style={{ ...styles.iconBtnDark, backgroundColor: '#7C3AED', color: '#FFFFFF' }}
+                    title="새 템플릿2 만들기"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              )}
+
+              <div style={{ ...styles.paneContent, padding: '10px' }}>
+                {templates2.length === 0 ? (
+                  <div style={{ padding: '24px 12px', textAlign: 'center', color: '#7C95B1', fontSize: '13px' }}>
+                    등록된 템플릿2가 없습니다.<br />위 <strong>[+]</strong> 버튼을 눌러 상세화면 구조를 그대로 복제한 새 템플릿을 만들어보세요.
+                  </div>
+                ) : (
+                  templates2.map((tpl) => {
+                    const isSelected = selectedTemplate2IdInTab === tpl.id;
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => {
+                          handleSelectTemplate2InTab(tpl);
+                          if (isMobile) setMobileView('detail');
+                        }}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '10px',
+                          border: `1.5px solid ${isSelected ? '#7C3AED' : 'transparent'}`,
+                          backgroundColor: isSelected ? '#EDE9FE' : 'rgba(255, 255, 255, 0.05)',
+                          marginBottom: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: isSelected ? '#5B21B6' : '#2B5278', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            📑 {tpl.title || '제목 없는 템플릿2'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                            상위 항목 {(tpl.checklists || []).length}개
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTemplate2InTab(tpl.id);
+                          }}
+                          style={styles.actionBtnDark}
+                          title="템플릿2 삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {isMobile && renderMobileFooter(
+                <div style={{
+                  ...styles.pane1Header,
+                  borderBottom: 'none',
+                  borderTop: '1px solid #D4E3F3',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={styles.pane1Title}>템플릿2 목록 ({templates2.length})</span>
+                  <button
+                    onClick={handleCreateNewTemplate2InTab}
+                    style={{ ...styles.iconBtnDark, backgroundColor: '#7C3AED', color: '#FFFFFF' }}
+                    title="새 템플릿2 만들기"
                   >
                     <Plus size={18} />
                   </button>
@@ -5453,6 +5780,224 @@ export default function NotebookExplorer() {
                     </div>
                   </div>
                 </div>
+              ) : activeMainTab === 'template2' ? (
+                /* Dedicated Template 2 Canvas View (Replicating Detail Workspace 2-Pane Structure) */
+                <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', backgroundColor: '#FFFFFF', overflowY: 'auto' }}>
+                  {/* Canvas Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '14px', borderBottom: '2px solid #EDE9FE', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '280px' }}>
+                      <Layout size={24} color="#7C3AED" />
+                      <input
+                        type="text"
+                        value={tpl2DraftTitle}
+                        onChange={(e) => setTpl2DraftTitle(e.target.value)}
+                        placeholder="템플릿2 이름 (예: 부동산 계약 절차, 현장 답사 점검표)"
+                        style={{ fontSize: '20px', fontWeight: 700, border: 'none', borderBottom: '2px solid #7C3AED', outline: 'none', padding: '4px 8px', flex: 1, color: '#1E1B4B' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {selectedTemplate2IdInTab && selectedTemplate2IdInTab !== 'NEW' && (
+                        <button
+                          onClick={() => handleDeleteTemplate2InTab(selectedTemplate2IdInTab)}
+                          style={{ ...styles.btnSecondary, color: '#EF4444', borderColor: '#FCA5A5' }}
+                        >
+                          <Trash2 size={15} /> 템플릿2 삭제
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSaveTemplate2FromCanvas}
+                        disabled={isSavingTpl2}
+                        style={{ ...styles.btnPrimary, backgroundColor: '#7C3AED' }}
+                      >
+                        <Save size={16} />
+                        {isSavingTpl2 ? '저장 중...' : '템플릿2 저장'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Canvas Main 2-Pane Split Area (Left: Upper Checklists / Right: Sub DetailBlocksManager) */}
+                  <div style={{ flex: 1, display: 'flex', gap: '16px', overflow: 'hidden', minHeight: 0, flexDirection: isMobile ? 'column' : 'row' }}>
+                    {/* Left Pane: Upper Checklists List & Adder */}
+                    <div style={{
+                      width: isMobile ? '100%' : '320px',
+                      flexShrink: 0,
+                      backgroundColor: '#FAF5FF',
+                      borderRadius: '14px',
+                      border: '1px solid #E9D5FF',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      overflowY: 'auto'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #E9D5FF' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#5B21B6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckSquare size={15} color="#7C3AED" /> 좌측: 상위 체크리스트 ({tpl2DraftChecklists.length})
+                        </span>
+                      </div>
+
+                      {/* Add Upper Checklist Form */}
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          value={newTpl2ChecklistText}
+                          onChange={(e) => setNewTpl2ChecklistText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddTpl2UpperChecklist();
+                            }
+                          }}
+                          placeholder="새 상위 체크 항목..."
+                          style={{
+                            flex: 1,
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #D8B4FE',
+                            fontSize: '12px',
+                            outline: 'none'
+                          }}
+                        />
+                        <button
+                          onClick={handleAddTpl2UpperChecklist}
+                          disabled={!newTpl2ChecklistText.trim()}
+                          style={{
+                            padding: '6px 10px',
+                            backgroundColor: newTpl2ChecklistText.trim() ? '#7C3AED' : '#C4B5FD',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: newTpl2ChecklistText.trim() ? 'pointer' : 'not-allowed',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Plus size={14} /> 추가
+                        </button>
+                      </div>
+
+                      {/* Upper Checklists List */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
+                        {tpl2DraftChecklists.length === 0 ? (
+                          <div style={{ padding: '24px 12px', textAlign: 'center', color: '#9333EA', fontSize: '12px' }}>
+                            상위 체크 항목을 추가해주세요.
+                          </div>
+                        ) : (
+                          tpl2DraftChecklists.map((chk, idx) => {
+                            const isSelected = selectedTpl2ChecklistId === chk.id;
+                            return (
+                              <div
+                                key={chk.id || idx}
+                                onClick={() => setSelectedTpl2ChecklistId(chk.id)}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: '8px',
+                                  border: `1.5px solid ${isSelected ? '#7C3AED' : '#E9D5FF'}`,
+                                  backgroundColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                                  boxShadow: isSelected ? '0 2px 6px rgba(124,58,237,0.15)' : 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', minWidth: '18px' }}>
+                                  #{idx + 1}
+                                </span>
+                                <input
+                                  type="text"
+                                  value={chk.text || ''}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => handleUpdateTpl2UpperChecklistText(chk.id, e.target.value)}
+                                  placeholder="항목 제목 입력..."
+                                  style={{
+                                    flex: 1,
+                                    border: 'none',
+                                    outline: 'none',
+                                    backgroundColor: 'transparent',
+                                    fontSize: '13px',
+                                    fontWeight: isSelected ? 700 : 500,
+                                    color: '#1E1B4B'
+                                  }}
+                                />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTpl2UpperChecklist(chk.id);
+                                  }}
+                                  style={{
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    padding: '3px',
+                                    color: '#9CA3AF'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}
+                                  title="항목 삭제"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Pane: Sub DetailBlocksManager (하위 세부 체크리스트/블록) */}
+                    <div style={{
+                      flex: 1,
+                      minWidth: isMobile ? '100%' : '0',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '14px',
+                      border: '1px solid #E2E8F0',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflowY: 'auto'
+                    }}>
+                      {(() => {
+                        const activeUpperCheck = tpl2DraftChecklists.find(c => c.id === selectedTpl2ChecklistId) || tpl2DraftChecklists[0];
+                        if (!activeUpperCheck) {
+                          return (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                              좌측에서 상위 체크 항목을 먼저 선택하거나 추가해 주세요.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', marginBottom: '14px', borderBottom: '1px solid #F1F5F9' }}>
+                              <div>
+                                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <Type size={16} color="#7C3AED" /> 우측: [{activeUpperCheck.text || '항목'}]의 세부 하위 블록
+                                </span>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  현재 상위 항목에 포함될 세부 체크리스트 그룹 및 텍스트 블록을 구성합니다.
+                                </span>
+                              </div>
+                            </div>
+
+                            <DetailBlocksManager
+                              blocks={activeUpperCheck.detailBlocks || []}
+                              onChangeAndSave={(newBlocks) => handleSaveTpl2DetailBlocks(activeUpperCheck.id, newBlocks)}
+                              searchQuery=""
+                              editingBlockId={editingBlockId}
+                              setEditingBlockId={setEditingBlockId}
+                              openDeleteModal={openDeleteModal}
+                            />
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
               ) : activeItem ? (
                 <>
 
@@ -5637,6 +6182,28 @@ export default function NotebookExplorer() {
                                   </option>
                                 ))}
                               </select>
+                              <button
+                                type="button"
+                                onClick={() => setShowTemplate2Modal(true)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: isMobile ? '4px 8px' : '6px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #C4B5FD',
+                                  backgroundColor: '#F5F3FF',
+                                  color: '#7C3AED',
+                                  fontSize: isMobile ? '11px' : '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  height: isMobile ? '28px' : '32px'
+                                }}
+                                title="상세화면 구조 템플릿2 적용"
+                              >
+                                📑 템플릿2
+                              </button>
                             </div>
 
                             {/* Right Controls: Cancel & Save Buttons */}
@@ -6881,6 +7448,21 @@ export default function NotebookExplorer() {
                               >
                                 <Edit2 size={13} />
                                 수정
+                              </button>
+                            )}
+                            {!isItemInTrash && (
+                              <button
+                                onClick={() => setShowTemplate2Modal(true)}
+                                style={{
+                                  ...styles.btnSecondary,
+                                  borderColor: '#C4B5FD',
+                                  backgroundColor: '#F5F3FF',
+                                  color: '#7C3AED',
+                                  fontWeight: 600
+                                }}
+                                title="상세화면 구조 템플릿2 적용"
+                              >
+                                📑 템플릿2
                               </button>
                             )}
                           </div>
@@ -8971,6 +9553,214 @@ onClick={() => {
         >
           <Zap size={14} fill="#F59E0B" color="#F59E0B" />
           <span>오늘 날짜 퀵메모에 저장되었습니다.</span>
+        </div>
+      )}
+
+      {/* Template 2 Selection & Apply Modal */}
+      {showTemplate2Modal && (
+        <div
+          onClick={() => setShowTemplate2Modal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '520px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #F1F5F9',
+                backgroundColor: '#FAF5FF'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ backgroundColor: '#7C3AED', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Layout size={18} color="#FFFFFF" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E1B4B' }}>
+                    템플릿2 (상세화면 프리셋) 적용
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#6B7280' }}>
+                    미리 구성해 둔 상위/하위 체크리스트 구조를 현재 메모에 적용합니다.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTemplate2Modal(false)}
+                style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: '#94A3B8',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Apply Mode Option Bar */}
+            <div style={{ padding: '12px 20px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>적용 방식:</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12.5px', color: '#1E293B', cursor: 'pointer', fontWeight: template2ApplyMode === 'replace' ? 700 : 500 }}>
+                <input
+                  type="radio"
+                  name="template2Mode"
+                  value="replace"
+                  checked={template2ApplyMode === 'replace'}
+                  onChange={() => setTemplate2ApplyMode('replace')}
+                  style={{ accentColor: '#7C3AED', cursor: 'pointer' }}
+                />
+                기존 내용 대체 (권장)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12.5px', color: '#1E293B', cursor: 'pointer', fontWeight: template2ApplyMode === 'append' ? 700 : 500 }}>
+                <input
+                  type="radio"
+                  name="template2Mode"
+                  value="append"
+                  checked={template2ApplyMode === 'append'}
+                  onChange={() => setTemplate2ApplyMode('append')}
+                  style={{ accentColor: '#7C3AED', cursor: 'pointer' }}
+                />
+                기존 내용 뒤에 추가
+              </label>
+            </div>
+
+            {/* Template 2 Items List */}
+            <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {templates2.length === 0 ? (
+                <div style={{ padding: '40px 16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                  등록된 템플릿2가 없습니다.<br />
+                  상단 탭의 <strong>[템플릿2]</strong> 메뉴에서 특정 상황에 맞는 상세화면 프리셋을 먼저 만들어보세요.
+                </div>
+              ) : (
+                templates2.map((tpl) => {
+                  const upperCount = (tpl.checklists || []).length;
+                  const totalSubCount = (tpl.checklists || []).reduce((acc, c) => {
+                    const blockCount = (c.detailBlocks || []).reduce((bAcc, b) => bAcc + ((b.items || []).length || 1), 0);
+                    return acc + blockCount;
+                  }, 0);
+
+                  return (
+                    <div
+                      key={tpl.id}
+                      onClick={() => handleApplyTemplate2ToItem(tpl, template2ApplyMode)}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '1.5px solid #E9D5FF',
+                        backgroundColor: '#FAF5FF',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#7C3AED';
+                        e.currentTarget.style.backgroundColor = '#EDE9FE';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#E9D5FF';
+                        e.currentTarget.style.backgroundColor = '#FAF5FF';
+                        e.currentTarget.style.transform = 'none';
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#5B21B6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          📑 {tpl.title || '제목 없는 템플릿2'}
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#7C3AED', marginTop: '4px', display: 'flex', gap: '8px' }}>
+                          <span>상위 체크 항목 {upperCount}개</span>
+                          <span>•</span>
+                          <span>총 세부 항목/블록 약 {totalSubCount}개</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: '#7C3AED',
+                          color: '#FFFFFF',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      >
+                        적용하기
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                padding: '12px 20px',
+                backgroundColor: '#F8FAFC',
+                borderTop: '1px solid #E2E8F0'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowTemplate2Modal(false)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
