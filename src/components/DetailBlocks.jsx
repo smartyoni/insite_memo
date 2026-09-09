@@ -1633,26 +1633,26 @@ export const DetailBlocksManager = ({
             style={{
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: isEditingThisBlock ? '#FFFFFF' : '#F8FAFC',
+              backgroundColor: '#FFFFFF',
               borderRadius: '8px',
-              border: isEditingThisBlock ? '1.5px solid #3B82F6' : '1px solid #CBD5E1',
+              border: isEditingThisBlock ? '1.5px solid #8B5CF6' : '1px solid #9D84BE',
               boxShadow: isEditingThisBlock
-                ? '0 0 0 2px rgba(59, 130, 246, 0.15)'
+                ? '0 0 0 2px rgba(139, 92, 246, 0.2)'
                 : '0 1px 3px rgba(0, 0, 0, 0.04)',
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
             }}
           >
-            {/* 카드 상단 헤더 바 (체크 그룹헤더와 동일한 구조/기능): Sticky 상시 고정 */}
+            {/* 카드 상단 헤더 바: 하위체크리스트 톤과 맞춘 보라색 테마 (T 아이콘 제거) */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '8px 12px',
-                backgroundColor: isEditingThisBlock ? '#EFF6FF' : '#EEF2F6',
-                borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #DBEAFE' : '1px solid #CBD5E1'),
+                padding: '6px 10px',
+                backgroundColor: isEditingThisBlock ? '#EDE9FE' : '#C8B6E2',
+                borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #C4B5FD' : '1px solid #9578B8'),
                 cursor: isEditingThisBlock ? 'default' : 'pointer',
                 userSelect: 'none',
                 position: 'sticky',
@@ -1666,13 +1666,12 @@ export const DetailBlocksManager = ({
                 }
               }}
             >
-              {/* 좌측: 토글 화살표 + 아이콘 + 텍스트 이름 */}
+              {/* 좌측: 토글 화살표 + 텍스트 이름 (T 아이콘 제거) */}
               {isEditingThisBlock ? (
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Type size={14} color="#2563EB" style={{ flexShrink: 0 }} />
                   <input
                     ref={titleInputRef}
                     type="text"
@@ -1692,10 +1691,10 @@ export const DetailBlocksManager = ({
                       flex: 1,
                       fontSize: '13px',
                       fontWeight: 700,
-                      color: '#1E293B',
+                      color: '#2E1065',
                       padding: '2px 6px',
                       borderRadius: '4px',
-                      border: '1px solid #2563EB',
+                      border: '1px solid #7C3AED',
                       outline: 'none',
                       backgroundColor: '#FFFFFF',
                       minWidth: 0
@@ -1708,7 +1707,7 @@ export const DetailBlocksManager = ({
                       padding: '2px 8px',
                       borderRadius: '4px',
                       border: 'none',
-                      backgroundColor: '#2563EB',
+                      backgroundColor: '#7C3AED',
                       color: '#FFFFFF',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -1745,17 +1744,16 @@ export const DetailBlocksManager = ({
                   }}
                 >
                   <span
-                    style={{ display: 'flex', alignItems: 'center', color: '#64748B' }}
+                    style={{ display: 'flex', alignItems: 'center', color: '#4C1D95' }}
                     title={isCollapsed ? '펼치기' : '접기'}
                   >
                     {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                   </span>
-                  <Type size={14} color="#2563EB" style={{ flexShrink: 0 }} />
                   <span
                     style={{
                       fontSize: '13px',
                       fontWeight: 700,
-                      color: block.title && block.title.trim() ? '#1E293B' : '#94A3B8',
+                      color: block.title && block.title.trim() ? '#2E1065' : '#7C6F93',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
@@ -1770,7 +1768,7 @@ export const DetailBlocksManager = ({
                     {block.title && block.title.trim() ? block.title : '텍스트'}
                   </span>
                   {isCollapsed && (
-                    <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                    <span style={{ fontSize: '11px', color: '#581C87', fontWeight: 600 }}>
                       (접힘)
                     </span>
                   )}
