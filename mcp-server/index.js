@@ -57,7 +57,9 @@ const scopeNameMap = {
   balance: "앱개발",
   clip: "북마크",
   office: "사무실",
-  ad: "광고"
+  ad: "광고",
+  template2: "템플릿2",
+  experience: "경험"
 };
 
 function computeCategoryPath(cat, allCategories) {
@@ -90,7 +92,7 @@ server.tool(
     scope: z
       .string()
       .optional()
-      .describe("특정 탭/스코프 필터 (예: 'explorer', 'blog', 'clipboard', 'balance', 'clip', 'office', 'ad')")
+      .describe("특정 탭/스코프 필터 (예: 'explorer', 'blog', 'clipboard', 'balance', 'clip', 'office', 'ad', 'template2', 'experience')")
   },
   async ({ scope }) => {
     try {

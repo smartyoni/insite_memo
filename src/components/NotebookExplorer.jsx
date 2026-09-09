@@ -271,8 +271,9 @@ const CLIP_TRASH_CATEGORY = { id: 'clip_trash', name: '휴지통', order: 99999,
 const OFFICE_TRASH_CATEGORY = { id: 'office_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'office' };
 const AD_TRASH_CATEGORY = { id: 'ad_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'ad' };
 const TEMPLATE2_TRASH_CATEGORY = { id: 'template2_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'template2' };
+const EXPERIENCE_TRASH_CATEGORY = { id: 'experience_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'experience' };
 
-const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash', 'office_trash', 'ad_trash', 'template2_trash'];
+const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash', 'office_trash', 'ad_trash', 'template2_trash', 'experience_trash'];
 
 // Fixed Quick-memo category definition (Only in explorer/note tab)
 const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990, isFixed: true, isQuickMemo: true, scope: 'explorer' };
@@ -287,6 +288,7 @@ const getScopeForTab = (tab) => {
   if (tab === 'office') return 'office';
   if (tab === 'ad') return 'ad';
   if (tab === 'template2') return 'template2';
+  if (tab === 'experience') return 'experience';
   return 'explorer';
 };
 
@@ -319,6 +321,7 @@ const getTrashIdForTab = (tab) => {
   if (tab === 'office') return 'office_trash';
   if (tab === 'ad') return 'ad_trash';
   if (tab === 'template2') return 'template2_trash';
+  if (tab === 'experience') return 'experience_trash';
   return 'trash';
 };
 
@@ -330,6 +333,7 @@ const getFixedTrashCategoryForTab = (tab) => {
   if (tab === 'office') return OFFICE_TRASH_CATEGORY;
   if (tab === 'ad') return AD_TRASH_CATEGORY;
   if (tab === 'template2') return TEMPLATE2_TRASH_CATEGORY;
+  if (tab === 'experience') return EXPERIENCE_TRASH_CATEGORY;
   return TRASH_CATEGORY;
 };
 
@@ -409,7 +413,8 @@ export default function NotebookExplorer() {
       clip: '북마크',
       office: '사무실',
       ad: '광고',
-      template2: '템플릿2'
+      template2: '템플릿2',
+      experience: '경험'
     };
     if (categoryId === 'quick_memo') {
       return '노트 > 퀵메모';
@@ -3687,13 +3692,14 @@ export default function NotebookExplorer() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Top Row: 노트, 블로그, 사무실, 앱개발, (여백 슬롯) */}
+        {/* Top Row: 노트, 블로그, 사무실, 앱개발, 경험 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'explorer', label: '노트' },
             { id: 'blog', label: '블로그' },
             { id: 'office', label: '사무실' },
-            { id: 'balance', label: '앱개발' }
+            { id: 'balance', label: '앱개발' },
+            { id: 'experience', label: '경험' }
           ].map((tab) => {
             const isActive = activeMainTab === tab.id;
             return (
@@ -3723,17 +3729,6 @@ export default function NotebookExplorer() {
               </button>
             );
           })}
-          {/* 1열 5번째 비어있는 슬롯 (옵션 1: 자연스러운 여백 슬롯) */}
-          <div
-            style={{
-              flex: 1,
-              padding: '6px 0',
-              borderRadius: '6px',
-              backgroundColor: 'transparent',
-              pointerEvents: 'none',
-              userSelect: 'none'
-            }}
-          />
         </div>
 
         {/* Bottom Row: 계약, 광고, 북마크, 템플릿1, 템플릿2 */}
@@ -4852,7 +4847,9 @@ export default function NotebookExplorer() {
                                     balance: 'balance',
                                     clip: 'clip',
                                     office: 'office',
-                                    ad: 'ad'
+                                    ad: 'ad',
+                                    template2: 'template2',
+                                    experience: 'experience'
                                   };
                                   if (scopeToTabMap[targetScope]) {
                                     setActiveMainTab(scopeToTabMap[targetScope]);
