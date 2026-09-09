@@ -370,8 +370,22 @@ export default function NotebookExplorer() {
   // Nav Location Persistence: Retrieve saved location
   const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
 
+  // Parse initial deep link from URL hash (#tab=...&cat=...)
+  const initialHashLoc = React.useMemo(() => {
+    if (typeof window === 'undefined' || !window.location.hash) return null;
+    try {
+      const hashStr = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+      const params = new URLSearchParams(hashStr);
+      const tab = params.get('tab');
+      const cat = params.get('cat');
+      if (tab || cat) return { activeMainTab: tab, selectedCategoryId: cat };
+    } catch (e) {}
+    return null;
+  }, []);
+
   // Main View Mode Tab state ('explorer' | 'clipboard' | 'balance' | 'clip' | 'calendar')
   const [activeMainTab, setActiveMainTab] = useState(() => {
+    if (initialHashLoc?.activeMainTab) return initialHashLoc.activeMainTab;
     const initial = initialNavLoc?.activeMainTab || 'explorer';
     return initial === 'template' ? 'template2' : initial;
   });
@@ -380,6 +394,7 @@ export default function NotebookExplorer() {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(() => {
+    if (initialHashLoc?.selectedCategoryId) return initialHashLoc.selectedCategoryId;
     const saved = initialNavLoc?.selectedCategoryId;
     if (saved && !LEGACY_INBOX_IDS.includes(saved)) {
       return saved;
@@ -387,6 +402,10 @@ export default function NotebookExplorer() {
     return (initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab) ? 'quick_memo' : '';
   });
   const [selectedItemId, setSelectedItemId] = useState(() => initialNavLoc?.selectedItemId || null);
+
+  // Deep Link Category Bookmark & Navigation States
+  const [categoryContextMenu, setCategoryContextMenu] = useState(null); // { x, y, category }
+  const [returnLocation, setReturnLocation] = useState(null); // { tab, categoryId, categoryName, itemId }
 
   // Item List Sort Order State (Default: 'asc' for ascending order)
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
@@ -946,6 +965,163 @@ export default function NotebookExplorer() {
       console.error('체크리스트 복사 실패:', err);
     }
   };
+
+  // Handle Category Right-Click Context Menu
+  const handleCategoryContextMenu = (e, cat) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const menuWidth = 180;
+    const menuHeight = 50;
+    const adjustedX = (clickX + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : clickX;
+    const adjustedY = (clickY + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : clickY;
+
+    setCategoryContextMenu({
+      x: adjustedX,
+      y: adjustedY,
+      category: cat
+    });
+  };
+
+  // Copy Category Deep Link Bookmark [CategoryName](URL)
+  const handleCopyCategoryLink = async (cat) => {
+    if (!cat) return;
+    setCategoryContextMenu(null);
+    const catId = cat.id;
+    const catName = cat.name || (catId === 'quick_memo' ? '퀵메모' : '목록');
+    const scope = cat.scope || activeMainTab || 'explorer';
+
+    const origin = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '';
+    const linkUrl = `${origin}#tab=${encodeURIComponent(scope)}&cat=${encodeURIComponent(catId)}`;
+    const markdownLink = `[${catName}](${linkUrl})`;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(markdownLink);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = markdownLink;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyToastText(`✓ '${catName}' 목록 주소가 복사되었습니다.`);
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => {
+        setCopyToastText('');
+      }, 1800);
+    } catch (err) {
+      console.error('목록 주소 복사 실패:', err);
+    }
+  };
+
+  // Return to previous work location (Bookmark Back)
+  const handleReturnToPreviousLocation = () => {
+    if (!returnLocation) return;
+    if (returnLocation.tab && returnLocation.tab !== activeMainTab) {
+      setActiveMainTab(returnLocation.tab);
+    }
+    if (returnLocation.categoryId) {
+      setSelectedCategoryId(returnLocation.categoryId);
+    }
+    if (returnLocation.itemId) {
+      setSelectedItemId(returnLocation.itemId);
+    }
+    setReturnLocation(null);
+  };
+
+  // Listen to deep-link hash navigation from [title](url) clicks
+  useEffect(() => {
+    const handleAppNavigateHash = (e) => {
+      const { url } = e.detail || {};
+      if (!url) return;
+
+      try {
+        const hashIdx = url.indexOf('#');
+        const hashStr = hashIdx !== -1 ? url.slice(hashIdx + 1) : url;
+        const params = new URLSearchParams(hashStr);
+        const targetTab = params.get('tab');
+        const targetCat = params.get('cat');
+
+        if (targetCat) {
+          // Save current return location
+          const currentCat = categories.find(c => c.id === selectedCategoryId);
+          const currentItem = items.find(i => i.id === selectedItemId);
+          const fromLabel = currentItem?.title
+            ? `메모: ${currentItem.title.slice(0, 15)}`
+            : (selectedCategoryId === 'quick_memo' ? '퀵메모' : (currentCat?.name || '이전 작업'));
+
+          setReturnLocation({
+            tab: activeMainTab,
+            categoryId: selectedCategoryId,
+            categoryName: fromLabel,
+            itemId: selectedItemId
+          });
+
+          if (targetTab && targetTab !== activeMainTab) {
+            setActiveMainTab(targetTab);
+          }
+          setSelectedCategoryId(targetCat);
+          setSelectedItemId(null);
+
+          const fullHash = `#tab=${targetTab || activeMainTab}&cat=${targetCat}`;
+          if (window.location.hash !== fullHash) {
+            window.history.pushState(null, '', fullHash);
+          }
+        }
+      } catch (err) {
+        console.error('Error handling deep-link navigation:', err);
+      }
+    };
+
+    window.addEventListener('app-navigate-hash', handleAppNavigateHash);
+    return () => {
+      window.removeEventListener('app-navigate-hash', handleAppNavigateHash);
+    };
+  }, [activeMainTab, selectedCategoryId, selectedItemId, categories, items]);
+
+  // Browser back/forward button support for URL hash
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined' || !window.location.hash) return;
+      try {
+        const hashStr = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+        const params = new URLSearchParams(hashStr);
+        const targetTab = params.get('tab');
+        const targetCat = params.get('cat');
+        if (targetCat) {
+          if (targetTab) setActiveMainTab(targetTab);
+          setSelectedCategoryId(targetCat);
+          setSelectedItemId(null);
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
+  }, []);
+
+  // Close category context menu on global click
+  useEffect(() => {
+    if (!categoryContextMenu) return;
+    const handleCloseContextMenu = () => setCategoryContextMenu(null);
+    window.addEventListener('click', handleCloseContextMenu);
+    window.addEventListener('contextmenu', handleCloseContextMenu);
+    return () => {
+      window.removeEventListener('click', handleCloseContextMenu);
+      window.removeEventListener('contextmenu', handleCloseContextMenu);
+    };
+  }, [categoryContextMenu]);
 
   // Resize listener for mobile responsive layout
   useEffect(() => {
@@ -3881,6 +4057,7 @@ export default function NotebookExplorer() {
         <button
           type="button"
           onClick={handleNavigateToQuickMemo}
+          onContextMenu={(e) => handleCategoryContextMenu(e, { id: 'quick_memo', name: '퀵메모', scope: 'explorer' })}
           style={{
             flex: 1.3,
             display: 'flex',
@@ -3898,7 +4075,7 @@ export default function NotebookExplorer() {
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap'
           }}
-          title="퀵메모 카테고리(목록)로 이동"
+          title="퀵메모 카테고리(목록)로 이동 (우클릭: 주소 복사)"
         >
           <span>퀵메모이동</span>
         </button>
@@ -4024,6 +4201,9 @@ export default function NotebookExplorer() {
             if (ALL_FIXED_CATEGORY_IDS.includes(node.id)) return;
             setEditingCategoryId(node.id);
             setEditingCategoryName(node.name);
+          }}
+          onContextMenu={(e) => {
+            handleCategoryContextMenu(e, node);
           }}
           style={{
             ...styles.catRow,
@@ -4157,6 +4337,19 @@ export default function NotebookExplorer() {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenCatMenuId(null);
+                          handleCopyCategoryLink(node);
+                        }}
+                        style={styles.checklistDropdownItem}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Copy size={14} color="#2563EB" />
+                        <span>목록주소복사</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -9250,6 +9443,147 @@ onClick={() => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Category Right-Click Context Menu Popup */}
+      {categoryContextMenu && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99998,
+              backgroundColor: 'transparent'
+            }}
+            onClick={() => setCategoryContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setCategoryContextMenu(null);
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: categoryContextMenu.y,
+              left: categoryContextMenu.x,
+              zIndex: 99999,
+              backgroundColor: '#FFFFFF',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #CBD5E1',
+              padding: '4px',
+              minWidth: '150px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => handleCopyCategoryLink(categoryContextMenu.category)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1E293B',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={15} color="#2563EB" />
+              <span>목록 주소 복사</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Deep Link Return Floating Banner */}
+      {returnLocation && (
+        <div
+          style={{
+            position: 'fixed',
+            top: isMobile ? '10px' : '14px',
+            right: isMobile ? '10px' : '20px',
+            zIndex: 99990,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            backgroundColor: '#0F172A',
+            color: '#FFFFFF',
+            padding: '7px 14px',
+            borderRadius: '24px',
+            boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.35), 0 4px 6px -2px rgba(15, 23, 42, 0.2)',
+            border: '1px solid #334155',
+            fontSize: '13px',
+            fontWeight: 500
+          }}
+        >
+          <span
+            style={{
+              color: '#93C5FD',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              maxWidth: isMobile ? '140px' : '220px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+            title={`이전 위치: ${returnLocation.categoryName}`}
+          >
+            이전: {returnLocation.categoryName}
+          </span>
+          <button
+            type="button"
+            onClick={handleReturnToPreviousLocation}
+            style={{
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '14px',
+              padding: '4px 10px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.3)',
+              transition: 'background-color 0.15s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1D4ED8'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563EB'}
+          >
+            <RotateCcw size={12} />
+            <span>복귀</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setReturnLocation(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94A3B8',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title="복귀 알림 닫기"
+          >
+            <X size={15} />
+          </button>
+        </div>
       )}
 
       {/* Copy Toast Notification */}
