@@ -3801,7 +3801,7 @@ export default function NotebookExplorer() {
           })}
         </div>
 
-        {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
+        {/* Bottom Row: 계약, 광고, 북마크, 템플릿, 빈 탭 (5x2 그리드 형태 유지) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'clipboard', label: '계약' },
@@ -3837,6 +3837,16 @@ export default function NotebookExplorer() {
               </button>
             );
           })}
+          {/* 5x2 형태 유지를 위한 빈 탭 */}
+          <div
+            style={{
+              flex: 1,
+              padding: '6px 0',
+              pointerEvents: 'none',
+              visibility: 'hidden'
+            }}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
