@@ -6703,7 +6703,7 @@ export default function NotebookExplorer() {
 
                                     {/* 하위 항목들 */}
                                     {!isSecCollapsed && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '4px' : '8px' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '3px' : '4px' }}>
                                         {group.sortedItems.map((checkItem) => {
                                           const isEditing = editingCheckId === checkItem.id;
                                           const isSelected = selectedChecklistId === checkItem.id;
@@ -6746,19 +6746,19 @@ export default function NotebookExplorer() {
                                               style={{
                                                 ...styles.checklistItemRow,
                                                 ...(isMobile ? {
-                                                  padding: '6px 4px',
-                                                  borderRadius: '5px'
+                                                  padding: '2px 4px',
+                                                  borderRadius: '4px'
                                                 } : {}),
                                                 backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
                                                 border: isDragOver
-                                                  ? '1.5px solid #2563EB'
+                                                  ? '2px solid #2563EB'
                                                   : isSelected
-                                                    ? '1.5px solid #2563EB'
+                                                    ? '2px solid #2563EB'
                                                     : isEditing
-                                                      ? '1.5px solid #3B82F6'
+                                                      ? '2px solid #3B82F6'
                                                       : checkItem.completed
-                                                        ? '1px solid #E2E8F0'
-                                                        : '1px solid #CBD5E1',
+                                                        ? '1.5px solid #94A3B8'
+                                                        : '1.5px solid #64748B',
                                                 boxShadow: isDragOver
                                                   ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
                                                   : isSelected
@@ -6817,10 +6817,10 @@ export default function NotebookExplorer() {
                                                   alignItems: 'center',
                                                   justifyContent: 'space-between',
                                                   width: '100%',
-                                                  gap: isMobile ? '4px' : '8px',
-                                                  minHeight: isMobile ? '24px' : '26px'
+                                                  gap: isMobile ? '3px' : '6px',
+                                                  minHeight: isMobile ? '20px' : '22px'
                                                 }}>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flex: 1, minWidth: 0 }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '5px', flex: 1, minWidth: 0 }}>
                                                     {canDrag && (
                                                       <span
                                                         style={{
@@ -6832,7 +6832,7 @@ export default function NotebookExplorer() {
                                                         }}
                                                         title="드래그하여 순서 변경"
                                                       >
-                                                        <GripVertical size={15} />
+                                                        <GripVertical size={14} />
                                                       </span>
                                                     )}
                                                     <button
@@ -6844,9 +6844,9 @@ export default function NotebookExplorer() {
                                                       title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
                                                     >
                                                       {checkItem.completed ? (
-                                                        <CheckSquare size={18} color="#2563EB" />
+                                                        <CheckSquare size={16} color="#2563EB" />
                                                       ) : (
-                                                        <Square size={18} color="#94A3B8" />
+                                                        <Square size={16} color="#94A3B8" />
                                                       )}
                                                     </button>
                                                     <span
@@ -6882,9 +6882,9 @@ export default function NotebookExplorer() {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        width: isMobile ? '24px' : '28px',
-                                                        height: isMobile ? '24px' : '28px',
-                                                        borderRadius: '6px',
+                                                        width: isMobile ? '20px' : '22px',
+                                                        height: isMobile ? '20px' : '22px',
+                                                        borderRadius: '4px',
                                                         border: 'none',
                                                         backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
                                                         color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
@@ -6892,7 +6892,7 @@ export default function NotebookExplorer() {
                                                       }}
                                                       title="메뉴"
                                                     >
-                                                      <MoreVertical size={isMobile ? 15 : 16} />
+                                                      <MoreVertical size={isMobile ? 14 : 15} />
                                                     </button>
 
                                                     {openChecklistMenuId === checkItem.id && (
@@ -7991,7 +7991,7 @@ export default function NotebookExplorer() {
 
                                   {/* 그룹 하위 체크리스트 항목들 (접혀있지 않을 때만 렌더링) */}
                                   {!isSecCollapsed && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '4px' : '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '3px' : '4px' }}>
                                       {group.sortedItems.map((checkItem) => {
                                         const isEditing = editingCheckId === checkItem.id;
                                         const isSelected = selectedChecklistId === checkItem.id;
@@ -8034,19 +8034,19 @@ export default function NotebookExplorer() {
                                             style={{
                                               ...styles.checklistItemRow,
                                               ...(isMobile ? {
-                                                padding: '6px 4px',
-                                                borderRadius: '5px'
+                                                padding: '2px 4px',
+                                                borderRadius: '4px'
                                               } : {}),
                                               backgroundColor: isSelected ? '#EFF6FF' : (checkItem.completed ? '#F8FAFC' : '#FFFFFF'),
                                               border: isDragOver
-                                                ? '1.5px solid #2563EB'
+                                                ? '2px solid #2563EB'
                                                 : isSelected
-                                                  ? '1.5px solid #2563EB'
+                                                  ? '2px solid #2563EB'
                                                   : isEditing
-                                                    ? '1.5px solid #3B82F6'
+                                                    ? '2px solid #3B82F6'
                                                     : checkItem.completed
-                                                      ? '1px solid #E2E8F0'
-                                                      : '1px solid #CBD5E1',
+                                                      ? '1.5px solid #94A3B8'
+                                                      : '1.5px solid #64748B',
                                               boxShadow: isDragOver
                                                 ? '0 -3px 0 0 #2563EB, 0 4px 12px rgba(37, 99, 235, 0.2)'
                                                 : isSelected
@@ -8105,11 +8105,11 @@ onClick={() => {
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
                                                 width: '100%',
-                                                gap: isMobile ? '4px' : '8px',
-                                                minHeight: isMobile ? '24px' : '26px'
+                                                gap: isMobile ? '3px' : '6px',
+                                                minHeight: isMobile ? '20px' : '22px'
                                               }}>
                                                 {/* Left Row: Drag Handle + Checkbox + Pure Text */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px', flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '3px' : '5px', flex: 1, minWidth: 0 }}>
                                                   {canDrag && (
                                                     <span
                                                       style={{
@@ -8121,7 +8121,7 @@ onClick={() => {
                                                       }}
                                                       title="드래그하여 순서 변경"
                                                     >
-                                                      <GripVertical size={15} />
+                                                      <GripVertical size={14} />
                                                     </span>
                                                   )}
                                                   <button
@@ -8133,9 +8133,9 @@ onClick={() => {
                                                     title={checkItem.completed ? '미완료로 변경' : '완료로 변경'}
                                                   >
                                                     {checkItem.completed ? (
-                                                      <CheckSquare size={18} color="#2563EB" />
+                                                      <CheckSquare size={16} color="#2563EB" />
                                                     ) : (
-                                                      <Square size={18} color="#94A3B8" />
+                                                      <Square size={16} color="#94A3B8" />
                                                     )}
                                                   </button>
                                                   <span
@@ -8172,9 +8172,9 @@ onClick={() => {
                                                       display: 'inline-flex',
                                                       alignItems: 'center',
                                                       justifyContent: 'center',
-                                                      width: isMobile ? '24px' : '28px',
-                                                      height: isMobile ? '24px' : '28px',
-                                                      borderRadius: '6px',
+                                                      width: isMobile ? '20px' : '22px',
+                                                      height: isMobile ? '20px' : '22px',
+                                                      borderRadius: '4px',
                                                       border: 'none',
                                                       backgroundColor: openChecklistMenuId === checkItem.id ? '#E2E8F0' : 'transparent',
                                                       color: openChecklistMenuId === checkItem.id ? '#2563EB' : '#64748B',
@@ -8182,7 +8182,7 @@ onClick={() => {
                                                     }}
                                                     title="메뉴"
                                                   >
-                                                    <MoreVertical size={isMobile ? 15 : 16} />
+                                                    <MoreVertical size={isMobile ? 14 : 15} />
                                                   </button>
 
                                                   {openChecklistMenuId === checkItem.id && (
@@ -10681,9 +10681,9 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: '6px',
-    padding: '9px 12px',
-    borderRadius: '8px',
+    gap: '3px',
+    padding: '3px 6px',
+    borderRadius: '6px',
     backgroundColor: '#FFFFFF',
     boxSizing: 'border-box',
     transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease'
@@ -10692,16 +10692,16 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '6px',
-    paddingTop: '6px',
+    gap: '4px',
+    paddingTop: '4px',
     borderTop: '1px dashed #E2E8F0',
     width: '100%',
-    minHeight: '22px'
+    minHeight: '20px'
   },
   checkboxBtn: {
     background: 'none',
     border: 'none',
-    padding: '2px 0 0 0',
+    padding: 0,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -10710,7 +10710,7 @@ const styles = {
   },
   checkitemText: {
     fontSize: '12.5px',
-    lineHeight: 1.5,
+    lineHeight: 1.35,
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
     display: 'inline'
