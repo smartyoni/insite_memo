@@ -287,7 +287,7 @@ const getScopeForTab = (tab) => {
   if (tab === 'clip') return 'clip';
   if (tab === 'office') return 'office';
   if (tab === 'ad') return 'ad';
-  if (tab === 'template2') return 'template2';
+  if (tab === 'template2' || tab === 'template') return 'template2';
   if (tab === 'experience') return 'experience';
   return 'explorer';
 };
@@ -320,7 +320,7 @@ const getTrashIdForTab = (tab) => {
   if (tab === 'clip') return 'clip_trash';
   if (tab === 'office') return 'office_trash';
   if (tab === 'ad') return 'ad_trash';
-  if (tab === 'template2') return 'template2_trash';
+  if (tab === 'template2' || tab === 'template') return 'template2_trash';
   if (tab === 'experience') return 'experience_trash';
   return 'trash';
 };
@@ -332,38 +332,26 @@ const getFixedTrashCategoryForTab = (tab) => {
   if (tab === 'clip') return CLIP_TRASH_CATEGORY;
   if (tab === 'office') return OFFICE_TRASH_CATEGORY;
   if (tab === 'ad') return AD_TRASH_CATEGORY;
-  if (tab === 'template2') return TEMPLATE2_TRASH_CATEGORY;
+  if (tab === 'template2' || tab === 'template') return TEMPLATE2_TRASH_CATEGORY;
   if (tab === 'experience') return EXPERIENCE_TRASH_CATEGORY;
   return TRASH_CATEGORY;
 };
 
 // Helper to highlight matching searchQuery in text
-export function highlightText(text, searchQuery) {
-  if (!text || typeof text !== 'string' || !searchQuery || !searchQuery.trim()) {
-    return text;
-  }
-  const q = searchQuery.trim();
-  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const segs = text.split(new RegExp(`(${escaped})`, 'gi'));
-  return segs.map((seg, idx) =>
-    seg.toLowerCase() === q.toLowerCase() ? (
-      <mark
-        key={`hl_${idx}`}
-        style={{
-          backgroundColor: '#FDE047',
-          color: '#854D0E',
-          padding: '0 2px',
-          borderRadius: '3px',
-          fontWeight: 700
-        }}
-      >
-        {seg}
-      </mark>
+const highlightText = (text, query) => {
+  if (!query || !text) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = String(text).split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase() ? (
+      <span key={i} style={styles.searchHighlight}>
+        {part}
+      </span>
     ) : (
-      seg
+      part
     )
   );
-}
+};
 
 // Helper to safely extract milliseconds timestamp from item updated/created time
 function getItemTimestamp(item) {
@@ -383,7 +371,10 @@ export default function NotebookExplorer() {
   const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
 
   // Main View Mode Tab state ('explorer' | 'clipboard' | 'balance' | 'clip' | 'calendar')
-  const [activeMainTab, setActiveMainTab] = useState(() => initialNavLoc?.activeMainTab || 'explorer');
+  const [activeMainTab, setActiveMainTab] = useState(() => {
+    const initial = initialNavLoc?.activeMainTab || 'explorer';
+    return initial === 'template' ? 'template2' : initial;
+  });
 
   // Data states
   const [categories, setCategories] = useState([]);
@@ -413,7 +404,7 @@ export default function NotebookExplorer() {
       clip: '북마크',
       office: '사무실',
       ad: '광고',
-      template2: '템플릿2',
+      template2: '템플릿',
       experience: '경험'
     };
     if (categoryId === 'quick_memo') {
@@ -3500,56 +3491,135 @@ export default function NotebookExplorer() {
     );
   };
 
-  const handleApplyTemplate2ToItem = async (tpl2, mode = 'replace') => {
-    if (!activeItem || !tpl2) return;
-    try {
-      const clonedChecklists = (tpl2.checklists || []).map((chk, cIdx) => {
-        const newChkId = `chk_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`;
-        const clonedBlocks = (chk.detailBlocks || []).map((b, bIdx) => ({
-          ...b,
-          id: `b_${Date.now()}_${cIdx}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
-          items: Array.isArray(b.items)
-            ? b.items.map((it, itIdx) => ({
-                ...it,
-                id: `it_${Date.now()}_${cIdx}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
-                completed: false
-              }))
-            : []
-        }));
-        return {
-          id: newChkId,
-          text: chk.text || '',
-          completed: false,
-          detailBlocks: clonedBlocks,
-          detail: blocksToPlainText(clonedBlocks)
-        };
-      });
+  const cloneTemplateData = (tpl) => {
+    if (!tpl) return { checklists: [], body: '', detailBlocks: [] };
 
-      let finalChecklists = [];
-      if (mode === 'append') {
-        const existing = Array.isArray(activeItem.checklists) ? activeItem.checklists : [];
-        finalChecklists = [...existing, ...clonedChecklists];
-      } else {
-        finalChecklists = clonedChecklists;
+    const clonedChecklists = (tpl.checklists || []).map((chk, cIdx) => {
+      const isSec = Boolean(chk.isSection || chk.type === 'section');
+      const newChkId = isSec
+        ? `sec_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`
+        : `chk_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`;
+
+      const clonedBlocks = (chk.detailBlocks || []).map((b, bIdx) => ({
+        ...b,
+        id: `b_${Date.now()}_${cIdx}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
+        items: Array.isArray(b.items)
+          ? b.items.map((it, itIdx) => ({
+              ...it,
+              id: `it_${Date.now()}_${cIdx}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
+              completed: false
+            }))
+          : []
+      }));
+
+      let detailText = '';
+      if (clonedBlocks.length > 0) {
+        detailText = blocksToPlainText(clonedBlocks);
+      } else if (chk.detail) {
+        detailText = chk.detail;
       }
 
-      await updateDoc(doc(db, 'items', activeItem.id), {
-        checklists: finalChecklists,
-        updatedAt: new Date().toISOString()
-      });
+      return {
+        ...chk,
+        id: newChkId,
+        text: chk.text || '',
+        completed: false,
+        isSection: isSec,
+        type: chk.type || (isSec ? 'section' : 'item'),
+        tag: chk.tag || null,
+        detailBlocks: clonedBlocks,
+        detail: detailText
+      };
+    });
 
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === activeItem.id ? { ...item, checklists: finalChecklists } : item
-        )
-      );
+    const clonedMainBlocks = (tpl.detailBlocks || []).map((b, bIdx) => ({
+      ...b,
+      id: `mb_${Date.now()}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
+      items: Array.isArray(b.items)
+        ? b.items.map((it, itIdx) => ({
+            ...it,
+            id: `mit_${Date.now()}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
+            completed: false
+          }))
+        : []
+    }));
 
+    return {
+      checklists: clonedChecklists,
+      body: tpl.body || '',
+      detailBlocks: clonedMainBlocks
+    };
+  };
+
+  const handleApplyTemplate2ToItem = async (tpl2, mode = 'replace') => {
+    if (!tpl2) return;
+    try {
+      const { checklists: clonedChecklists, body: tplBody, detailBlocks: tplBlocks } = cloneTemplateData(tpl2);
+
+      let finalChecklists = [];
+      let finalBody = isEditMode ? draftBody : (activeItem?.body || '');
+      let finalDetailBlocks = Array.isArray(activeItem?.detailBlocks) ? activeItem.detailBlocks : [];
+
+      if (mode === 'append') {
+        const existing = Array.isArray(isEditMode && draftChecklists !== null ? draftChecklists : activeItem?.checklists)
+          ? (isEditMode && draftChecklists !== null ? draftChecklists : (activeItem?.checklists || []))
+          : [];
+        finalChecklists = [...existing, ...clonedChecklists];
+        if (tplBody) {
+          finalBody = finalBody ? `${finalBody}\n\n${tplBody}` : tplBody;
+        }
+        if (tplBlocks.length > 0) {
+          finalDetailBlocks = [...finalDetailBlocks, ...tplBlocks];
+        }
+      } else {
+        finalChecklists = clonedChecklists;
+        if (tplBody) finalBody = tplBody;
+        if (tplBlocks.length > 0) finalDetailBlocks = tplBlocks;
+      }
+
+      // 1. 현재 편집 모드(isEditMode)일 경우 draft 상태 즉시 갱신
+      if (isEditMode) {
+        setDraftChecklists(finalChecklists);
+        setDraftBody(finalBody);
+        if (finalDetailBlocks.length > 0) {
+          setChecklistDetailBlocks(finalDetailBlocks);
+        }
+      }
+
+      // 2. 만약 activeItem이 존재한다면 Firestore DB 및 items 상태도 업데이트
+      if (activeItem && activeItem.id) {
+        const updatePayload = {
+          checklists: finalChecklists,
+          updatedAt: new Date().toISOString()
+        };
+        if (tplBody || mode === 'replace') {
+          updatePayload.body = finalBody;
+        }
+        if (finalDetailBlocks.length > 0 || mode === 'replace') {
+          updatePayload.detailBlocks = finalDetailBlocks;
+        }
+
+        await updateDoc(doc(db, 'items', activeItem.id), updatePayload);
+
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === activeItem.id ? { ...item, ...updatePayload } : item
+          )
+        );
+      }
+
+      // 3. 네비게이션 포커스 설정
       if (finalChecklists.length > 0) {
-        const firstTarget = mode === 'append' && activeItem.checklists?.length
-          ? finalChecklists[activeItem.checklists.length]
-          : finalChecklists[0];
+        const targetIndex = (mode === 'append' && activeItem?.checklists?.length)
+          ? activeItem.checklists.length
+          : 0;
+        const firstTarget = finalChecklists[targetIndex] || finalChecklists[0];
         setSelectedChecklistId(firstTarget?.id || '__main__');
-        setChecklistDetailBlocks(firstTarget?.detailBlocks || []);
+        if (firstTarget && Array.isArray(firstTarget.detailBlocks) && firstTarget.detailBlocks.length > 0) {
+          setChecklistDetailBlocks(firstTarget.detailBlocks);
+        } else {
+          setChecklistDetailBlocks([]);
+        }
       }
 
       setShowTemplate2Modal(false);
@@ -3557,8 +3627,8 @@ export default function NotebookExplorer() {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
     } catch (err) {
-      console.error('템플릿2 적용 오류:', err);
-      alert('템플릿2를 적용하지 못했습니다.');
+      console.error('템플릿 적용 오류:', err);
+      alert('템플릿을 적용하지 못했습니다.');
     }
   };
 
@@ -3731,14 +3801,13 @@ export default function NotebookExplorer() {
           })}
         </div>
 
-        {/* Bottom Row: 계약, 광고, 북마크, 템플릿1, 템플릿2 */}
+        {/* Bottom Row: 계약, 광고, 북마크, 템플릿 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'clipboard', label: '계약' },
             { id: 'ad', label: '광고' },
             { id: 'clip', label: '북마크' },
-            { id: 'template', label: '템플릿1' },
-            { id: 'template2', label: '템플릿2' }
+            { id: 'template2', label: '템플릿' }
           ].map((tab) => {
             const isActive = activeMainTab === tab.id;
             return (
@@ -5824,59 +5893,61 @@ export default function NotebookExplorer() {
                                 ))}
                               </select>
 
-                              <select
-                                value={draftTemplateId || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value || null;
-                                  setDraftTemplateId(val);
-                                  if (val) {
-                                    const targetTpl = templates.find(t => t.id === val);
-                                    if (targetTpl) {
-                                      if (targetTpl.fields) {
-                                        const initialVals = { ...draftTemplateValues };
-                                        targetTpl.fields.forEach(f => {
-                                          if (f.type === 'checklist') {
-                                            if (!initialVals[f.id]) {
-                                              initialVals[f.id] = (f.defaultItems || []).map(text => ({ text, completed: false }));
-                                            }
-                                          } else {
-                                            if (initialVals[f.id] === undefined && f.placeholder) {
-                                              initialVals[f.id] = f.placeholder.replace(/\//g, '\n');
-                                            }
-                                          }
-                                        });
-                                        setDraftTemplateValues(initialVals);
+                              {(() => {
+                                const tplCats = categories.filter(c => c.scope === 'template2' && c.id !== 'template2_trash');
+                                const tplCatIds = new Set(tplCats.map(c => c.id));
+                                const tplItems = items.filter(it => tplCatIds.has(it.categoryId));
+
+                                return (
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (!val) return;
+                                      const targetTpl = tplItems.find(it => it.id === val) || templates2.find(t => t.id === val);
+                                      if (targetTpl) {
+                                        handleApplyTemplate2ToItem(targetTpl, 'replace');
                                       }
-                                      if (targetTpl.checklists && targetTpl.checklists.length > 0) {
-                                        const converted = targetTpl.checklists.map((c, i) => ({
-                                          id: `tcheck_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
-                                          text: typeof c === 'string' ? c : c.text,
-                                          completed: false,
-                                          tag: typeof c === 'object' ? (c.tag || null) : null
-                                        }));
-                                        setDraftChecklists(converted);
-                                      }
-                                    }
-                                  }
-                                }}
-                                style={{
-                                  ...styles.headerCategorySelect,
-                                  flex: 1,
-                                  minWidth: 0,
-                                  maxWidth: isMobile ? '135px' : '220px',
-                                  height: isMobile ? '28px' : '32px',
-                                  fontWeight: 600,
-                                  color: draftTemplateId ? '#2563EB' : '#334155'
-                                }}
-                                title="템플릿 선택"
-                              >
-                                <option value="">기본 서식</option>
-                                {templates.map((tpl) => (
-                                  <option key={tpl.id} value={tpl.id}>
-                                    📋 {tpl.title}
-                                  </option>
-                                ))}
-                              </select>
+                                    }}
+                                    style={{
+                                      ...styles.headerCategorySelect,
+                                      flex: 1,
+                                      minWidth: 0,
+                                      maxWidth: isMobile ? '135px' : '220px',
+                                      height: isMobile ? '28px' : '32px',
+                                      fontWeight: 600,
+                                      color: '#7C3AED',
+                                      backgroundColor: '#FAF5FF',
+                                      borderColor: '#C4B5FD'
+                                    }}
+                                    title="템플릿 서식 적용 (기존 내용 대체)"
+                                  >
+                                    <option value="">📋 템플릿 선택...</option>
+                                    {tplCats.map((cat) => {
+                                      const cItems = tplItems.filter(it => it.categoryId === cat.id);
+                                      if (cItems.length === 0) return null;
+                                      return (
+                                        <optgroup key={cat.id} label={cat.name}>
+                                          {cItems.map((tpl) => (
+                                            <option key={tpl.id} value={tpl.id}>
+                                              {tpl.title || '제목 없는 템플릿'}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      );
+                                    })}
+                                    {templates2.length > 0 && (
+                                      <optgroup label="템플릿 프리셋">
+                                        {templates2.map((tpl) => (
+                                          <option key={tpl.id} value={tpl.id}>
+                                            {tpl.title || '제목 없는 프리셋'}
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    )}
+                                  </select>
+                                );
+                              })()}
                               <button
                                 type="button"
                                 onClick={() => setShowTemplate2Modal(true)}
@@ -5895,9 +5966,9 @@ export default function NotebookExplorer() {
                                   whiteSpace: 'nowrap',
                                   height: isMobile ? '28px' : '32px'
                                 }}
-                                title="상세화면 구조 템플릿2 적용"
+                                title="상세화면 구조 템플릿 적용"
                               >
-                                📑 템플릿2
+                                📑 템플릿
                               </button>
                             </div>
 
@@ -7218,9 +7289,9 @@ export default function NotebookExplorer() {
                                   color: '#7C3AED',
                                   fontWeight: 600
                                 }}
-                                title="상세화면 구조 템플릿2 적용"
+                                title="상세화면 구조 템플릿 적용"
                               >
-                                📑 템플릿2
+                                📑 템플릿
                               </button>
                             )}
                           </div>
@@ -9427,10 +9498,10 @@ onClick={() => {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E1B4B' }}>
-                    템플릿2 (상세화면 프리셋) 적용
+                    템플릿 적용
                   </h3>
                   <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#6B7280' }}>
-                    미리 구성해 둔 상위/하위 체크리스트 구조를 현재 메모에 적용합니다.
+                    미리 구성해 둔 템플릿 서식(체크리스트 및 세부 항목)을 현재 메모에 적용합니다.
                   </p>
                 </div>
               </div>
@@ -9479,7 +9550,7 @@ onClick={() => {
               </label>
             </div>
 
-            {/* Template 2 Items List */}
+            {/* Template Items List */}
             <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(() => {
                 const tpl2CategoryIds = new Set(categories.filter(c => c.scope === 'template2').map(c => c.id));
@@ -9503,8 +9574,8 @@ onClick={() => {
                 if (combinedList.length === 0) {
                   return (
                     <div style={{ padding: '40px 16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
-                      등록된 템플릿2가 없습니다.<br />
-                      상단 탭의 <strong>[템플릿2]</strong> 메뉴에서 카테고리를 만들고 상세화면 구조 프리셋을 먼저 작성해보세요.
+                      등록된 템플릿이 없습니다.<br />
+                      상단 탭의 <strong>[템플릿]</strong> 메뉴에서 카테고리를 만들고 템플릿 메모를 먼저 작성해보세요.
                     </div>
                   );
                 }
@@ -9545,7 +9616,7 @@ onClick={() => {
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '14px', fontWeight: 700, color: '#5B21B6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          📑 {tpl.title || '제목 없는 템플릿2'}
+                          📑 {tpl.title || '제목 없는 템플릿'}
                         </div>
                         <div style={{ fontSize: '11.5px', color: '#7C3AED', marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {tpl.categoryName && <span style={{ backgroundColor: '#EDE9FE', padding: '1px 6px', borderRadius: '4px' }}>{tpl.categoryName}</span>}
