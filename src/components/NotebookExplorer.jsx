@@ -4291,10 +4291,10 @@ export default function NotebookExplorer() {
             />
           ) : (
             <div
-              style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}
+              style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}
               title="더블클릭하여 카테고리명 수정"
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
+              <span style={{ fontSize: '13.5px', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>
                 {node.name}
               </span>
               <span style={{
@@ -5174,9 +5174,9 @@ export default function NotebookExplorer() {
                               userSelect: 'none'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
                               <div
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}
+                                style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}
                                 title={isTrashSelected ? undefined : "더블클릭하여 목록명 수정"}
                               >
                                 {isEditing ? (
@@ -5200,9 +5200,9 @@ export default function NotebookExplorer() {
                                     fontSize: '13px',
                                     fontWeight: isSelected ? 700 : 600,
                                     color: isSelected ? '#163326' : '#2D3748',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word',
+                                    lineHeight: 1.45,
                                     flex: 1
                                   }}>
                                     {highlightText(item.title || '제목 없음', searchQuery)}
@@ -10276,9 +10276,9 @@ const styles = {
   itemTitle: {
     fontSize: '13px',
     fontWeight: 600,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    lineHeight: 1.45,
     flex: 1
   },
   inputLightInline: {
