@@ -242,7 +242,7 @@ function DetailChecklistItemRow({
         alignItems: isEditing ? 'stretch' : 'center',
         justifyContent: 'space-between',
         gap: '6px',
-        padding: isEditing ? '8px 8px' : '5px 6px',
+        padding: isEditing ? '8px 8px' : '5px 2px 5px 6px',
         borderRadius: '6px',
         border: isEditing
           ? '1.5px solid #059669'
@@ -331,24 +331,11 @@ function DetailChecklistItemRow({
           </div>
         </div>
       ) : (
-        // [조회 모드 (드래그 핸들 + 체크박스 + 텍스트 + 3점 메뉴)]
+        // [조회 모드 (체크박스 + 텍스트 + 3점 메뉴)]
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
-          {/* 좌측: 드래그 핸들 + 체크박스 + 텍스트 */}
+          {/* 좌측: 체크박스 + 텍스트 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-            <span
-              style={{
-                cursor: 'grab',
-                display: 'inline-flex',
-                alignItems: 'center',
-                color: '#94A3B8',
-                flexShrink: 0
-              }}
-              title="드래그하여 순서 변경"
-            >
-              <GripVertical size={15} />
-            </span>
-
-            {/* 체크박스 */}
+            {/* 체크박스 (기존의 80% 크기) */}
             <button
               type="button"
               onClick={(e) => {
@@ -356,9 +343,9 @@ function DetailChecklistItemRow({
                 onToggle(blockId, item.id);
               }}
               style={{
-                width: '19px',
-                height: '19px',
-                borderRadius: '4px',
+                width: '15px',
+                height: '15px',
+                borderRadius: '3px',
                 backgroundColor: item.completed ? '#059669' : '#FFFFFF',
                 border: item.completed ? '1px solid #059669' : '1.5px solid #CBD5E1',
                 display: 'flex',
@@ -371,7 +358,7 @@ function DetailChecklistItemRow({
               }}
               title={item.completed ? '완료 해제' : '완료 체크'}
             >
-              {item.completed && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
+              {item.completed && <Check size={10} color="#FFFFFF" strokeWidth={3} />}
             </button>
 
             {/* 텍스트 (더블클릭 시 수정) */}
@@ -414,7 +401,7 @@ function DetailChecklistItemRow({
           </div>
 
           {/* 우측: 3점 메뉴 */}
-          <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+          <div style={{ position: 'relative', flexShrink: 0, marginRight: '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={(e) => onOpenItemMenu(e, item.id)}
