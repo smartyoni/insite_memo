@@ -4219,7 +4219,12 @@ export default function NotebookExplorer() {
             }
           }}
           onClick={() => {
-            if (!isEditing) navigateToItems(node.id);
+            if (!isEditing) {
+              navigateToItems(node.id);
+              if (hasChildren) {
+                toggleFolder(node.id);
+              }
+            }
           }}
           onDoubleClick={(e) => {
             e.stopPropagation();
