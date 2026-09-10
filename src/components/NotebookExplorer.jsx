@@ -6770,7 +6770,7 @@ export default function NotebookExplorer() {
                                               }}
                                               style={{
                                                 ...styles.checklistItemRow,
-                                                padding: isMobile ? '5px 8px' : '7px 12px',
+                                                padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
                                                 borderRadius: isMobile ? '6px' : '8px',
                                                 backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
                                                 border: isDragOver
@@ -6866,7 +6866,7 @@ export default function NotebookExplorer() {
                                                     </span>
                                                   </div>
 
-                                                  <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                  <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                                     <button
                                                       type="button"
                                                       onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
@@ -8055,7 +8055,7 @@ export default function NotebookExplorer() {
                                             }}
                                             style={{
                                               ...styles.checklistItemRow,
-                                              padding: isMobile ? '5px 8px' : '7px 12px',
+                                              padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
                                               borderRadius: isMobile ? '6px' : '8px',
                                               backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
                                               border: isDragOver
@@ -8151,7 +8151,7 @@ onClick={() => {
                                                   </span>
                                                 </div>
                                                 {/* Right End: 3-dot Menu */}
-                                                <div style={{ position: 'relative', flexShrink: 0 }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                                   <button
                                                     type="button"
                                                     onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
