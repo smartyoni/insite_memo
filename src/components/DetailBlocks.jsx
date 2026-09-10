@@ -242,7 +242,7 @@ function DetailChecklistItemRow({
         alignItems: isEditing ? 'stretch' : 'center',
         justifyContent: 'space-between',
         gap: '6px',
-        padding: isEditing ? '8px 10px' : '5px 8px',
+        padding: isEditing ? '8px 8px' : '5px 6px',
         borderRadius: '6px',
         border: isEditing
           ? '1.5px solid #059669'
@@ -1173,7 +1173,7 @@ export const DetailBlocksManager = ({
         flex: 1,
         minHeight: 0,
         overflowY: 'auto',
-        paddingRight: '4px'
+        paddingRight: '1px'
       }}
     >
       {blocks.map((block, idx) => {
@@ -1219,7 +1219,7 @@ export const DetailBlocksManager = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '6px 10px',
+                  padding: '6px 8px',
                   backgroundColor: '#A8D5B8',
                   borderBottom: isCollapsed ? 'none' : '1px solid #6B9E7D',
                   cursor: isEditingTitle ? 'default' : 'pointer',
@@ -1568,7 +1568,7 @@ export const DetailBlocksManager = ({
               {!isCollapsed && (
                 <div
                   style={{
-                    padding: '4px 6px',
+                    padding: '4px 4px',
                     backgroundColor: '#FFFFFF',
                     display: 'flex',
                     flexDirection: 'column',
@@ -1650,7 +1650,7 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '6px 10px',
+                padding: '6px 8px',
                 backgroundColor: isEditingThisBlock ? '#EDE9FE' : '#C8B6E2',
                 borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #C4B5FD' : '1px solid #9578B8'),
                 cursor: isEditingThisBlock ? 'default' : 'pointer',

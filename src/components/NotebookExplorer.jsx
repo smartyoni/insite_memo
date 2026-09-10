@@ -6991,7 +6991,13 @@ export default function NotebookExplorer() {
 
                       {/* Right Card for Edit Mode: Main Body, Template Form, or Checklist Detail */}
                       {(!isMobile || mobileSubTab === 'sub') && (
-                        <div style={styles.editPaneSubCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
+                        <div
+                          style={{
+                            ...styles.editPaneSubCard,
+                            ...(isMobile ? { padding: '8px 2px', borderRadius: '4px' } : {})
+                          }}
+                          className={printTarget === 'detail' ? 'print-area' : 'no-print'}
+                        >
                           {selectedChecklistId === '__main__' ? (
                             draftTemplateId === null ? (
                               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -7197,7 +7203,9 @@ export default function NotebookExplorer() {
                                     marginBottom: '10px',
                                     borderBottom: '1px solid #E2E8F0',
                                     flexWrap: 'wrap',
-                                    gap: '6px'
+                                    gap: '6px',
+                                    paddingLeft: isMobile ? '4px' : '0',
+                                    paddingRight: isMobile ? '4px' : '0'
                                   }}>
                                     <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
                                       ☑️ {selectedCheckItem.text} 상세내용
@@ -8278,7 +8286,13 @@ onClick={() => {
 
                     {/* Right Card: Detail for Selected Checklist or Parent Item */}
                     {(!isMobile || mobileSubTab === 'sub') && (
-                      <div style={styles.rightPaneCard} className={printTarget === 'detail' ? 'print-area' : 'no-print'}>
+                      <div
+                        style={{
+                          ...styles.rightPaneCard,
+                          ...(isMobile ? { padding: '8px 2px', borderRadius: '4px' } : {})
+                        }}
+                        className={printTarget === 'detail' ? 'print-area' : 'no-print'}
+                      >
                         {selectedChecklistId === '__main__' && activeItem.templateId && templates.find(t => t.id === activeItem.templateId) ? (
                           // Case 1: Template Applied
                           <>
@@ -8492,7 +8506,9 @@ onClick={() => {
                                   top: 0,
                                   backgroundColor: '#F8FAFC',
                                   zIndex: 10,
-                                  flexShrink: 0
+                                  flexShrink: 0,
+                                  paddingLeft: isMobile ? '4px' : '0',
+                                  paddingRight: isMobile ? '4px' : '0'
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                     <button
