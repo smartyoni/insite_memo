@@ -4235,13 +4235,13 @@ export default function NotebookExplorer() {
             backgroundColor: isDropTarget ? '#EFF6FF' : isSelected ? '#D8E6F5' : 'transparent',
             border: isDropTarget ? '1.5px dashed #2563EB' : isBeingDragged ? '1px dashed #94A3B8' : '1px solid transparent',
             opacity: isBeingDragged ? 0.5 : 1,
-            color: isSelected ? '#1E3A5F' : '#4A607A',
-            fontWeight: isSelected ? 600 : 400,
-            paddingLeft: '6px',
-            paddingRight: '6px',
-            paddingTop: '6px',
-            paddingBottom: '6px',
-            gap: '6px',
+            color: isSelected ? '#0F172A' : '#1E293B',
+            fontWeight: isSelected ? 600 : 500,
+            paddingLeft: '4px',
+            paddingRight: '2px',
+            paddingTop: '5px',
+            paddingBottom: '5px',
+            gap: '4px',
             userSelect: 'none',
             transition: 'background-color 0.15s, border-color 0.15s'
           }}
@@ -4254,7 +4254,7 @@ export default function NotebookExplorer() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: isSelected ? '#2563EB' : '#7C95B1',
+                color: isSelected ? '#2563EB' : '#475569',
                 cursor: 'pointer',
                 padding: '2px',
                 display: 'flex',
@@ -4270,8 +4270,6 @@ export default function NotebookExplorer() {
           ) : (
             <span style={{ width: 14, height: 14, flexShrink: 0 }} />
           )}
-
-          <Folder size={16} color={isSelected ? '#2563EB' : '#7C95B1'} style={{ flexShrink: 0 }} />
 
           {isEditing ? (
             <input
@@ -4294,13 +4292,22 @@ export default function NotebookExplorer() {
               style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}
               title="더블클릭하여 카테고리명 수정"
             >
-              <span style={{ fontSize: '13.5px', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>
+              <span style={{
+                fontSize: '13.5px',
+                color: isSelected ? '#0F172A' : '#1E293B',
+                fontWeight: isSelected ? 600 : 500,
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+                lineHeight: 1.35,
+                letterSpacing: '-0.2px',
+                WebkitFontSmoothing: 'antialiased'
+              }}>
                 {node.name}
               </span>
               <span style={{
                 fontSize: '11px',
-                color: isSelected ? '#2563EB' : '#7C95B1',
-                fontWeight: isSelected ? 700 : 500,
+                color: isSelected ? '#2563EB' : '#64748B',
+                fontWeight: isSelected ? 700 : 600,
                 flexShrink: 0
               }}>
                 ({count})
@@ -4310,7 +4317,7 @@ export default function NotebookExplorer() {
 
           {!isEditing && (
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, marginLeft: 'auto' }}
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={(e) => e.stopPropagation()}
             >
@@ -4323,12 +4330,12 @@ export default function NotebookExplorer() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '22px',
+                    width: '18px',
                     height: '22px',
                     borderRadius: '4px',
                     border: 'none',
                     backgroundColor: openCatMenuId === node.id ? '#DBEAFE' : 'transparent',
-                    color: openCatMenuId === node.id ? '#2563EB' : '#7C95B1',
+                    color: openCatMenuId === node.id ? '#2563EB' : '#64748B',
                     cursor: 'pointer',
                     padding: 0
                   }}
@@ -4611,7 +4618,7 @@ export default function NotebookExplorer() {
                 </div>
               )}
 
-              <div style={styles.paneContent}>
+              <div style={{ ...styles.paneContent, paddingLeft: '6px', paddingRight: '2px' }}>
                 {/* Fixed Quick-memo Category (Only in explorer/note tab) */}
                 {activeMainTab === 'explorer' && (() => {
                   const isSelected = QUICK_MEMO_CATEGORY.id === selectedCategoryId;
@@ -4629,9 +4636,7 @@ export default function NotebookExplorer() {
                           e.preventDefault();
                           e.stopPropagation();
                           e.dataTransfer.dropEffect = 'move';
-                          if (dragOverCategoryId !== QUICK_MEMO_CATEGORY.id) {
-                            setDragOverCategoryId(QUICK_MEMO_CATEGORY.id);
-                          }
+                          setDragOverCategoryId(QUICK_MEMO_CATEGORY.id);
                         }
                       }}
                       onDragLeave={(e) => {
@@ -4662,10 +4667,10 @@ export default function NotebookExplorer() {
                         ...styles.catRow,
                         backgroundColor: isDropTarget ? '#FEF08A' : isSelected ? '#FEF3C7' : 'transparent',
                         border: isDropTarget ? '1.5px dashed #D97706' : '1px solid transparent',
-                        color: isSelected ? '#92400E' : '#4A607A',
+                        color: isSelected ? '#92400E' : '#1E293B',
                         fontWeight: isSelected ? 700 : 500,
-                        paddingLeft: '6px',
-                        paddingRight: '6px',
+                        paddingLeft: '4px',
+                        paddingRight: '2px',
                         paddingTop: '6px',
                         paddingBottom: '6px',
                         gap: '6px'
