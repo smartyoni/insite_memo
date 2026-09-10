@@ -4293,9 +4293,9 @@ export default function NotebookExplorer() {
               title="더블클릭하여 카테고리명 수정"
             >
               <span style={{
-                fontSize: '13.5px',
+                fontSize: level === 0 ? '14.5px' : '13.5px',
                 color: isSelected ? '#0F172A' : '#1E293B',
-                fontWeight: isSelected ? 600 : 500,
+                fontWeight: level === 0 ? (isSelected ? 700 : 600) : (isSelected ? 600 : 500),
                 whiteSpace: 'normal',
                 wordBreak: 'break-word',
                 lineHeight: 1.35,
