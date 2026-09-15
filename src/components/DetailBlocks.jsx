@@ -72,21 +72,8 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
     ];
   }
 
-  // 기본 빈 블록 1개: 체크리스트 기본 생성
-  return [
-    {
-      id: `chk_init_${Date.now()}`,
-      type: 'checklist',
-      title: '체크리스트',
-      items: [
-        {
-          id: `item_${Date.now()}_0`,
-          text: '',
-          completed: false
-        }
-      ]
-    }
-  ];
+  // 기본 상세 내용이 없을 때는 빈 블록 배열 반환 (자동 생성 방지)
+  return [];
 };
 
 /**
@@ -1163,7 +1150,30 @@ export const DetailBlocksManager = ({
         paddingRight: '1px'
       }}
     >
-      {blocks.map((block, idx) => {
+      {blocks.length === 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '36px 16px',
+            color: '#94A3B8',
+            fontSize: '13px',
+            textAlign: 'center',
+            backgroundColor: '#F8FAFC',
+            borderRadius: '8px',
+            border: '1px dashed #CBD5E1',
+            margin: '8px 0'
+          }}
+        >
+          <span style={{ fontWeight: 500, color: '#64748B' }}>등록된 상세 내용이 없습니다.</span>
+          <span style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
+            우측 상단의 <b>[+ 텍스트]</b> 또는 <b>[+ 체크]</b> 버튼을 눌러 내용을 추가해보세요.
+          </span>
+        </div>
+      ) : (
+        blocks.map((block, idx) => {
         if (block.type === 'checklist') {
           const isEditingTitle = editingChecklistTitleId === block.id;
           const items = Array.isArray(block.items) && block.items.length > 0
@@ -2029,7 +2039,8 @@ export const DetailBlocksManager = ({
             )}
           </div>
         );
-      })}
+      })
+      )}
 
       {/* 블록 3점 메뉴 (Stacking Context 및 z-index 잘림 방지를 위해 document.body에 Portal 렌더링) */}
       {openBlockMenuId && openBlockMenuPos && activeMenuBlock && typeof document !== 'undefined' && createPortal(

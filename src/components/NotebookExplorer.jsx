@@ -1889,32 +1889,18 @@ export default function NotebookExplorer() {
 
   const handleAddChecklist = async () => {
     if (!activeItem || !newChecklistText.trim()) return;
-    const defaultCheckBlocks = [
-      {
-        id: `chk_${Date.now()}_0`,
-        type: 'checklist',
-        title: '체크리스트',
-        items: [
-          {
-            id: `item_${Date.now()}_0`,
-            text: '',
-            completed: false
-          }
-        ]
-      }
-    ];
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
       completed: false,
       detail: '',
-      detailBlocks: defaultCheckBlocks
+      detailBlocks: []
     };
     const updated = [...baseChecklists, newItem];
     setNewChecklistText('');
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
-    setChecklistDetailBlocks(defaultCheckBlocks);
+    setChecklistDetailBlocks([]);
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -1950,26 +1936,12 @@ export default function NotebookExplorer() {
 
   const handleAddChecklistToGroup = async (sectionId) => {
     if (!activeItem || !sectionId) return;
-    const defaultCheckBlocks = [
-      {
-        id: `chk_${Date.now()}_0`,
-        type: 'checklist',
-        title: '체크리스트',
-        items: [
-          {
-            id: `item_${Date.now()}_0`,
-            text: '',
-            completed: false
-          }
-        ]
-      }
-    ];
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: '',
       completed: false,
       detail: '',
-      detailBlocks: defaultCheckBlocks
+      detailBlocks: []
     };
 
     const secIdx = baseChecklists.findIndex((c) => c.id === sectionId);
@@ -1996,7 +1968,7 @@ export default function NotebookExplorer() {
     }
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
-    setChecklistDetailBlocks(defaultCheckBlocks);
+    setChecklistDetailBlocks([]);
     setEditingCheckId(newItem.id);
     setEditingCheckText('');
     setEditingCheckTag('');
