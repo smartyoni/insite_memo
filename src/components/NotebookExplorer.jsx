@@ -1863,6 +1863,7 @@ export default function NotebookExplorer() {
   // Checklist Handlers
   const handleToggleChecklist = async (checkId) => {
     if (!activeItem || isItemInTrash) return;
+    recordWorkLocation();
     if (checkId === '__main__') {
       try {
         await updateDoc(doc(db, 'items', activeItem.id), {
@@ -1889,6 +1890,7 @@ export default function NotebookExplorer() {
 
   const handleAddChecklist = async () => {
     if (!activeItem || !newChecklistText.trim()) return;
+    recordWorkLocation();
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: newChecklistText.trim(),
@@ -1913,6 +1915,7 @@ export default function NotebookExplorer() {
 
   const handleAddChecklistSection = async () => {
     if (!activeItem || !newChecklistText.trim()) return;
+    recordWorkLocation();
     const newSection = {
       id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       isSection: true,
@@ -1936,6 +1939,7 @@ export default function NotebookExplorer() {
 
   const handleAddChecklistToGroup = async (sectionId) => {
     if (!activeItem || !sectionId) return;
+    recordWorkLocation();
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       text: '',
@@ -2336,6 +2340,7 @@ export default function NotebookExplorer() {
   };
 
   const handleSaveChecklistDetail = async (checkId, blocksToSave) => {
+    recordWorkLocation();
     const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
     const plainText = blocksToPlainText(targetBlocks);
     if (checkId === '__main__') {
@@ -2379,6 +2384,7 @@ export default function NotebookExplorer() {
 
   const handleAddNewTextBlock = () => {
     if (!selectedChecklistId) return;
+    recordWorkLocation();
     const newBlockId = `b_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newBlock = {
       id: newBlockId,
@@ -2393,6 +2399,7 @@ export default function NotebookExplorer() {
 
   const handleAddNewChecklistBlock = () => {
     if (!selectedChecklistId) return;
+    recordWorkLocation();
     const newBlockId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newBlock = {
       id: newBlockId,
@@ -2861,70 +2868,97 @@ export default function NotebookExplorer() {
     }
   };
 
-  // ---------------- Global Navigation History Tracker (전역 직전 위치 추적) ----------------
-  useEffect(() => {
-    if (isNavigatingBackRef.current) {
-      isNavigatingBackRef.current = false;
-      lastNavLocationRef.current = {
-        tab: activeMainTab,
-        catId: selectedCategoryId,
-        itemId: selectedItemId,
-        mobileView: isMobile ? mobileView : null
-      };
-      return;
-    }
+  // ---------------- Global Work History Tracker (실제 작업 위치 추적) ----------------
+  const recordWorkLocation = (overrideLoc = null) => {
+    const tab = overrideLoc?.tab || activeMainTab;
+    const catId = overrideLoc?.catId || selectedCategoryId;
+    const itemId = overrideLoc?.itemId || selectedItemId;
+    const targetItem = items.find(i => i.id === itemId) || activeItem;
+    const itemTitle = overrideLoc?.itemTitle || targetItem?.title || (catId === 'quick_memo' ? '퀵메모' : '작업 메모');
+    const mobView = isMobile ? (overrideLoc?.mobileView || mobileView || 'detail') : null;
 
-    const currentLoc = {
-      tab: activeMainTab,
-      catId: selectedCategoryId,
-      itemId: selectedItemId,
-      mobileView: isMobile ? mobileView : null
+    if (!catId && !itemId) return;
+
+    const newLoc = {
+      tab,
+      catId,
+      itemId,
+      itemTitle,
+      mobileView: mobView,
+      timestamp: Date.now()
     };
 
-    if (!lastNavLocationRef.current) {
-      lastNavLocationRef.current = currentLoc;
-      return;
-    }
+    setNavHistory((prevStack) => {
+      if (prevStack.length > 0) {
+        const last = prevStack[prevStack.length - 1];
+        if (last.tab === newLoc.tab && last.catId === newLoc.catId && last.itemId === newLoc.itemId) {
+          const updated = [...prevStack];
+          updated[updated.length - 1] = newLoc;
+          return updated;
+        }
+      }
+      const nextStack = [...prevStack, newLoc];
+      return nextStack.length > 30 ? nextStack.slice(nextStack.length - 30) : nextStack;
+    });
+  };
 
-    const prev = lastNavLocationRef.current;
-    const isDifferent =
-      prev.tab !== currentLoc.tab ||
-      prev.catId !== currentLoc.catId ||
-      prev.itemId !== currentLoc.itemId;
+  const previousWorkTarget = React.useMemo(() => {
+    if (navHistory.length === 0) return null;
+    const last = navHistory[navHistory.length - 1];
+    const isCurrent =
+      last.tab === activeMainTab &&
+      last.catId === selectedCategoryId &&
+      last.itemId === selectedItemId;
 
-    if (isDifferent) {
-      setNavHistory((prevStack) => {
-        const nextStack = [...prevStack, prev];
-        return nextStack.length > 30 ? nextStack.slice(nextStack.length - 30) : nextStack;
-      });
-      lastNavLocationRef.current = currentLoc;
+    if (isCurrent) {
+      return navHistory.length > 1 ? navHistory[navHistory.length - 2] : null;
     }
-  }, [activeMainTab, selectedCategoryId, selectedItemId, isMobile, mobileView]);
+    return last;
+  }, [navHistory, activeMainTab, selectedCategoryId, selectedItemId]);
 
   const handleReturnPrevious = () => {
-    if (navHistory.length === 0) return;
+    if (!previousWorkTarget) return;
 
-    const targetLoc = navHistory[navHistory.length - 1];
-    setNavHistory((prev) => prev.slice(0, -1));
-    isNavigatingBackRef.current = true;
+    setNavHistory((prevStack) => {
+      if (prevStack.length === 0) return prevStack;
 
-    if (targetLoc.tab && targetLoc.tab !== activeMainTab) {
-      setActiveMainTab(targetLoc.tab);
-    }
-    if (targetLoc.catId) {
-      setSelectedCategoryId(targetLoc.catId);
-    }
-    setSelectedItemId(targetLoc.itemId || null);
+      let nextStack = [...prevStack];
+      let targetLoc = nextStack[nextStack.length - 1];
 
-    if (isMobile) {
-      if (targetLoc.mobileView) {
-        setMobileView(targetLoc.mobileView);
-      } else if (targetLoc.itemId) {
-        setMobileView('detail');
-      } else {
-        setMobileView('items');
+      const isCurrent =
+        targetLoc.tab === activeMainTab &&
+        targetLoc.catId === selectedCategoryId &&
+        targetLoc.itemId === selectedItemId;
+
+      if (isCurrent) {
+        nextStack.pop(); // 현재 작업 위치 제거
+        if (nextStack.length === 0) return [];
+        targetLoc = nextStack[nextStack.length - 1];
       }
-    }
+
+      nextStack.pop(); // 복귀할 대상 위치 제거
+
+      isNavigatingBackRef.current = true;
+      if (targetLoc.tab && targetLoc.tab !== activeMainTab) {
+        setActiveMainTab(targetLoc.tab);
+      }
+      if (targetLoc.catId) {
+        setSelectedCategoryId(targetLoc.catId);
+      }
+      setSelectedItemId(targetLoc.itemId || null);
+
+      if (isMobile) {
+        if (targetLoc.mobileView) {
+          setMobileView(targetLoc.mobileView);
+        } else if (targetLoc.itemId) {
+          setMobileView('detail');
+        } else {
+          setMobileView('items');
+        }
+      }
+
+      return nextStack;
+    });
   };
 
   // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
@@ -3004,6 +3038,12 @@ export default function NotebookExplorer() {
           checklists: updatedChecklists,
           updatedAt: serverTimestamp()
         });
+        recordWorkLocation({
+          tab: 'explorer',
+          catId: 'quick_memo',
+          itemId: existingTodayNote.id,
+          itemTitle: `퀵메모 (${todayStr})`
+        });
       } else {
         // 오늘 첫 퀵메모 노트 신규 생성
         const newRef = doc(collection(db, 'items'));
@@ -3018,6 +3058,12 @@ export default function NotebookExplorer() {
           order: -Date.now(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
+        });
+        recordWorkLocation({
+          tab: 'explorer',
+          catId: 'quick_memo',
+          itemId: newRef.id,
+          itemTitle: `퀵메모 (${todayStr})`
         });
       }
 
@@ -3136,6 +3182,12 @@ export default function NotebookExplorer() {
       setIsAddingItem(false);
       setNewItemTitle('');
       navigateToDetail(newRef.id);
+      recordWorkLocation({
+        tab: activeMainTab,
+        catId: targetCatId,
+        itemId: newRef.id,
+        itemTitle: trimmedTitle
+      });
       setDraftCategoryId(targetCatId);
       setDraftTitle(trimmedTitle);
       setDraftBody('');
@@ -3955,6 +4007,7 @@ export default function NotebookExplorer() {
 
   const handleSaveDetail = async () => {
     if (!selectedItemId) return;
+    recordWorkLocation();
     try {
       const blocksPlainText = blocksToPlainText(checklistDetailBlocks);
       const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : (blocksPlainText || draftBody);
@@ -4226,7 +4279,7 @@ export default function NotebookExplorer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', marginTop: '2px' }}>
         <button
           type="button"
-          disabled={navHistory.length === 0}
+          disabled={!previousWorkTarget}
           onClick={handleReturnPrevious}
           style={{
             flex: 1,
@@ -4234,19 +4287,19 @@ export default function NotebookExplorer() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '6px 2px',
-            backgroundColor: navHistory.length > 0 ? '#FEF3C7' : '#F1F5F9',
-            border: `1px solid ${navHistory.length > 0 ? '#F59E0B' : '#E2E8F0'}`,
+            backgroundColor: previousWorkTarget ? '#FEF3C7' : '#F1F5F9',
+            border: `1px solid ${previousWorkTarget ? '#F59E0B' : '#E2E8F0'}`,
             borderRadius: '6px',
-            color: navHistory.length > 0 ? '#92400E' : '#94A3B8',
+            color: previousWorkTarget ? '#92400E' : '#94A3B8',
             fontSize: '12px',
-            fontWeight: navHistory.length > 0 ? 700 : 500,
-            cursor: navHistory.length > 0 ? 'pointer' : 'not-allowed',
-            opacity: navHistory.length > 0 ? 1 : 0.6,
-            boxShadow: navHistory.length > 0 ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
+            fontWeight: previousWorkTarget ? 700 : 500,
+            cursor: previousWorkTarget ? 'pointer' : 'not-allowed',
+            opacity: previousWorkTarget ? 1 : 0.6,
+            boxShadow: previousWorkTarget ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap'
           }}
-          title={navHistory.length > 0 ? '직전 위치로 이동' : '이전 위치 없음'}
+          title={previousWorkTarget ? `이전 작업 위치로 이동: ${previousWorkTarget.itemTitle || '메모'}` : '이전 작업 위치 없음'}
         >
           <span>이전</span>
         </button>
