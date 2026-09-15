@@ -4140,7 +4140,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
             <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0 }} />
             <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 600, color: '#1E293B' }}>
-              {currentUser.email}
+              관리자 ({currentUser.email ? `${currentUser.email.slice(0, 3)}***@${currentUser.email.split('@')[1] || ''}` : '인증됨'})
             </span>
           </div>
           {onLogout && (

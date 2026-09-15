@@ -19,7 +19,7 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
       const user = result.user;
       if (user && user.email !== ADMIN_EMAIL) {
         await signOut(auth);
-        setErrorMsg(`접근 권한이 없는 계정입니다 (${user.email}). 관리자 계정(${ADMIN_EMAIL})으로 로그인해 주세요.`);
+        setErrorMsg('접근 권한이 없는 계정입니다. 승인된 관리자 계정으로 로그인해 주세요.');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -120,7 +120,7 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               <div style={{ fontWeight: 700, marginBottom: '2px' }}>접근 권한 제한 안내</div>
-              <div>{errorMsg || `로그인하신 계정(${unauthorizedEmail})은 권한이 없습니다. 등록된 관리자(${ADMIN_EMAIL}) 계정으로 로그인해 주세요.`}</div>
+              <div>{errorMsg || '로그인하신 계정은 접근 권한이 없습니다. 승인된 관리자 계정으로 로그인해 주세요.'}</div>
             </div>
           </div>
         )}
@@ -130,7 +130,7 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '5px 12px',
+            padding: '5px 14px',
             backgroundColor: '#F8FAFC',
             border: '1px solid #E2E8F0',
             borderRadius: '20px',
@@ -140,7 +140,7 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
           }}
         >
           <Lock size={12} color="#059669" />
-          <span>보안 잠금: <b>{ADMIN_EMAIL}</b></span>
+          <span>보안 잠금: <b>인가된 관리자 전용</b></span>
         </div>
 
         <button
