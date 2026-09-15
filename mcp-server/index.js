@@ -56,7 +56,7 @@ const scopeNameMap = {
   clipboard: "계약",
   balance: "앱개발",
   clip: "북마크",
-  office: "사무실",
+  office: "정보",
   ad: "광고",
   template2: "템플릿2",
   experience: "경험"

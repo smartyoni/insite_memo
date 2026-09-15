@@ -421,7 +421,7 @@ export default function NotebookExplorer() {
       clipboard: '계약',
       balance: '앱개발',
       clip: '북마크',
-      office: '사무실',
+      office: '정보',
       ad: '광고',
       template2: '템플릿',
       experience: '경험'
@@ -3963,12 +3963,12 @@ export default function NotebookExplorer() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Top Row: 노트, 블로그, 사무실, 앱개발, 경험 */}
+        {/* Top Row: 노트, 블로그, 정보, 앱개발, 경험 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
             { id: 'explorer', label: '노트' },
             { id: 'blog', label: '블로그' },
-            { id: 'office', label: '사무실' },
+            { id: 'office', label: '정보' },
             { id: 'balance', label: '앱개발' },
             { id: 'experience', label: '경험' }
           ].map((tab) => {
