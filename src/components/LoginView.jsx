@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { ShieldCheck, Lock, AlertCircle } from 'lucide-react';
 
@@ -9,11 +9,51 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
+  // 모바일 리다이렉트 로그인 후 돌아왔을 때 결과 확인
+  useEffect(() => {
+    let isMounted = true;
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!isMounted || !result || !result.user) return;
+        const user = result.user;
+        if (user.email !== ADMIN_EMAIL) {
+          await signOut(auth);
+          setErrorMsg('접근 권한이 없는 계정입니다. 승인된 관리자 계정으로 로그인해 주세요.');
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error('Redirect login error:', err);
+        setErrorMsg(err.message || '로그인 중 오류가 발생했습니다.');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setErrorMsg(null);
     if (onClearUnauthorized) onClearUnauthorized();
 
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768;
+
+    if (isMobile) {
+      // 모바일 환경: 브라우저 팝업 차단 방지를 위해 리다이렉트 방식 실행
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (err) {
+        console.error('Mobile redirect error:', err);
+        setErrorMsg('모바일 로그인 페이지로 이동 중 오류가 발생했습니다.');
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 데스크톱 환경: 팝업 방식 시도, 실패 시 리다이렉트 폴백
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
@@ -23,7 +63,14 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
       }
     } catch (err) {
       console.error('Login error:', err);
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr) {
+          setErrorMsg('로그인 페이지로 이동 중 오류가 발생했습니다.');
+        }
+      } else if (err.code === 'auth/popup-closed-by-user') {
         setErrorMsg('로그인 창이 닫혔습니다. 다시 시도해 주세요.');
       } else {
         setErrorMsg(err.message || '로그인 중 오류가 발생했습니다.');
