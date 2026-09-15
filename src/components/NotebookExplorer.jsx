@@ -416,7 +416,7 @@ export default function NotebookExplorer() {
 
   const getCategoryPath = (categoryId) => {
     const scopeMap = {
-      explorer: '노트',
+      explorer: 'ME',
       blog: '블로그',
       clipboard: '계약',
       balance: '앱개발',
@@ -427,7 +427,7 @@ export default function NotebookExplorer() {
       experience: '경험'
     };
     if (categoryId === 'quick_memo') {
-      return '노트 > 퀵메모';
+      return 'ME > 퀵메모';
     }
     if (LEGACY_INBOX_IDS.includes(categoryId)) {
       return 'In-box';
@@ -445,7 +445,7 @@ export default function NotebookExplorer() {
       pathSegments.unshift(parent.name);
       curr = parent;
     }
-    const scopeName = scopeMap[found.scope || 'explorer'] || '노트';
+    const scopeName = scopeMap[found.scope || 'explorer'] || 'ME';
     return `${scopeName} > ${pathSegments.join(' > ')}`;
   };
   const getCategoryBadgeName = getCategoryPath;
@@ -3966,13 +3966,14 @@ export default function NotebookExplorer() {
         {/* Top Row: 노트, 블로그, 정보, 앱개발, 경험 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
           {[
-            { id: 'explorer', label: '노트' },
+            { id: 'explorer', label: 'ME' },
             { id: 'blog', label: '블로그' },
             { id: 'office', label: '정보' },
             { id: 'balance', label: '앱개발' },
             { id: 'experience', label: '경험' }
           ].map((tab) => {
             const isActive = activeMainTab === tab.id;
+            const isMeTab = tab.id === 'explorer';
             return (
               <button
                 key={tab.id}
@@ -3990,7 +3991,9 @@ export default function NotebookExplorer() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                  color: isActive ? '#1E40AF' : '#1E293B',
+                  color: isMeTab
+                    ? (isActive ? '#15803D' : '#16A34A')
+                    : (isActive ? '#1E40AF' : '#1E293B'),
                   boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap'

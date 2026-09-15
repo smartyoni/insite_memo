@@ -51,7 +51,7 @@ const server = new McpServer({
 });
 
 const scopeNameMap = {
-  explorer: "노트",
+  explorer: "ME",
   blog: "블로그",
   clipboard: "계약",
   balance: "앱개발",
@@ -64,10 +64,10 @@ const scopeNameMap = {
 
 function computeCategoryPath(cat, allCategories) {
   if (cat.id === "quick_memo") {
-    return "노트 > 퀵메모";
+    return "ME > 퀵메모";
   }
   if (FIXED_INBOX_IDS.includes(cat.id)) {
-    const sName = scopeNameMap[cat.scope || "explorer"] || "노트";
+    const sName = scopeNameMap[cat.scope || "explorer"] || "ME";
     return `${sName} > In-box`;
   }
   const segments = [cat.name];
@@ -80,7 +80,7 @@ function computeCategoryPath(cat, allCategories) {
     segments.unshift(parent.name);
     curr = parent;
   }
-  const sName = scopeNameMap[cat.scope || "explorer"] || "노트";
+  const sName = scopeNameMap[cat.scope || "explorer"] || "ME";
   return `${sName} > ${segments.join(" > ")}`;
 }
 
