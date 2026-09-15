@@ -10513,7 +10513,13 @@ onClick={() => {
               </button>
               <button
                 type="button"
-                onClick={() => setIsTabSettingModalOpen(false)}
+                onClick={() => {
+                  saveMainTabs(mainTabs);
+                  setIsTabSettingModalOpen(false);
+                  setShowSavedToast(true);
+                  if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                  toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
+                }}
                 style={{
                   padding: '7px 18px',
                   borderRadius: '6px',
@@ -10525,7 +10531,7 @@ onClick={() => {
                   cursor: 'pointer'
                 }}
               >
-                완료
+                동기화 완료
               </button>
             </div>
           </div>
