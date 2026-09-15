@@ -280,6 +280,41 @@ const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990
 
 const ALL_FIXED_CATEGORY_IDS = [...FIXED_TRASH_IDS, 'quick_memo'];
 
+// Default Main Tabs configuration (9 tabs)
+export const DEFAULT_MAIN_TABS = [
+  { id: 'explorer', label: 'ME' },
+  { id: 'blog', label: '블로그' },
+  { id: 'office', label: '정보' },
+  { id: 'balance', label: '앱개발' },
+  { id: 'experience', label: '경험' },
+  { id: 'clipboard', label: '계약' },
+  { id: 'ad', label: '광고' },
+  { id: 'clip', label: '북마크' },
+  { id: 'template2', label: '템플릿' }
+];
+
+export const MAIN_TABS_STORAGE_KEY = 'explorer_main_tabs_config_v1';
+
+export const getStoredMainTabs = () => {
+  if (typeof window === 'undefined') return DEFAULT_MAIN_TABS;
+  try {
+    const raw = localStorage.getItem(MAIN_TABS_STORAGE_KEY);
+    if (!raw) return DEFAULT_MAIN_TABS;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_MAIN_TABS;
+    const validTabs = parsed.filter(t => t && t.id && DEFAULT_MAIN_TABS.some(d => d.id === t.id));
+    const savedIds = new Set(validTabs.map(t => t.id));
+    DEFAULT_MAIN_TABS.forEach(d => {
+      if (!savedIds.has(d.id)) {
+        validTabs.push({ ...d });
+      }
+    });
+    return validTabs;
+  } catch (e) {
+    return DEFAULT_MAIN_TABS;
+  }
+};
+
 const getScopeForTab = (tab) => {
   if (tab === 'blog') return 'blog';
   if (tab === 'clipboard') return 'clipboard';
@@ -407,6 +442,112 @@ export default function NotebookExplorer() {
   const [categoryContextMenu, setCategoryContextMenu] = useState(null); // { x, y, category }
   const [returnLocation, setReturnLocation] = useState(null); // { tab, categoryId, categoryName, itemId }
 
+  // Main Tabs Configuration State (Custom order & custom labels)
+  const [mainTabs, setMainTabs] = useState(() => getStoredMainTabs());
+  const [draggedTabIndex, setDraggedTabIndex] = useState(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
+  const [isTabSettingModalOpen, setIsTabSettingModalOpen] = useState(false);
+  const [editingTab, setEditingTab] = useState(null); // { id, label }
+  const [editingTabInput, setEditingTabInput] = useState('');
+  const tabLongPressTimerRef = useRef(null);
+
+  // Tab Drag & Drop handlers
+  const handleTabDragStart = (e, index) => {
+    setDraggedTabIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try {
+        e.dataTransfer.setData('text/plain', index.toString());
+      } catch (err) {}
+    }
+  };
+
+  const handleTabDragOver = (e, index) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    if (dragOverTabIndex !== index) {
+      setDragOverTabIndex(index);
+    }
+  };
+
+  const handleTabDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedTabIndex === null || draggedTabIndex === dropIndex) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+    const newTabs = [...mainTabs];
+    const [moved] = newTabs.splice(draggedTabIndex, 1);
+    newTabs.splice(dropIndex, 0, moved);
+    setMainTabs(newTabs);
+    try {
+      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
+    } catch (err) {}
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  const handleTabDragEnd = () => {
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  // Reorder tabs with arrow buttons
+  const moveTab = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= mainTabs.length) return;
+    const newTabs = [...mainTabs];
+    const temp = newTabs[index];
+    newTabs[index] = newTabs[targetIndex];
+    newTabs[targetIndex] = temp;
+    setMainTabs(newTabs);
+    try {
+      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
+    } catch (err) {}
+  };
+
+  const handleUpdateTabLabel = (id, newLabel) => {
+    const trimmed = (newLabel || '').trim();
+    if (!trimmed) return;
+    const newTabs = mainTabs.map(t => t.id === id ? { ...t, label: trimmed } : t);
+    setMainTabs(newTabs);
+    try {
+      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
+    } catch (err) {}
+    if (editingTab && editingTab.id === id) {
+      setEditingTab(null);
+      setEditingTabInput('');
+    }
+  };
+
+  const handleResetMainTabs = () => {
+    if (window.confirm('메인탭 순서와 이름을 초기 기본값으로 되돌리시겠습니까?')) {
+      setMainTabs(DEFAULT_MAIN_TABS);
+      try {
+        localStorage.removeItem(MAIN_TABS_STORAGE_KEY);
+      } catch (err) {}
+      setIsTabSettingModalOpen(false);
+      setEditingTab(null);
+    }
+  };
+
+  const handleTabTouchStart = (tab) => {
+    tabLongPressTimerRef.current = setTimeout(() => {
+      setEditingTab(tab);
+      setEditingTabInput(tab.label);
+    }, 600);
+  };
+
+  const handleTabTouchEnd = () => {
+    if (tabLongPressTimerRef.current) {
+      clearTimeout(tabLongPressTimerRef.current);
+      tabLongPressTimerRef.current = null;
+    }
+  };
+
   // Item List Sort Order State (Default: 'asc' for ascending order)
   const [itemSortOrder, setItemSortOrder] = useState('asc'); // 'asc' | 'desc'
   const [searchQuery, setSearchQuery] = useState('');
@@ -426,8 +567,14 @@ export default function NotebookExplorer() {
       template2: '템플릿',
       experience: '경험'
     };
+    (mainTabs || []).forEach(t => {
+      if (t.id && t.label) {
+        scopeMap[t.id] = t.label;
+      }
+    });
+    const meLabel = scopeMap.explorer || 'ME';
     if (categoryId === 'quick_memo') {
-      return 'ME > 퀵메모';
+      return `${meLabel} > 퀵메모`;
     }
     if (LEGACY_INBOX_IDS.includes(categoryId)) {
       return 'In-box';
@@ -445,7 +592,7 @@ export default function NotebookExplorer() {
       pathSegments.unshift(parent.name);
       curr = parent;
     }
-    const scopeName = scopeMap[found.scope || 'explorer'] || 'ME';
+    const scopeName = scopeMap[found.scope || 'explorer'] || meLabel;
     return `${scopeName} > ${pathSegments.join(' > ')}`;
   };
   const getCategoryBadgeName = getCategoryPath;
@@ -3963,30 +4110,42 @@ export default function NotebookExplorer() {
           boxSizing: 'border-box'
         }}
       >
-        {/* Top Row: 노트, 블로그, 정보, 앱개발, 경험 */}
+        {/* Top Row: 상위 5개 탭 (드래그앤드롭 및 롱프레스/우클릭 지원) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
-          {[
-            { id: 'explorer', label: 'ME' },
-            { id: 'blog', label: '블로그' },
-            { id: 'office', label: '정보' },
-            { id: 'balance', label: '앱개발' },
-            { id: 'experience', label: '경험' }
-          ].map((tab) => {
+          {mainTabs.slice(0, 5).map((tab, idx) => {
+            const index = idx;
             const isActive = activeMainTab === tab.id;
             const isMeTab = tab.id === 'explorer';
+            const isDragging = draggedTabIndex === index;
+            const isOver = dragOverTabIndex === index;
+
             return (
               <button
                 key={tab.id}
                 type="button"
+                draggable
+                onDragStart={(e) => handleTabDragStart(e, index)}
+                onDragOver={(e) => handleTabDragOver(e, index)}
+                onDrop={(e) => handleTabDrop(e, index)}
+                onDragEnd={handleTabDragEnd}
+                onTouchStart={() => handleTabTouchStart(tab)}
+                onTouchEnd={handleTabTouchEnd}
+                onTouchMove={handleTabTouchEnd}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setEditingTab(tab);
+                  setEditingTabInput(tab.label);
+                }}
                 onClick={() => handleTabSwitch(tab.id)}
+                title={`${tab.label} (드래그: 순서 이동, 우클릭/길게 누름: 이름 변경)`}
                 style={{
                   flex: 1,
                   padding: '6px 0',
                   borderRadius: '6px',
                   fontSize: '12px',
                   fontWeight: isActive ? 800 : 700,
-                  border: 'none',
-                  cursor: 'pointer',
+                  border: isOver ? '2px dashed #2563EB' : 'none',
+                  cursor: isDragging ? 'grabbing' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -3996,7 +4155,9 @@ export default function NotebookExplorer() {
                     : (isActive ? '#1E40AF' : '#1E293B'),
                   boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
                   transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  opacity: isDragging ? 0.4 : 1,
+                  userSelect: 'none'
                 }}
               >
                 <span>{tab.label}</span>
@@ -4005,52 +4166,87 @@ export default function NotebookExplorer() {
           })}
         </div>
 
-        {/* Bottom Row: 계약, 광고, 북마크, 템플릿, 빈 탭 (5x2 그리드 형태 유지) */}
+        {/* Bottom Row: 나머지 4개 탭 + ⚙️ 탭 관리 버튼 (5x2 그리드 완벽 유지) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
-          {[
-            { id: 'clipboard', label: '계약' },
-            { id: 'ad', label: '광고' },
-            { id: 'clip', label: '북마크' },
-            { id: 'template2', label: '템플릿' }
-          ].map((tab) => {
+          {mainTabs.slice(5).map((tab, idx) => {
+            const index = 5 + idx;
             const isActive = activeMainTab === tab.id;
+            const isMeTab = tab.id === 'explorer';
+            const isDragging = draggedTabIndex === index;
+            const isOver = dragOverTabIndex === index;
+
             return (
               <button
                 key={tab.id}
                 type="button"
+                draggable
+                onDragStart={(e) => handleTabDragStart(e, index)}
+                onDragOver={(e) => handleTabDragOver(e, index)}
+                onDrop={(e) => handleTabDrop(e, index)}
+                onDragEnd={handleTabDragEnd}
+                onTouchStart={() => handleTabTouchStart(tab)}
+                onTouchEnd={handleTabTouchEnd}
+                onTouchMove={handleTabTouchEnd}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setEditingTab(tab);
+                  setEditingTabInput(tab.label);
+                }}
                 onClick={() => handleTabSwitch(tab.id)}
+                title={`${tab.label} (드래그: 순서 이동, 우클릭/길게 누름: 이름 변경)`}
                 style={{
                   flex: 1,
                   padding: '6px 0',
                   borderRadius: '6px',
                   fontSize: '12px',
                   fontWeight: isActive ? 800 : 700,
-                  border: 'none',
-                  cursor: 'pointer',
+                  border: isOver ? '2px dashed #2563EB' : 'none',
+                  cursor: isDragging ? 'grabbing' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: isActive ? '#FFFFFF' : 'transparent',
-                  color: isActive ? '#1E40AF' : '#1E293B',
+                  color: isMeTab
+                    ? (isActive ? '#15803D' : '#16A34A')
+                    : (isActive ? '#1E40AF' : '#1E293B'),
                   boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
                   transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  opacity: isDragging ? 0.4 : 1,
+                  userSelect: 'none'
                 }}
               >
                 <span>{tab.label}</span>
               </button>
             );
           })}
-          {/* 5x2 형태 유지를 위한 빈 탭 */}
-          <div
+          {/* 10번째 슬롯: 탭 설정 및 순서/이름 관리 버튼 */}
+          <button
+            type="button"
+            onClick={() => setIsTabSettingModalOpen(true)}
+            title="메인탭 순서 변경 및 이름 설정"
             style={{
               flex: 1,
               padding: '6px 0',
-              pointerEvents: 'none',
-              visibility: 'hidden'
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              border: '1px dashed #94A3B8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '2px',
+              backgroundColor: isTabSettingModalOpen ? '#CBD5E1' : '#E2E8F0',
+              color: '#475569',
+              boxShadow: 'none',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap'
             }}
-            aria-hidden="true"
-          />
+          >
+            <Settings size={12} />
+            <span>설정</span>
+          </button>
         </div>
       </div>
 
@@ -10032,6 +10228,320 @@ onClick={() => {
                 닫기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Tabs Setting Modal */}
+      {isTabSettingModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          onClick={() => setIsTabSettingModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              width: '100%',
+              maxWidth: '440px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                borderBottom: '1px solid #E2E8F0',
+                backgroundColor: '#F8FAFC'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Settings size={18} color="#2563EB" />
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>메인탭 순서 및 이름 설정</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTabSettingModalOpen(false)}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Guide Text */}
+            <div style={{ padding: '10px 18px', backgroundColor: '#EFF6FF', borderBottom: '1px solid #DBEAFE', fontSize: '12px', color: '#1E40AF', lineHeight: '1.4' }}>
+              💡 화살표(▲/▼)로 탭 순서를 변경하고, 입력창에서 이름을 직접 수정할 수 있습니다. 메인 화면에서도 마우스로 끌어다 놓아 순서를 변경할 수 있습니다.
+            </div>
+
+            {/* Tab List */}
+            <div style={{ padding: '12px 18px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+              {mainTabs.map((tab, idx) => (
+                <div
+                  key={tab.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', width: '20px', textAlign: 'center' }}>
+                    {idx + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={tab.label}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const newTabs = mainTabs.map((t, i) => i === idx ? { ...t, label: val } : t);
+                      setMainTabs(newTabs);
+                      try {
+                        localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
+                      } catch (err) {}
+                    }}
+                    placeholder="탭 이름"
+                    style={{
+                      flex: 1,
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      backgroundColor: '#FFFFFF',
+                      outline: 'none',
+                      color: '#1E293B'
+                    }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveTab(idx, -1)}
+                      title="위로 이동"
+                      style={{
+                        padding: '5px',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '4px',
+                        backgroundColor: idx === 0 ? '#F1F5F9' : '#FFFFFF',
+                        color: idx === 0 ? '#CBD5E1' : '#475569',
+                        cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <ArrowUp size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === mainTabs.length - 1}
+                      onClick={() => moveTab(idx, 1)}
+                      title="아래로 이동"
+                      style={{
+                        padding: '5px',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '4px',
+                        backgroundColor: idx === mainTabs.length - 1 ? '#F1F5F9' : '#FFFFFF',
+                        color: idx === mainTabs.length - 1 ? '#CBD5E1' : '#475569',
+                        cursor: idx === mainTabs.length - 1 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <ArrowDown size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 18px',
+                borderTop: '1px solid #E2E8F0',
+                backgroundColor: '#F8FAFC'
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleResetMainTabs}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #EF4444',
+                  backgroundColor: '#FEF2F2',
+                  color: '#DC2626',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <RotateCcw size={13} />
+                <span>기본값 초기화</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTabSettingModalOpen(false)}
+                style={{
+                  padding: '7px 18px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                완료
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Single Tab Label Edit Modal (Long-press or Right-click) */}
+      {editingTab && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+          onClick={() => {
+            setEditingTab(null);
+            setEditingTabInput('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              width: '100%',
+              maxWidth: '320px',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>탭 이름 변경</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingTab(null);
+                  setEditingTabInput('');
+                }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#64748B' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUpdateTabLabel(editingTab.id, editingTabInput);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              <input
+                type="text"
+                autoFocus
+                value={editingTabInput}
+                onChange={(e) => setEditingTabInput(e.target.value)}
+                placeholder="탭 이름을 입력하세요"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTab(null);
+                    setEditingTabInput('');
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  저장
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
