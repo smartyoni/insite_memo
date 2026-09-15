@@ -401,7 +401,7 @@ function getItemTimestamp(item) {
   return 0;
 }
 
-export default function NotebookExplorer() {
+export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Nav Location Persistence: Retrieve saved location
   const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
 
@@ -4121,6 +4121,51 @@ export default function NotebookExplorer() {
       flexDirection: 'column',
       gap: '4px'
     }}>
+      {/* User Profile & Logout Bar */}
+      {currentUser && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '3px 8px',
+            backgroundColor: '#F1F5F9',
+            borderRadius: '6px',
+            border: '1px solid #E2E8F0',
+            fontSize: '11px',
+            color: '#475569',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0 }} />
+            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 600, color: '#1E293B' }}>
+              {currentUser.email}
+            </span>
+          </div>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              style={{
+                padding: '2px 7px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748B',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              title="로그아웃"
+            >
+              로그아웃
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Function Segmented Tabs (2 Rows x 4 Columns) */}
       <div
         style={{
