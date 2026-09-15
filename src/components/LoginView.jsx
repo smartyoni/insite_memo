@@ -60,7 +60,8 @@ export default function LoginView({ unauthorizedEmail, onClearUnauthorized }) {
       } else if (err.code === 'auth/popup-closed-by-user') {
         setErrorMsg('로그인 창이 닫혔습니다. 다시 시도해 주세요.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setErrorMsg('인증되지 않은 도메인입니다. Firebase 콘솔 설정을 확인해 주세요.');
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        setErrorMsg(`인증되지 않은 도메인입니다 [${currentHost}]. Firebase 콘솔의 승인된 도메인 목록에 '${currentHost}'를 추가해 주세요.`);
       } else {
         setErrorMsg(`로그인 오류 (${err.code || '오류'}): ${err.message || '로그인 중 오류가 발생했습니다.'}`);
       }
