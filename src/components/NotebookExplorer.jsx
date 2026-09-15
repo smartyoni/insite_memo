@@ -451,6 +451,46 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [editingTabInput, setEditingTabInput] = useState('');
   const tabLongPressTimerRef = useRef(null);
 
+  // Save main tabs to both localStorage and Firestore cloud
+  const saveMainTabs = async (newTabs) => {
+    setMainTabs(newTabs);
+    try {
+      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
+    } catch (err) {}
+    try {
+      await setDoc(doc(db, 'settings', 'mainTabs'), {
+        tabs: newTabs,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error syncing main tabs to Firestore:', err);
+    }
+  };
+
+  // Real-time Cloud Sync for Main Tabs
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'mainTabs'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (Array.isArray(data.tabs) && data.tabs.length > 0) {
+          setMainTabs(data.tabs);
+          try {
+            localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(data.tabs));
+          } catch (err) {}
+        }
+      } else {
+        // 최초 1회: 로컬에 설정된 탭을 Firestore 클라우드에 자동 백업/동기화
+        const currentStored = getStoredMainTabs();
+        setDoc(doc(db, 'settings', 'mainTabs'), {
+          tabs: currentStored,
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch((e) => console.error('Initial mainTabs cloud save error:', e));
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
   // Tab Drag & Drop handlers
   const handleTabDragStart = (e, index) => {
     setDraggedTabIndex(index);
@@ -482,10 +522,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const newTabs = [...mainTabs];
     const [moved] = newTabs.splice(draggedTabIndex, 1);
     newTabs.splice(dropIndex, 0, moved);
-    setMainTabs(newTabs);
-    try {
-      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
-    } catch (err) {}
+    saveMainTabs(newTabs);
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
   };
@@ -503,20 +540,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const temp = newTabs[index];
     newTabs[index] = newTabs[targetIndex];
     newTabs[targetIndex] = temp;
-    setMainTabs(newTabs);
-    try {
-      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
-    } catch (err) {}
+    saveMainTabs(newTabs);
   };
 
   const handleUpdateTabLabel = (id, newLabel) => {
     const trimmed = (newLabel || '').trim();
     if (!trimmed) return;
     const newTabs = mainTabs.map(t => t.id === id ? { ...t, label: trimmed } : t);
-    setMainTabs(newTabs);
-    try {
-      localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
-    } catch (err) {}
+    saveMainTabs(newTabs);
     if (editingTab && editingTab.id === id) {
       setEditingTab(null);
       setEditingTabInput('');
@@ -525,10 +556,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   const handleResetMainTabs = () => {
     if (window.confirm('메인탭 순서와 이름을 초기 기본값으로 되돌리시겠습니까?')) {
-      setMainTabs(DEFAULT_MAIN_TABS);
-      try {
-        localStorage.removeItem(MAIN_TABS_STORAGE_KEY);
-      } catch (err) {}
+      saveMainTabs(DEFAULT_MAIN_TABS);
       setIsTabSettingModalOpen(false);
       setEditingTab(null);
     }
@@ -10393,10 +10421,7 @@ onClick={() => {
                     onChange={(e) => {
                       const val = e.target.value;
                       const newTabs = mainTabs.map((t, i) => i === idx ? { ...t, label: val } : t);
-                      setMainTabs(newTabs);
-                      try {
-                        localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(newTabs));
-                      } catch (err) {}
+                      saveMainTabs(newTabs);
                     }}
                     placeholder="탭 이름"
                     style={{
