@@ -24,6 +24,7 @@ import {
   FolderPlus,
   FolderInput,
   ChevronDown,
+  ChevronUp,
   FileText,
   Clipboard,
   ChevronRight,
