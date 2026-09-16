@@ -5511,13 +5511,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               {/* Standard Note Items List for Pane 2 */}
               <>
                 {!isMobile ? (
-                  <div style={styles.pane2Header}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={styles.pane2Title}>
+                  <div style={{
+                    ...styles.pane2Header,
+                    padding: '0 8px 0 14px',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: 1 }}>
+                      <span style={{
+                        ...styles.pane2Title,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
                         {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                       {isTrashSelected ? (
                         displayedItems.length > 0 && (
                           <button
@@ -5548,67 +5557,81 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           </button>
                         )
                       ) : (
-                        <>
-                          {!isTrashSelected && !isSearchActive && selectedCategoryId !== 'quick_memo' && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '6px',
+                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                            overflow: 'hidden',
+                            height: '27px'
+                          }}
+                        >
+                          {!isSearchActive && selectedCategoryId !== 'quick_memo' && (
                             <button
+                              type="button"
                               onClick={() => {
-                                setIsAddingItemGroup(true);
+                                setIsAddingItemGroup((prev) => !prev);
                                 setNewItemGroupName('');
                               }}
                               style={{
-                                ...styles.iconBtnLight,
-                                padding: '4px 7px',
-                                display: 'flex',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                fontSize: '11px',
-                                color: '#1E40AF',
-                                backgroundColor: '#EFF6FF',
-                                border: '1px solid #BFDBFE'
+                                justifyContent: 'center',
+                                padding: '0 9px',
+                                height: '100%',
+                                border: 'none',
+                                borderRight: '1px solid #E2E8F0',
+                                backgroundColor: isAddingItemGroup ? '#EFF6FF' : 'transparent',
+                                color: isAddingItemGroup ? '#2563EB' : '#334155',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
                               }}
                               title="새 그룹 추가"
                             >
-                              <FolderPlus size={14} color="#2563EB" />
-                              <span>+그룹</span>
+                              그룹
                             </button>
                           )}
                           <button
+                            type="button"
                             onClick={handleAddItem}
-                            style={styles.iconBtnLight}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 10px',
+                              height: '100%',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#2563EB',
+                              fontSize: '15px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
                             title="메모 추가"
                           >
-                            <Plus size={18} />
+                            +
                           </button>
-                        </>
+                        </div>
                       )}
-                      <button
-                        onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                        style={{
-                          ...styles.iconBtnLight,
-                          padding: '4px 6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          fontSize: '11px',
-                          color: '#4B5563'
-                        }}
-                        title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
-                      >
-                        {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                        <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-                      </button>
                     </div>
                   </div>
                 ) : (
                   <div style={{
                     height: '52px',
-                    padding: '0 12px 0 16px',
+                    padding: '0 8px 0 12px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     borderBottom: '1px solid #E2E8F0',
                     backgroundColor: '#F8FAFC',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    gap: '6px'
                   }}>
                     <button
                       onClick={navigateBack}
@@ -5617,42 +5640,19 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       <ArrowLeft size={16} />
                       <span>카테고리</span>
                     </button>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: '#1E293B',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                      textAlign: 'center'
+                    }}>
                       {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {!isTrashSelected && !isSearchActive && selectedCategoryId !== 'quick_memo' && (
-                        <button
-                          onClick={() => {
-                            setIsAddingItemGroup(true);
-                            setNewItemGroupName('');
-                          }}
-                          style={{
-                            ...styles.iconBtnLight,
-                            padding: '4px 6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            fontSize: '11px',
-                            color: '#1E40AF',
-                            backgroundColor: '#EFF6FF',
-                            border: '1px solid #BFDBFE'
-                          }}
-                          title="새 그룹 추가"
-                        >
-                          <FolderPlus size={13} color="#2563EB" />
-                          <span>그룹</span>
-                        </button>
-                      )}
-                      {!isTrashSelected && (
-                        <button
-                          onClick={handleAddItem}
-                          style={styles.iconBtnLight}
-                          title="목록 추가"
-                        >
-                          <Plus size={18} />
-                        </button>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                       {isTrashSelected && displayedItems.length > 0 && (
                         <button
                           onClick={() => {
@@ -5681,22 +5681,67 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           <span>비우기</span>
                         </button>
                       )}
-                      <button
-                        onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                        style={{
-                          ...styles.iconBtnLight,
-                          padding: '4px 6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          fontSize: '11px',
-                          color: '#4B5563'
-                        }}
-                        title={itemSortOrder === 'asc' ? '현재: 오름차순 (클릭 시 내림차순)' : '현재: 내림차순 (클릭 시 오름차순)'}
-                      >
-                        {itemSortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                        <span>{itemSortOrder === 'asc' ? '오름차순' : '내림차순'}</span>
-                      </button>
+                      {!isTrashSelected && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: '6px',
+                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                            overflow: 'hidden',
+                            height: '27px'
+                          }}
+                        >
+                          {!isSearchActive && selectedCategoryId !== 'quick_memo' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingItemGroup((prev) => !prev);
+                                setNewItemGroupName('');
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '0 8px',
+                                height: '100%',
+                                border: 'none',
+                                borderRight: '1px solid #E2E8F0',
+                                backgroundColor: isAddingItemGroup ? '#EFF6FF' : 'transparent',
+                                color: isAddingItemGroup ? '#2563EB' : '#334155',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                              title="새 그룹 추가"
+                            >
+                              그룹
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleAddItem}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0 9px',
+                              height: '100%',
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              color: '#2563EB',
+                              fontSize: '15px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                            title="목록 추가"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
