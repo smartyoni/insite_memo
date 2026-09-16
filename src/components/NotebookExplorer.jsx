@@ -6046,7 +6046,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             overflow: 'hidden',
                             border: group
                               ? isGroupDragOver
-                                ? '2px dashed #2563EB'
+                                ? '2px dashed #EA580C'
                                 : '1px solid #CBD5E1'
                               : 'none',
                             backgroundColor: '#FFFFFF',
@@ -6064,9 +6064,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 height: isMobile ? '28px' : '30px',
                                 padding: isMobile ? '2px 8px' : '2px 10px',
                                 boxSizing: 'border-box',
-                                backgroundColor: isGroupDragOver ? '#DBEAFE' : '#B3C8DD',
+                                backgroundColor: isGroupDragOver ? '#FFEDD5' : '#F8C8A0',
                                 border: 'none',
-                                borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
+                                borderBottom: isSecCollapsed ? 'none' : '1px solid #E2A374',
                                 borderRadius: '0',
                                 boxShadow: 'none',
                                 cursor: isSecEditing ? 'default' : 'pointer',
@@ -6103,7 +6103,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       color: '#1E293B',
                                       padding: '2px 6px',
                                       borderRadius: '4px',
-                                      border: '1px solid #2563EB',
+                                      border: '1px solid #EA580C',
                                       outline: 'none',
                                       flex: 1
                                     }}
@@ -6112,7 +6112,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateItemGroupName(group.id)}
-                                    style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
+                                    style={{ ...styles.btnPrimary, backgroundColor: '#EA580C', padding: '2px 8px', fontSize: '11px' }}
                                   >
                                     저장
                                   </button>
@@ -6127,7 +6127,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               ) : (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                                   <span
-                                    style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
+                                    style={{ display: 'flex', alignItems: 'center', color: '#C2410C' }}
                                     title={isSecCollapsed ? '펼치기' : '접기'}
                                   >
                                     {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
