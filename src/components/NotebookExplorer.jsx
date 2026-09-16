@@ -6703,7 +6703,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       borderRadius: isMobile ? '6px' : '8px',
                                       border: '1.5px solid #64748B',
                                       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '4px' : '6px'),
+                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
                                       marginLeft: 0,
                                       marginRight: 0,
                                       overflow: 'hidden'
@@ -8016,7 +8016,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     borderRadius: isMobile ? '6px' : '8px',
                                     border: '1.5px solid #64748B',
                                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '4px' : '6px'),
+                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
                                     marginLeft: 0,
                                     marginRight: 0,
                                     overflow: 'hidden'
