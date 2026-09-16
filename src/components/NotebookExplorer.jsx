@@ -842,6 +842,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [editingItemGroupId, setEditingItemGroupId] = useState(null);
   const [editingItemGroupName, setEditingItemGroupName] = useState('');
   const [itemGroupTargetForNewItem, setItemGroupTargetForNewItem] = useState(null);
+  const [dragOverItemGroupId, setDragOverItemGroupId] = useState(null);
+  const [dragOverItemId, setDragOverItemId] = useState(null);
 
   // Item inline editing states (Pane 2)
   const [editingItemId, setEditingItemId] = useState(null);
@@ -3436,6 +3438,75 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  const handleDropItemOnGroup = async (e, targetGroupId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const itemId = e.dataTransfer.getData('text/plain') || draggedItemId;
+    setDragOverItemGroupId(null);
+    setDragOverItemId(null);
+    setDraggedItemId(null);
+    if (!itemId) return;
+    const actualGroupId = (targetGroupId === '__unassigned__' || !targetGroupId) ? null : targetGroupId;
+    const currentItem = items.find((it) => it.id === itemId);
+    if (!currentItem || currentItem.groupId === actualGroupId) return;
+    try {
+      await updateDoc(doc(db, 'items', itemId), {
+        groupId: actualGroupId,
+        updatedAt: serverTimestamp()
+      });
+      if (actualGroupId) {
+        setCollapsedItemGroups((prev) => ({ ...prev, [actualGroupId]: false }));
+      }
+    } catch (err) {
+      console.error('Error dropping item on group:', err);
+    }
+  };
+
+  const handleDropItemOnItem = async (e, targetItem, targetGroupId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceItemId = e.dataTransfer.getData('text/plain') || draggedItemId;
+    setDragOverItemGroupId(null);
+    setDragOverItemId(null);
+    setDraggedItemId(null);
+    if (!sourceItemId || sourceItemId === targetItem.id) return;
+
+    const actualGroupId = (targetGroupId === '__unassigned__' || !targetGroupId) ? null : targetGroupId;
+    const sourceItem = items.find((it) => it.id === sourceItemId);
+    if (!sourceItem) return;
+
+    const targetGroupObj = displayedItemGrouped.find((g) => {
+      if (!g.group && !actualGroupId) return true;
+      if (g.group?.isUnassigned && !actualGroupId) return true;
+      return g.group?.id === actualGroupId;
+    });
+    if (!targetGroupObj) return;
+
+    const groupItems = targetGroupObj.items.filter((it) => it.id !== sourceItemId);
+    const targetIdx = groupItems.findIndex((it) => it.id === targetItem.id);
+    if (targetIdx === -1) return;
+
+    groupItems.splice(targetIdx, 0, sourceItem);
+
+    const batch = writeBatch(db);
+    groupItems.forEach((it, idx) => {
+      const updateData = { order: idx, updatedAt: serverTimestamp() };
+      if (it.id === sourceItemId) {
+        updateData.groupId = actualGroupId;
+      }
+      batch.update(doc(db, 'items', it.id), updateData);
+    });
+
+    try {
+      await batch.commit();
+      if (actualGroupId) {
+        setCollapsedItemGroups((prev) => ({ ...prev, [actualGroupId]: false }));
+      }
+    } catch (err) {
+      console.error('Error dropping item on item:', err);
+    }
+  };
+
   // ---------------- Item Handlers ----------------
   const handleAddItem = () => {
     setItemGroupTargetForNewItem(null);
@@ -5894,9 +5965,43 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       const isSecEditing = group ? editingItemGroupId === group.id : false;
                       const isFirstGroup = groupIdx === 0;
                       const isLastGroup = groupIdx === displayedItemGrouped.length - 1;
+                      const isGroupDragOver = group && dragOverItemGroupId === group.id;
 
                       return (
-                        <div key={group ? group.id : 'default_grp'} style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div
+                          key={group ? group.id : 'default_grp'}
+                          onDragOver={(e) => {
+                            if (!draggedItemId) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            if (group && dragOverItemGroupId !== group.id) {
+                              setDragOverItemGroupId(group.id);
+                            }
+                          }}
+                          onDragLeave={() => {
+                            if (group && dragOverItemGroupId === group.id) {
+                              setDragOverItemGroupId(null);
+                            }
+                          }}
+                          onDrop={(e) => {
+                            if (!draggedItemId) return;
+                            handleDropItemOnGroup(e, group?.id);
+                          }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            marginBottom: group ? '10px' : '0',
+                            borderRadius: group ? '6px' : '0',
+                            overflow: 'hidden',
+                            border: group
+                              ? isGroupDragOver
+                                ? '2px dashed #2563EB'
+                                : '1px solid #CBD5E1'
+                              : 'none',
+                            backgroundColor: '#FFFFFF',
+                            boxShadow: group ? '0 1px 3px rgba(0, 0, 0, 0.04)' : 'none'
+                          }}
+                        >
                           {/* 그룹 헤더 바 */}
                           {group && (
                             <div
@@ -5906,18 +6011,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 justifyContent: 'space-between',
                                 gap: isMobile ? '4px' : '8px',
                                 padding: isMobile ? '5px 8px' : '7px 12px',
-                                marginTop: groupIdx > 0 ? '8px' : '0',
-                                marginBottom: isSecCollapsed ? '4px' : '0',
-                                backgroundColor: '#B3C8DD',
+                                backgroundColor: isGroupDragOver ? '#DBEAFE' : '#B3C8DD',
                                 border: 'none',
                                 borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
-                                borderRadius: '4px 4px 0 0',
+                                borderRadius: '0',
                                 boxShadow: 'none',
                                 cursor: isSecEditing ? 'default' : 'pointer',
-                                userSelect: 'none',
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 4
+                                userSelect: 'none'
                               }}
                               onClick={() => {
                                 if (!isSecEditing) {
@@ -6201,26 +6301,25 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             <div style={{
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '4px',
-                              padding: group ? '4px 0 6px 0' : '0'
+                              backgroundColor: '#FFFFFF'
                             }}>
                               {grpItems.length === 0 ? (
                                 <div style={{
-                                  padding: '10px 14px',
+                                  padding: '12px 14px',
                                   fontSize: '12px',
                                   color: '#94A3B8',
                                   backgroundColor: '#F8FAFC',
-                                  borderRadius: '6px',
-                                  margin: '2px 0 6px 0',
                                   textAlign: 'center'
                                 }}>
-                                  이 그룹에 등록된 메모가 없습니다.
+                                  여기에 메모를 드래그하거나 [+] 버튼으로 추가하세요.
                                 </div>
                               ) : (
                                 grpItems.map((item, itemIdx) => {
                                   const isSelected = item.id === selectedItemId;
                                   const isEditing = item.id === editingItemId;
                                   const isDeleting = item.id === deletingItemId;
+                                  const isItemDragOver = dragOverItemId === item.id;
+                                  const isDragged = draggedItemId === item.id;
 
                                   return (
                                     <div
@@ -6232,9 +6331,30 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         e.dataTransfer.effectAllowed = 'move';
                                         setDraggedItemId(item.id);
                                       }}
+                                      onDragOver={(e) => {
+                                        if (!draggedItemId || draggedItemId === item.id) return;
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.dataTransfer.dropEffect = 'move';
+                                        if (dragOverItemId !== item.id) {
+                                          setDragOverItemId(item.id);
+                                        }
+                                      }}
+                                      onDragLeave={(e) => {
+                                        e.stopPropagation();
+                                        if (dragOverItemId === item.id) {
+                                          setDragOverItemId(null);
+                                        }
+                                      }}
+                                      onDrop={(e) => {
+                                        if (!draggedItemId) return;
+                                        e.stopPropagation();
+                                        handleDropItemOnItem(e, item, group?.id);
+                                      }}
                                       onDragEnd={() => {
                                         setDraggedItemId(null);
-                                        setDragOverCategoryId(null);
+                                        setDragOverItemId(null);
+                                        setDragOverItemGroupId(null);
                                       }}
                                       onClick={() => {
                                         if (!isEditing && !isDeleting) {
@@ -6267,15 +6387,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         setEditingItemTitle(item.title || '');
                                       }}
                                       style={{
-                                        ...styles.itemCard,
-                                        backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
-                                        borderColor: isSelected ? '#3F7A63' : '#ECEBE7',
-                                        opacity: draggedItemId === item.id ? 0.4 : 1,
+                                        padding: isMobile ? '7px 8px' : '8px 12px',
+                                        backgroundColor: isItemDragOver
+                                          ? '#DBEAFE'
+                                          : isSelected
+                                          ? '#EFF6FF'
+                                          : '#FFFFFF',
+                                        borderBottom: itemIdx < grpItems.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                        borderTop: isItemDragOver ? '2px solid #2563EB' : 'none',
+                                        boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                        opacity: isDragged ? 0.35 : 1,
                                         cursor: isTrashSelected ? 'pointer' : 'grab',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        gap: '4px',
-                                        userSelect: 'none'
+                                        gap: '3px',
+                                        userSelect: 'none',
+                                        transition: 'background-color 0.15s ease'
                                       }}
                                     >
                                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
