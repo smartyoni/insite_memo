@@ -167,6 +167,7 @@ function DetailChecklistItemRow({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  onAddNext,
   onToggle,
   onCopy,
   onDelete,
@@ -206,7 +207,15 @@ function DetailChecklistItemRow({
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.nativeEvent && e.nativeEvent.isComposing) {
+      return;
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      if (onAddNext) {
+        onAddNext(blockId, item.id, draftText);
+      }
+    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       onSaveEdit(blockId, item.id, draftText);
     } else if (e.key === 'Escape') {
@@ -223,6 +232,16 @@ function DetailChecklistItemRow({
       onDragOver={(e) => onDragOver(e, blockId, item.id)}
       onDrop={(e) => onDrop(e, blockId, item.id)}
       onDragEnd={onDragEnd}
+      onKeyDown={(e) => {
+        if (e.nativeEvent && e.nativeEvent.isComposing) return;
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onAddNext) {
+            onAddNext(blockId, item.id, isEditing ? draftText : (item.text || ''));
+          }
+        }
+      }}
       style={{
         display: 'flex',
         flexDirection: isEditing ? 'column' : 'row',
@@ -259,7 +278,7 @@ function DetailChecklistItemRow({
               adjustHeight(e.target);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="체크 항목 내용 입력... (Enter 줄바꿈, Ctrl+Enter 저장)"
+            placeholder="체크 항목 내용 입력... (Enter 줄바꿈, Shift+Enter 새 항목 추가, Ctrl+Enter 저장)"
             style={{
               width: '100%',
               minHeight: '38px',
@@ -343,7 +362,7 @@ function DetailChecklistItemRow({
                 flexShrink: 0,
                 transition: 'all 0.15s ease'
               }}
-              title={item.completed ? '완료 해제' : '완료 체크'}
+              title={item.completed ? '완료 해제 (Shift+Enter: 새 항목 추가)' : '완료 체크 (Shift+Enter: 새 항목 추가)'}
             >
               {item.completed && <Check size={10} color="#FFFFFF" strokeWidth={3} />}
             </button>
@@ -973,6 +992,31 @@ export const DetailBlocksManager = ({
     setEditingItemId(newItem.id);
   };
 
+  // 체크리스트 항목 편집 또는 포커스 중 Shift+Enter 단축키: 현재 항목 바로 아래에 새 항목 추가 및 편집 포커스
+  const handleAddNextChecklistItem = (blockId, currentItemId, currentText) => {
+    const newItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: '',
+      completed: false
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const currentItems = [...(b.items || [])];
+      const idx = currentItems.findIndex((it) => it.id === currentItemId);
+      if (idx !== -1) {
+        if (currentText !== undefined) {
+          currentItems[idx] = { ...currentItems[idx], text: currentText };
+        }
+        currentItems.splice(idx + 1, 0, newItem);
+      } else {
+        currentItems.push(newItem);
+      }
+      return { ...b, items: currentItems };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(newItem.id);
+  };
+
   // 체크리스트 블록 제목 저장
   const handleSaveChecklistTitle = (blockId, newTitle) => {
     const next = blocks.map((b) => (b.id === blockId ? { ...b, title: newTitle.trim() } : b));
@@ -1386,7 +1430,7 @@ export const DetailBlocksManager = ({
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = '#059669';
                     }}
-                    title="체크 항목 추가"
+                    title="체크 항목 추가 (단축키: Shift+Enter)"
                   >
                     <Plus size={15} strokeWidth={2.5} />
                   </button>
@@ -1594,6 +1638,7 @@ export const DetailBlocksManager = ({
                       onStartEdit={handleStartEditChecklistItem}
                       onSaveEdit={handleSaveEditChecklistItem}
                       onCancelEdit={handleCancelEditChecklistItem}
+                      onAddNext={handleAddNextChecklistItem}
                       onToggle={handleToggleChecklistItem}
                       onCopy={handleCopyChecklistItem}
                       onDelete={handleDeleteChecklistItem}
