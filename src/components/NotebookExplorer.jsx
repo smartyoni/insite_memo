@@ -1562,15 +1562,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         const tB = getItemTimestamp(b);
         return tB - tA;
       }
+      const orderA = typeof a.order === 'number' ? a.order : null;
+      const orderB = typeof b.order === 'number' ? b.order : null;
+      if (orderA !== null && orderB !== null) {
+        if (orderA !== orderB) return orderA - orderB;
+      } else if (orderA !== null) {
+        return -1;
+      } else if (orderB !== null) {
+        return 1;
+      }
       const titleA = (a.title || '').trim();
       const titleB = (b.title || '').trim();
       const comp = titleA.localeCompare(titleB, 'ko-KR', { numeric: true, sensitivity: 'base' });
-      if (comp !== 0) {
-        return itemSortOrder === 'asc' ? comp : -comp;
-      }
+      if (comp !== 0) return comp;
       const tA = getItemTimestamp(a);
       const tB = getItemTimestamp(b);
-      return itemSortOrder === 'asc' ? tA - tB : tB - tA;
+      return tA - tB;
     });
 
   // Helper to extract all text strings from any object recursively
@@ -1777,6 +1784,29 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         items: unassignedItems
       });
     }
+
+    result.forEach((grp) => {
+      if (grp && Array.isArray(grp.items)) {
+        grp.items.sort((a, b) => {
+          const orderA = typeof a.order === 'number' ? a.order : null;
+          const orderB = typeof b.order === 'number' ? b.order : null;
+          if (orderA !== null && orderB !== null) {
+            if (orderA !== orderB) return orderA - orderB;
+          } else if (orderA !== null) {
+            return -1;
+          } else if (orderB !== null) {
+            return 1;
+          }
+          const titleA = (a.title || '').trim();
+          const titleB = (b.title || '').trim();
+          const comp = titleA.localeCompare(titleB, 'ko-KR', { numeric: true, sensitivity: 'base' });
+          if (comp !== 0) return comp;
+          const tA = getItemTimestamp(a);
+          const tB = getItemTimestamp(b);
+          return tA - tB;
+        });
+      }
+    });
 
     return result;
   }, [displayedItems, currentCategoryItemGroups, isSearchActive, isTrashSelected]);
@@ -3421,16 +3451,19 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       return g.group?.id === item.groupId;
     });
     if (!targetGroupObj) return;
-    const groupItems = targetGroupObj.items;
+    const groupItems = [...targetGroupObj.items];
     const curIdx = groupItems.findIndex((it) => it.id === item.id);
     if (curIdx === -1) return;
     const targetIdx = direction === 'up' ? curIdx - 1 : curIdx + 1;
     if (targetIdx < 0 || targetIdx >= groupItems.length) return;
 
-    const otherItem = groupItems[targetIdx];
+    const [moved] = groupItems.splice(curIdx, 1);
+    groupItems.splice(targetIdx, 0, moved);
+
     const batch = writeBatch(db);
-    batch.update(doc(db, 'items', item.id), { order: targetIdx, updatedAt: serverTimestamp() });
-    batch.update(doc(db, 'items', otherItem.id), { order: curIdx, updatedAt: serverTimestamp() });
+    groupItems.forEach((it, idx) => {
+      batch.update(doc(db, 'items', it.id), { order: idx, updatedAt: serverTimestamp() });
+    });
     try {
       await batch.commit();
     } catch (err) {
@@ -3449,9 +3482,20 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const actualGroupId = (targetGroupId === '__unassigned__' || !targetGroupId) ? null : targetGroupId;
     const currentItem = items.find((it) => it.id === itemId);
     if (!currentItem || currentItem.groupId === actualGroupId) return;
+
+    const targetGroupObj = displayedItemGrouped.find((g) => {
+      if (!g.group && !actualGroupId) return true;
+      if (g.group?.isUnassigned && !actualGroupId) return true;
+      return g.group?.id === actualGroupId;
+    });
+    const maxOrder = targetGroupObj && Array.isArray(targetGroupObj.items)
+      ? targetGroupObj.items.reduce((max, it) => Math.max(max, typeof it.order === 'number' ? it.order : -1), -1)
+      : -1;
+
     try {
       await updateDoc(doc(db, 'items', itemId), {
         groupId: actualGroupId,
+        order: maxOrder + 1,
         updatedAt: serverTimestamp()
       });
       if (actualGroupId) {
@@ -3563,6 +3607,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       if (itemGroupTargetForNewItem) {
         newDocData.groupId = itemGroupTargetForNewItem;
       }
+      const targetGroupItems = items.filter(it =>
+        it.categoryId === targetCatId &&
+        (itemGroupTargetForNewItem ? it.groupId === itemGroupTargetForNewItem : !it.groupId)
+      );
+      const maxOrder = targetGroupItems.reduce((max, it) => Math.max(max, typeof it.order === 'number' ? it.order : -1), -1);
+      newDocData.order = maxOrder + 1;
+
       await setDoc(newRef, newDocData);
       setIsAddingItem(false);
       setNewItemTitle('');
