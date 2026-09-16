@@ -248,21 +248,18 @@ function DetailChecklistItemRow({
         alignItems: isEditing ? 'stretch' : 'center',
         justifyContent: 'space-between',
         gap: '6px',
-        padding: isEditing ? '8px 8px' : '5px 2px 5px 6px',
-        borderRadius: '6px',
-        border: isEditing
-          ? '1.5px solid #059669'
-          : item.completed
-            ? '1px solid #E2E8F0'
-            : '1px solid #CBD5E1',
-        backgroundColor: isEditing ? '#FFFFFF' : item.completed ? '#F8FAFC' : '#FFFFFF',
-        boxShadow: isDragOver
-          ? '0 -3px 0 0 #059669, 0 4px 12px rgba(5, 150, 105, 0.2)'
-          : isEditing
-            ? '0 0 0 1px #059669, 0 2px 6px rgba(5, 150, 105, 0.1)'
-            : '0 1px 2px rgba(0, 0, 0, 0.02)',
+        padding: isEditing ? '8px 10px' : '6px 10px',
+        borderRadius: '0',
+        border: 'none',
+        borderBottom: (itemIdx !== undefined && items && itemIdx < items.length - 1) ? '1px solid #E2E8F0' : 'none',
+        backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : item.completed ? '#F8FAFC' : '#FFFFFF',
+        boxShadow: isEditing
+          ? 'inset 3px 0 0 #059669'
+          : isDragOver
+            ? 'inset 3px 0 0 #059669, 0 2px 6px rgba(5, 150, 105, 0.15)'
+            : 'none',
         opacity: isDragged ? 0.4 : 1,
-        transition: 'border-color 0.15s, box-shadow 0.15s',
+        transition: 'background-color 0.15s',
         cursor: isEditing ? 'default' : 'pointer'
       }}
     >
@@ -1246,7 +1243,7 @@ export const DetailBlocksManager = ({
                 flexDirection: 'column',
                 backgroundColor: '#FFFFFF',
                 borderRadius: '8px',
-                border: isBlockDragOver ? '2px dashed #059669' : '1px solid #72A884',
+                border: isBlockDragOver ? '2px dashed #059669' : '1.5px solid #4D7C5D',
                 boxShadow: isBlockDragOver ? '0 0 0 2px rgba(5, 150, 105, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 overflow: 'hidden',
                 flexShrink: 0
@@ -1609,11 +1606,11 @@ export const DetailBlocksManager = ({
               {!isCollapsed && (
                 <div
                   style={{
-                    padding: '4px 4px',
+                    padding: '0px',
                     backgroundColor: '#FFFFFF',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
+                    gap: '0px',
                     minHeight: '20px'
                   }}
                   onDragOver={(e) => {
