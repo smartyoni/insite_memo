@@ -825,6 +825,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [targetMoveParentId, setTargetMoveParentId] = useState('');
   const [movingItem, setMovingItem] = useState(null);
   const [targetMoveItemCategoryId, setTargetMoveItemCategoryId] = useState('');
+  const [targetMoveItemGroupId, setTargetMoveItemGroupId] = useState('');
+
+  // Category item groups (그룹화된 메모 목록 관리) states
+  const [collapsedItemGroups, setCollapsedItemGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('memo_collapsed_item_groups');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isAddingItemGroup, setIsAddingItemGroup] = useState(false);
+  const [newItemGroupName, setNewItemGroupName] = useState('');
+  const [editingItemGroupId, setEditingItemGroupId] = useState(null);
+  const [editingItemGroupName, setEditingItemGroupName] = useState('');
+  const [itemGroupTargetForNewItem, setItemGroupTargetForNewItem] = useState(null);
 
   // Item inline editing states (Pane 2)
   const [editingItemId, setEditingItemId] = useState(null);
@@ -1718,6 +1734,60 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Get active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
+
+  // Current active category item groups
+  const currentCategoryItemGroups = React.useMemo(() => {
+    if (isTrashSelected || isSearchActive) return [];
+    if (!activeCategory || !Array.isArray(activeCategory.itemGroups)) return [];
+    return [...activeCategory.itemGroups].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [activeCategory, isTrashSelected, isSearchActive]);
+
+  // Group displayed items by itemGroups
+  const displayedItemGrouped = React.useMemo(() => {
+    if (isSearchActive || isTrashSelected || currentCategoryItemGroups.length === 0) {
+      return [{ group: null, items: displayedItems }];
+    }
+
+    const groupMap = new Map();
+    currentCategoryItemGroups.forEach((g) => {
+      groupMap.set(g.id, { group: g, items: [] });
+    });
+
+    const unassignedItems = [];
+
+    displayedItems.forEach((item) => {
+      if (item.groupId && groupMap.has(item.groupId)) {
+        groupMap.get(item.groupId).items.push(item);
+      } else {
+        unassignedItems.push(item);
+      }
+    });
+
+    const result = [];
+    currentCategoryItemGroups.forEach((g) => {
+      result.push(groupMap.get(g.id));
+    });
+
+    if (unassignedItems.length > 0) {
+      result.push({
+        group: { id: '__unassigned__', name: '미분류 메모', isUnassigned: true },
+        items: unassignedItems
+      });
+    }
+
+    return result;
+  }, [displayedItems, currentCategoryItemGroups, isSearchActive, isTrashSelected]);
+
+  const toggleItemGroupCollapse = (groupId) => {
+    setCollapsedItemGroups((prev) => {
+      const next = { ...prev, [groupId]: !prev[groupId] };
+      try {
+        localStorage.setItem('memo_collapsed_item_groups', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const isItemInTrash = Boolean(activeItem && (activeItem.isDeleted || FIXED_TRASH_IDS.includes(activeItem.categoryId) || isTrashSelected));
 
   const hasTpl = Boolean(activeItem?.templateId && templates.find(t => t.id === activeItem.templateId));
@@ -3208,8 +3278,166 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  // ---------------- Category Item Group Handlers ----------------
+  const handleAddItemGroup = async () => {
+    const trimmed = newItemGroupName.trim();
+    if (!trimmed) {
+      setIsAddingItemGroup(false);
+      setNewItemGroupName('');
+      return;
+    }
+    if (!activeCategory || ALL_FIXED_CATEGORY_IDS.includes(activeCategory.id)) {
+      alert('이 카테고리에는 그룹을 추가할 수 없습니다.');
+      setIsAddingItemGroup(false);
+      setNewItemGroupName('');
+      return;
+    }
+    const currentGroups = Array.isArray(activeCategory.itemGroups) ? activeCategory.itemGroups : [];
+    const newGroup = {
+      id: 'igrp_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      name: trimmed,
+      order: currentGroups.length
+    };
+    const updatedGroups = [...currentGroups, newGroup];
+    try {
+      await updateDoc(doc(db, 'categories', activeCategory.id), {
+        itemGroups: updatedGroups,
+        updatedAt: serverTimestamp()
+      });
+      setNewItemGroupName('');
+      setIsAddingItemGroup(false);
+    } catch (err) {
+      console.error('Error adding item group:', err);
+    }
+  };
+
+  const handleUpdateItemGroupName = async (groupId) => {
+    const trimmed = editingItemGroupName.trim();
+    if (!trimmed || !activeCategory) {
+      setEditingItemGroupId(null);
+      return;
+    }
+    const currentGroups = Array.isArray(activeCategory.itemGroups) ? activeCategory.itemGroups : [];
+    const updatedGroups = currentGroups.map((g) => (g.id === groupId ? { ...g, name: trimmed } : g));
+    try {
+      await updateDoc(doc(db, 'categories', activeCategory.id), {
+        itemGroups: updatedGroups,
+        updatedAt: serverTimestamp()
+      });
+      setEditingItemGroupId(null);
+    } catch (err) {
+      console.error('Error updating item group name:', err);
+    }
+  };
+
+  const handleDeleteItemGroup = (groupId) => {
+    if (!activeCategory) return;
+    openDeleteModal(
+      '그룹 삭제',
+      '이 그룹을 삭제하시겠습니까? 소속된 메모들은 안전하게 [미분류] 목록으로 이동됩니다.',
+      async () => {
+        try {
+          const currentGroups = Array.isArray(activeCategory.itemGroups) ? activeCategory.itemGroups : [];
+          const updatedGroups = currentGroups.filter((g) => g.id !== groupId);
+          await updateDoc(doc(db, 'categories', activeCategory.id), {
+            itemGroups: updatedGroups,
+            updatedAt: serverTimestamp()
+          });
+
+          // 소속 메모들의 groupId를 null로 리셋
+          const itemsInGroup = items.filter(
+            (it) => it.categoryId === activeCategory.id && it.groupId === groupId
+          );
+          if (itemsInGroup.length > 0) {
+            const batch = writeBatch(db);
+            itemsInGroup.forEach((it) => {
+              batch.update(doc(db, 'items', it.id), {
+                groupId: null,
+                updatedAt: serverTimestamp()
+              });
+            });
+            await batch.commit();
+          }
+        } catch (err) {
+          console.error('Error deleting item group:', err);
+        }
+      }
+    );
+  };
+
+  const handleMoveItemGroup = async (groupId, direction) => {
+    if (!activeCategory) return;
+    const currentGroups = [...(Array.isArray(activeCategory.itemGroups) ? activeCategory.itemGroups : [])];
+    const index = currentGroups.findIndex((g) => g.id === groupId);
+    if (index === -1) return;
+
+    let newIndex = index;
+    if (direction === 'top') newIndex = 0;
+    else if (direction === 'bottom') newIndex = currentGroups.length - 1;
+    else if (direction === 'up') newIndex = Math.max(0, index - 1);
+    else if (direction === 'down') newIndex = Math.min(currentGroups.length - 1, index + 1);
+
+    if (newIndex === index) return;
+
+    const [moved] = currentGroups.splice(index, 1);
+    currentGroups.splice(newIndex, 0, moved);
+    const updatedGroups = currentGroups.map((g, idx) => ({ ...g, order: idx }));
+
+    try {
+      await updateDoc(doc(db, 'categories', activeCategory.id), {
+        itemGroups: updatedGroups,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error moving item group:', err);
+    }
+  };
+
+  const handleAddItemToGroup = (groupId) => {
+    setItemGroupTargetForNewItem(groupId);
+    setIsAddingItem(true);
+    setNewItemTitle('');
+    if (groupId) {
+      setCollapsedItemGroups((prev) => ({ ...prev, [groupId]: false }));
+    }
+    setTimeout(() => {
+      if (itemScrollRef.current) {
+        itemScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (itemInputRef.current) {
+        itemInputRef.current.focus();
+      }
+    }, 50);
+  };
+
+  const handleMoveItemOrderInGroup = async (item, direction) => {
+    if (!item) return;
+    const targetGroupObj = displayedItemGrouped.find((g) => {
+      if (!g.group && !item.groupId) return true;
+      if (g.group?.isUnassigned && !item.groupId) return true;
+      return g.group?.id === item.groupId;
+    });
+    if (!targetGroupObj) return;
+    const groupItems = targetGroupObj.items;
+    const curIdx = groupItems.findIndex((it) => it.id === item.id);
+    if (curIdx === -1) return;
+    const targetIdx = direction === 'up' ? curIdx - 1 : curIdx + 1;
+    if (targetIdx < 0 || targetIdx >= groupItems.length) return;
+
+    const otherItem = groupItems[targetIdx];
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'items', item.id), { order: targetIdx, updatedAt: serverTimestamp() });
+    batch.update(doc(db, 'items', otherItem.id), { order: curIdx, updatedAt: serverTimestamp() });
+    try {
+      await batch.commit();
+    } catch (err) {
+      console.error('Error moving item order:', err);
+    }
+  };
+
   // ---------------- Item Handlers ----------------
   const handleAddItem = () => {
+    setItemGroupTargetForNewItem(null);
     setIsAddingItem(true);
     setNewItemTitle('');
     setTimeout(() => {
@@ -3228,6 +3456,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     if (!trimmedTitle) {
       setIsAddingItem(false);
       setNewItemTitle('');
+      setItemGroupTargetForNewItem(null);
       return;
     }
     isSubmittingItemRef.current = true;
@@ -3249,7 +3478,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
     try {
       const newRef = doc(collection(db, 'items'));
-      await setDoc(newRef, {
+      const newDocData = {
         categoryId: targetCatId,
         title: trimmedTitle,
         body: '',
@@ -3258,9 +3487,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         checklists: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+      if (itemGroupTargetForNewItem) {
+        newDocData.groupId = itemGroupTargetForNewItem;
+      }
+      await setDoc(newRef, newDocData);
       setIsAddingItem(false);
       setNewItemTitle('');
+      setItemGroupTargetForNewItem(null);
       navigateToDetail(newRef.id);
       recordWorkLocation({
         tab: activeMainTab,
@@ -3283,6 +3517,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       console.error('Error adding item:', err);
       setIsAddingItem(false);
       setNewItemTitle('');
+      setItemGroupTargetForNewItem(null);
     } finally {
       isSubmittingItemRef.current = false;
     }
@@ -5312,13 +5547,38 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           </button>
                         )
                       ) : (
-                        <button
-                          onClick={handleAddItem}
-                          style={styles.iconBtnLight}
-                          title="메모 추가"
-                        >
-                          <Plus size={18} />
-                        </button>
+                        <>
+                          {!isTrashSelected && !isSearchActive && selectedCategoryId !== 'quick_memo' && (
+                            <button
+                              onClick={() => {
+                                setIsAddingItemGroup(true);
+                                setNewItemGroupName('');
+                              }}
+                              style={{
+                                ...styles.iconBtnLight,
+                                padding: '4px 7px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '11px',
+                                color: '#1E40AF',
+                                backgroundColor: '#EFF6FF',
+                                border: '1px solid #BFDBFE'
+                              }}
+                              title="새 그룹 추가"
+                            >
+                              <FolderPlus size={14} color="#2563EB" />
+                              <span>+그룹</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={handleAddItem}
+                            style={styles.iconBtnLight}
+                            title="메모 추가"
+                          >
+                            <Plus size={18} />
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => setItemSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
@@ -5360,6 +5620,29 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       {isSearchActive ? '전체 검색 결과' : (activeCategory ? activeCategory.name : '목록')} ({displayedItems.length})
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {!isTrashSelected && !isSearchActive && selectedCategoryId !== 'quick_memo' && (
+                        <button
+                          onClick={() => {
+                            setIsAddingItemGroup(true);
+                            setNewItemGroupName('');
+                          }}
+                          style={{
+                            ...styles.iconBtnLight,
+                            padding: '4px 6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            fontSize: '11px',
+                            color: '#1E40AF',
+                            backgroundColor: '#EFF6FF',
+                            border: '1px solid #BFDBFE'
+                          }}
+                          title="새 그룹 추가"
+                        >
+                          <FolderPlus size={13} color="#2563EB" />
+                          <span>그룹</span>
+                        </button>
+                      )}
                       {!isTrashSelected && (
                         <button
                           onClick={handleAddItem}
@@ -5453,6 +5736,62 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   </div>
                 </div>
 
+                {/* Inline input for creating new item group */}
+                {isAddingItemGroup && (
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#F8FAFC',
+                    borderBottom: '1px solid #CBD5E1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <FolderPlus size={16} color="#2563EB" style={{ flexShrink: 0 }} />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="새 그룹 이름 입력..."
+                      value={newItemGroupName}
+                      onChange={(e) => setNewItemGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (e.nativeEvent.isComposing) return;
+                          handleAddItemGroup();
+                        }
+                        if (e.key === 'Escape') {
+                          setIsAddingItemGroup(false);
+                          setNewItemGroupName('');
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        fontSize: '13px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid #3B82F6',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddItemGroup}
+                      style={{ ...styles.btnPrimary, padding: '4px 8px', fontSize: '11px' }}
+                    >
+                      추가
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingItemGroup(false);
+                        setNewItemGroupName('');
+                      }}
+                      style={{ ...styles.btnSecondary, padding: '4px 8px', fontSize: '11px' }}
+                    >
+                      취소
+                    </button>
+                  </div>
+                )}
+
                 <div style={styles.paneContent} ref={itemScrollRef}>
                   {/* Inline input for creating new item */}
                   {isAddingItem && (
@@ -5503,202 +5842,577 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       {isSearchActive ? '검색 결과와 일치하는 메모가 없습니다.' : '등록된 메모가 없습니다.'}
                     </div>
                   ) : (
-                    displayedItems.map((item) => {
-                        const isSelected = item.id === selectedItemId;
-                        const isEditing = item.id === editingItemId;
-                        const isDeleting = item.id === deletingItemId;
+                    displayedItemGrouped.map((groupObj, groupIdx) => {
+                      const { group, items: grpItems } = groupObj;
+                      const isSecCollapsed = group ? Boolean(collapsedItemGroups[group.id]) : false;
+                      const isSecEditing = group ? editingItemGroupId === group.id : false;
+                      const isFirstGroup = groupIdx === 0;
+                      const isLastGroup = groupIdx === displayedItemGrouped.length - 1;
 
-                        return (
-                          <div
-                            key={item.id}
-                            draggable={!isTrashSelected && !isEditing}
-                            onDragStart={(e) => {
-                              e.stopPropagation();
-                              e.dataTransfer.setData('text/plain', item.id);
-                              e.dataTransfer.effectAllowed = 'move';
-                              setDraggedItemId(item.id);
-                            }}
-                            onDragEnd={() => {
-                              setDraggedItemId(null);
-                              setDragOverCategoryId(null);
-                            }}
-                            onClick={() => {
-                              if (!isEditing && !isDeleting) {
-                                if (isSearchActive) {
-                                  const itemCat = categories.find(c => c.id === item.categoryId);
-                                  const targetScope = item.categoryId === 'quick_memo' ? 'explorer' : (itemCat ? (itemCat.scope || 'explorer') : 'explorer');
-                                  const scopeToTabMap = {
-                                    explorer: 'explorer',
-                                    blog: 'blog',
-                                    clipboard: 'clipboard',
-                                    balance: 'balance',
-                                    clip: 'clip',
-                                    office: 'office',
-                                    ad: 'ad',
-                                    template2: 'template2',
-                                    experience: 'experience'
-                                  };
-                                  if (scopeToTabMap[targetScope]) {
-                                    setActiveMainTab(scopeToTabMap[targetScope]);
-                                  }
-                                  setSelectedCategoryId(item.categoryId);
+                      return (
+                        <div key={group ? group.id : 'default_grp'} style={{ display: 'flex', flexDirection: 'column' }}>
+                          {/* 그룹 헤더 바 */}
+                          {group && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: isMobile ? '4px' : '8px',
+                                padding: isMobile ? '5px 8px' : '7px 12px',
+                                marginTop: groupIdx > 0 ? '8px' : '0',
+                                marginBottom: isSecCollapsed ? '4px' : '0',
+                                backgroundColor: '#B3C8DD',
+                                border: 'none',
+                                borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
+                                borderRadius: '4px 4px 0 0',
+                                boxShadow: 'none',
+                                cursor: isSecEditing ? 'default' : 'pointer',
+                                userSelect: 'none',
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 4
+                              }}
+                              onClick={() => {
+                                if (!isSecEditing) {
+                                  toggleItemGroupCollapse(group.id);
                                 }
-                                navigateToDetail(item.id);
-                              }
-                            }}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              if (isTrashSelected) return;
-                              setEditingItemId(item.id);
-                              setEditingItemTitle(item.title || '');
-                            }}
-                            style={{
-                              ...styles.itemCard,
-                              backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
-                              borderColor: isSelected ? '#3F7A63' : '#ECEBE7',
-                              opacity: draggedItemId === item.id ? 0.4 : 1,
-                              cursor: isTrashSelected ? 'pointer' : 'grab',
+                              }}
+                            >
+                              {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
+                              {isSecEditing ? (
+                                <div
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Folder size={14} color="#2563EB" />
+                                  <input
+                                    type="text"
+                                    value={editingItemGroupName}
+                                    onChange={(e) => setEditingItemGroupName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleUpdateItemGroupName(group.id);
+                                      } else if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        setEditingItemGroupId(null);
+                                      }
+                                    }}
+                                    style={{
+                                      fontSize: '13px',
+                                      fontWeight: 700,
+                                      color: '#1E293B',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      border: '1px solid #2563EB',
+                                      outline: 'none',
+                                      flex: 1
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemGroupName(group.id)}
+                                    style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
+                                  >
+                                    저장
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingItemGroupId(null)}
+                                    style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                  <span
+                                    style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
+                                    title={isSecCollapsed ? '펼치기' : '접기'}
+                                  >
+                                    {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                  </span>
+                                  <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
+                                  <span
+                                    onDoubleClick={(e) => {
+                                      e.stopPropagation();
+                                      if (group.isUnassigned) return;
+                                      setEditingItemGroupId(group.id);
+                                      setEditingItemGroupName(group.name);
+                                    }}
+                                    title={group.isUnassigned ? undefined : "더블클릭하여 그룹 이름 수정"}
+                                    style={{
+                                      fontSize: '13px',
+                                      fontWeight: 700,
+                                      color: '#0F172A',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      cursor: group.isUnassigned ? 'default' : 'text'
+                                    }}
+                                  >
+                                    {group.name}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    color: '#1E3A8A',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                                    padding: '1px 5px',
+                                    borderRadius: '10px'
+                                  }}>
+                                    {grpItems.length}
+                                  </span>
+                                  {isSecCollapsed && (
+                                    <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                                      (접힘)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* 우측: 추가 & 위치이동 & 삭제 (미분류가 아닐 때) */}
+                              {!isSecEditing && !group.isUnassigned && !isTrashSelected && (
+                                <div
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    backgroundColor: '#FFFFFF',
+                                    border: '1px solid #CBD5E1',
+                                    borderRadius: '6px',
+                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                                    height: isMobile ? '24px' : '26px',
+                                    flexShrink: 0
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* 1. 메모 추가 버튼 */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddItemToGroup(group.id);
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: isMobile ? '24px' : '26px',
+                                      height: '100%',
+                                      border: 'none',
+                                      borderRight: '1px solid #E2E8F0',
+                                      backgroundColor: 'transparent',
+                                      color: '#2563EB',
+                                      cursor: 'pointer',
+                                      padding: 0
+                                    }}
+                                    title="이 그룹에 메모 추가"
+                                  >
+                                    <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                  </button>
+
+                                  {/* 2. 위치이동 버튼 세트 */}
+                                  <div
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      borderRight: '1px solid #E2E8F0',
+                                      height: '100%',
+                                      padding: '0 2px',
+                                      gap: '1px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMoveItemGroup(group.id, 'top');
+                                        }}
+                                        disabled={isFirstGroup}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '100%',
+                                          height: '11px',
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                          color: isFirstGroup ? '#CBD5E1' : '#1E293B',
+                                          cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                          padding: 0
+                                        }}
+                                        title="그룹 최상단으로 이동"
+                                      >
+                                        <ChevronsUp size={11} strokeWidth={2.5} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMoveItemGroup(group.id, 'bottom');
+                                        }}
+                                        disabled={isLastGroup}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '100%',
+                                          height: '11px',
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                          color: isLastGroup ? '#CBD5E1' : '#1E293B',
+                                          cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                          padding: 0
+                                        }}
+                                        title="그룹 최하단으로 이동"
+                                      >
+                                        <ChevronsDown size={11} strokeWidth={2.5} />
+                                      </button>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMoveItemGroup(group.id, 'up');
+                                        }}
+                                        disabled={isFirstGroup}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '100%',
+                                          height: '11px',
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                          color: isFirstGroup ? '#CBD5E1' : '#1E293B',
+                                          cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                          padding: 0
+                                        }}
+                                        title="그룹 위로 이동"
+                                      >
+                                        <ChevronUp size={11} strokeWidth={2.5} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMoveItemGroup(group.id, 'down');
+                                        }}
+                                        disabled={isLastGroup}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '100%',
+                                          height: '11px',
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                          color: isLastGroup ? '#CBD5E1' : '#1E293B',
+                                          cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                          padding: 0
+                                        }}
+                                        title="그룹 아래로 이동"
+                                      >
+                                        <ChevronDown size={11} strokeWidth={2.5} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* 3. 삭제 버튼 */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteItemGroup(group.id);
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: isMobile ? '24px' : '26px',
+                                      height: '100%',
+                                      border: 'none',
+                                      backgroundColor: 'transparent',
+                                      color: '#DC2626',
+                                      cursor: 'pointer',
+                                      padding: 0
+                                    }}
+                                    title="그룹 삭제 (소속 메모는 미분류로 이동)"
+                                  >
+                                    <Trash2 size={isMobile ? 12 : 13} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 그룹 소속 아이템 렌더링 (그룹이 접혀있지 않을 때) */}
+                          {!isSecCollapsed && (
+                            <div style={{
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '4px',
-                              userSelect: 'none'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
-                              <div
-                                style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}
-                                title={isTrashSelected ? undefined : "더블클릭하여 목록명 수정"}
-                              >
-                                {isEditing ? (
-                                  <input
-                                    autoFocus
-                                    type="text"
-                                    value={editingItemTitle}
-                                    onChange={(e) => setEditingItemTitle(e.target.value)}
-                                    onFocus={(e) => e.target.select()}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleUpdateItemTitle(item.id);
-                                      if (e.key === 'Escape') setEditingItemId(null);
-                                    }}
-                                    onBlur={() => handleUpdateItemTitle(item.id)}
-                                    style={styles.inputLightInline}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onDoubleClick={(e) => e.stopPropagation()}
-                                  />
-                                ) : (
-                                  <span style={{
-                                    fontSize: '13px',
-                                    fontWeight: isSelected ? 700 : 600,
-                                    color: isSelected ? '#163326' : '#2D3748',
-                                    whiteSpace: 'normal',
-                                    wordBreak: 'break-word',
-                                    lineHeight: 1.45,
-                                    flex: 1
-                                  }}>
-                                    {highlightText(item.title || '제목 없음', searchQuery)}
-                                  </span>
-                                )}
-                              </div>
+                              padding: group ? '4px 0 6px 0' : '0'
+                            }}>
+                              {grpItems.length === 0 ? (
+                                <div style={{
+                                  padding: '10px 14px',
+                                  fontSize: '12px',
+                                  color: '#94A3B8',
+                                  backgroundColor: '#F8FAFC',
+                                  borderRadius: '6px',
+                                  margin: '2px 0 6px 0',
+                                  textAlign: 'center'
+                                }}>
+                                  이 그룹에 등록된 메모가 없습니다.
+                                </div>
+                              ) : (
+                                grpItems.map((item, itemIdx) => {
+                                  const isSelected = item.id === selectedItemId;
+                                  const isEditing = item.id === editingItemId;
+                                  const isDeleting = item.id === deletingItemId;
 
-                              <div
-                                style={styles.actionGroup}
-                                onClick={(e) => e.stopPropagation()}
-                                onDoubleClick={(e) => e.stopPropagation()}
-                              >
-                                {isTrashSelected ? (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      draggable={!isTrashSelected && !isEditing}
+                                      onDragStart={(e) => {
                                         e.stopPropagation();
-                                        handleRestoreItem(item);
+                                        e.dataTransfer.setData('text/plain', item.id);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                        setDraggedItemId(item.id);
                                       }}
-                                      style={styles.actionBtnLight}
-                                      title="원래 카테고리로 복원"
-                                    >
-                                      <RotateCcw size={13} color="#16A34A" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
+                                      onDragEnd={() => {
+                                        setDraggedItemId(null);
+                                        setDragOverCategoryId(null);
+                                      }}
+                                      onClick={() => {
+                                        if (!isEditing && !isDeleting) {
+                                          if (isSearchActive) {
+                                            const itemCat = categories.find(c => c.id === item.categoryId);
+                                            const targetScope = item.categoryId === 'quick_memo' ? 'explorer' : (itemCat ? (itemCat.scope || 'explorer') : 'explorer');
+                                            const scopeToTabMap = {
+                                              explorer: 'explorer',
+                                              blog: 'blog',
+                                              clipboard: 'clipboard',
+                                              balance: 'balance',
+                                              clip: 'clip',
+                                              office: 'office',
+                                              ad: 'ad',
+                                              template2: 'template2',
+                                              experience: 'experience'
+                                            };
+                                            if (scopeToTabMap[targetScope]) {
+                                              setActiveMainTab(scopeToTabMap[targetScope]);
+                                            }
+                                            setSelectedCategoryId(item.categoryId);
+                                          }
+                                          navigateToDetail(item.id);
+                                        }
+                                      }}
+                                      onDoubleClick={(e) => {
                                         e.stopPropagation();
-                                        openDeleteModal(
-                                          '영구 삭제',
-                                          `'${item.title || '제목 없음'}' 메모를 영구 삭제하시겠습니까? 복구할 수 없습니다.`,
-                                          () => handlePermanentDeleteItem(item.id)
-                                        );
+                                        if (isTrashSelected) return;
+                                        setEditingItemId(item.id);
+                                        setEditingItemTitle(item.title || '');
                                       }}
-                                      style={styles.actionBtnLight}
-                                      title="영구 삭제"
-                                    >
-                                      <Trash2 size={13} color="#DC2626" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setMovingItem(item);
-                                        setTargetMoveItemCategoryId(item.categoryId || '');
+                                      style={{
+                                        ...styles.itemCard,
+                                        backgroundColor: isSelected ? '#F0F7F4' : '#FFFFFF',
+                                        borderColor: isSelected ? '#3F7A63' : '#ECEBE7',
+                                        opacity: draggedItemId === item.id ? 0.4 : 1,
+                                        cursor: isTrashSelected ? 'pointer' : 'grab',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px',
+                                        userSelect: 'none'
                                       }}
-                                      style={styles.actionBtnLight}
-                                      title="다른 카테고리로 이동"
                                     >
-                                      <FolderInput size={13} color="#2563EB" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openDeleteModal(
-                                          '휴지통으로 이동',
-                                          `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
-                                          () => handleMoveToTrash(item.id)
-                                        );
-                                      }}
-                                      style={styles.actionBtnLight}
-                                      title="휴지통으로 이동"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
+                                        <div
+                                          style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}
+                                          title={isTrashSelected ? undefined : "더블클릭하여 목록명 수정"}
+                                        >
+                                          {isEditing ? (
+                                            <input
+                                              autoFocus
+                                              type="text"
+                                              value={editingItemTitle}
+                                              onChange={(e) => setEditingItemTitle(e.target.value)}
+                                              onFocus={(e) => e.target.select()}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleUpdateItemTitle(item.id);
+                                                if (e.key === 'Escape') setEditingItemId(null);
+                                              }}
+                                              onBlur={() => handleUpdateItemTitle(item.id)}
+                                              style={styles.inputLightInline}
+                                              onClick={(e) => e.stopPropagation()}
+                                              onDoubleClick={(e) => e.stopPropagation()}
+                                            />
+                                          ) : (
+                                            <span style={{
+                                              fontSize: '13px',
+                                              fontWeight: isSelected ? 700 : 600,
+                                              color: isSelected ? '#163326' : '#2D3748',
+                                              whiteSpace: 'normal',
+                                              wordBreak: 'break-word',
+                                              lineHeight: 1.45,
+                                              flex: 1
+                                            }}>
+                                              {highlightText(item.title || '제목 없음', searchQuery)}
+                                            </span>
+                                          )}
+                                        </div>
 
-                            {isSearchActive && (() => {
-                              const snip = getMatchedSnippet(item, searchQuery);
-                              return (
-                                <>
-                                  {snip && (
-                                    <div style={{
-                                      fontSize: '11px',
-                                      color: '#475569',
-                                      backgroundColor: '#F8FAFC',
-                                      padding: '4px 6px',
-                                      borderRadius: '4px',
-                                      borderLeft: '2.5px solid #3B82F6',
-                                      marginTop: '2px',
-                                      wordBreak: 'break-all'
-                                    }}>
-                                      💡 {highlightText(snip.snippetText, searchQuery)}
+                                        <div
+                                          style={styles.actionGroup}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onDoubleClick={(e) => e.stopPropagation()}
+                                        >
+                                          {isTrashSelected ? (
+                                            <>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleRestoreItem(item);
+                                                }}
+                                                style={styles.actionBtnLight}
+                                                title="원래 카테고리로 복원"
+                                              >
+                                                <RotateCcw size={13} color="#16A34A" />
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openDeleteModal(
+                                                    '영구 삭제',
+                                                    `'${item.title || '제목 없음'}' 메모를 영구 삭제하시겠습니까? 복구할 수 없습니다.`,
+                                                    () => handlePermanentDeleteItem(item.id)
+                                                  );
+                                                }}
+                                                style={styles.actionBtnLight}
+                                                title="영구 삭제"
+                                              >
+                                                <Trash2 size={13} color="#DC2626" />
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <>
+                                              {/* 그룹 내 위치 이동 버튼 */}
+                                              {grpItems.length > 1 && (
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleMoveItemOrderInGroup(item, 'up');
+                                                    }}
+                                                    disabled={itemIdx === 0}
+                                                    style={{
+                                                      ...styles.actionBtnLight,
+                                                      padding: '2px',
+                                                      color: itemIdx === 0 ? '#CBD5E1' : '#4B5563',
+                                                      cursor: itemIdx === 0 ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    title="위로 이동"
+                                                  >
+                                                    <ChevronUp size={12} />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleMoveItemOrderInGroup(item, 'down');
+                                                    }}
+                                                    disabled={itemIdx === grpItems.length - 1}
+                                                    style={{
+                                                      ...styles.actionBtnLight,
+                                                      padding: '2px',
+                                                      color: itemIdx === grpItems.length - 1 ? '#CBD5E1' : '#4B5563',
+                                                      cursor: itemIdx === grpItems.length - 1 ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    title="아래로 이동"
+                                                  >
+                                                    <ChevronDown size={12} />
+                                                  </button>
+                                                </div>
+                                              )}
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setMovingItem(item);
+                                                  setTargetMoveItemCategoryId(item.categoryId || '');
+                                                  setTargetMoveItemGroupId(item.groupId || '');
+                                                }}
+                                                style={styles.actionBtnLight}
+                                                title="다른 카테고리/그룹으로 이동"
+                                              >
+                                                <FolderInput size={13} color="#2563EB" />
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openDeleteModal(
+                                                    '휴지통으로 이동',
+                                                    `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
+                                                    () => handleMoveToTrash(item.id)
+                                                  );
+                                                }}
+                                                style={styles.actionBtnLight}
+                                                title="휴지통으로 이동"
+                                              >
+                                                <Trash2 size={13} />
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {isSearchActive && (() => {
+                                        const snip = getMatchedSnippet(item, searchQuery);
+                                        return (
+                                          <>
+                                            {snip && (
+                                              <div style={{
+                                                fontSize: '11px',
+                                                color: '#475569',
+                                                backgroundColor: '#F8FAFC',
+                                                padding: '4px 6px',
+                                                borderRadius: '4px',
+                                                borderLeft: '2.5px solid #3B82F6',
+                                                marginTop: '2px',
+                                                wordBreak: 'break-all'
+                                              }}>
+                                                💡 {highlightText(snip.snippetText, searchQuery)}
+                                              </div>
+                                            )}
+                                            <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                              <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                                {getCategoryBadgeName(item.categoryId)}
+                                              </span>
+                                              {getItemMatchBadges(item, searchLower).map((b, bIdx) => (
+                                                <span key={bIdx} style={{ fontSize: '10px', backgroundColor: b.bg, color: b.color, padding: '1px 5px', borderRadius: '4px' }}>
+                                                  {b.label}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </>
+                                        );
+                                      })()}
                                     </div>
-                                  )}
-                                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '10px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
-                                      {getCategoryBadgeName(item.categoryId)}
-                                    </span>
-                                    {getItemMatchBadges(item, searchLower).map((b, bIdx) => (
-                                      <span key={bIdx} style={{ fontSize: '10px', backgroundColor: b.bg, color: b.color, padding: '1px 5px', borderRadius: '4px' }}>
-                                        {b.label}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        );
-                      })
-                    )}
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                   </div>
 
                 {/* Floating Action Button (FAB) for Mobile Sublist */}
@@ -9715,33 +10429,75 @@ onClick={() => {
 
             <div style={styles.modalBody}>
               <p style={{ ...styles.modalMessage, marginBottom: '14px' }}>
-                <strong>'{movingItem.title || '제목 없음'}'</strong> 메모를 이동할 카테고리를 선택하세요:
+                <strong>'{movingItem.title || '제목 없음'}'</strong> 메모를 이동할 위치를 선택하세요:
               </p>
-              <select
-                value={targetMoveItemCategoryId}
-                onChange={(e) => setTargetMoveItemCategoryId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13.5px',
-                  color: '#1E293B',
-                  outline: 'none',
-                  backgroundColor: '#F8FAFC'
-                }}
-              >
-                {activeMainTab === 'explorer' && (
-                  <option value="quick_memo">⚡ 퀵메모</option>
-                )}
-                {getHierarchicalCategoryOptions(currentScope)
-                  .filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.displayName || c.name}
-                    </option>
-                  ))}
-              </select>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                  카테고리:
+                </label>
+                <select
+                  value={targetMoveItemCategoryId}
+                  onChange={(e) => {
+                    setTargetMoveItemCategoryId(e.target.value);
+                    setTargetMoveItemGroupId('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13.5px',
+                    color: '#1E293B',
+                    outline: 'none',
+                    backgroundColor: '#F8FAFC'
+                  }}
+                >
+                  {activeMainTab === 'explorer' && (
+                    <option value="quick_memo">⚡ 퀵메모</option>
+                  )}
+                  {getHierarchicalCategoryOptions(currentScope)
+                    .filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.displayName || c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {(() => {
+                const targetCat = categories.find((c) => c.id === targetMoveItemCategoryId);
+                const targetGroups = targetCat && Array.isArray(targetCat.itemGroups) ? targetCat.itemGroups : [];
+                if (targetGroups.length === 0) return null;
+                return (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                      그룹 (선택사항):
+                    </label>
+                    <select
+                      value={targetMoveItemGroupId || ''}
+                      onChange={(e) => setTargetMoveItemGroupId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #CBD5E1',
+                        fontSize: '13.5px',
+                        color: '#1E293B',
+                        outline: 'none',
+                        backgroundColor: '#F8FAFC'
+                      }}
+                    >
+                      <option value="">미분류 (기본)</option>
+                      {targetGroups.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          📁 {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={styles.modalFooter}>
@@ -9754,6 +10510,7 @@ onClick={() => {
                   try {
                     await updateDoc(doc(db, 'items', movingItem.id), {
                       categoryId: targetMoveItemCategoryId,
+                      groupId: targetMoveItemGroupId || null,
                       updatedAt: serverTimestamp()
                     });
                     if (targetMoveItemCategoryId !== 'quick_memo') {
