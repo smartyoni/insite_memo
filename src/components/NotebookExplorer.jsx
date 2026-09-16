@@ -4133,7 +4133,55 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
-  const renderMainModeBar = () => (
+  const renderUserBar = (customStyle = {}) => {
+    if (!currentUser) return null;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '3px 8px',
+          backgroundColor: '#F1F5F9',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          fontSize: '11px',
+          color: '#475569',
+          boxSizing: 'border-box',
+          ...customStyle
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+          <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0 }} />
+          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 600, color: '#1E293B' }}>
+            관리자 ({currentUser.email ? `${currentUser.email.slice(0, 3)}***@${currentUser.email.split('@')[1] || ''}` : '인증됨'})
+          </span>
+        </div>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            style={{
+              padding: '2px 7px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: 600,
+              color: '#64748B',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+            title="로그아웃"
+          >
+            로그아웃
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderMainModeBar = (showUserBar = true) => (
     <div style={isMobile ? {
       ...styles.mainModeBar,
       display: 'flex',
@@ -4150,49 +4198,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       gap: '4px'
     }}>
       {/* User Profile & Logout Bar */}
-      {currentUser && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '3px 8px',
-            backgroundColor: '#F1F5F9',
-            borderRadius: '6px',
-            border: '1px solid #E2E8F0',
-            fontSize: '11px',
-            color: '#475569',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0 }} />
-            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 600, color: '#1E293B' }}>
-              관리자 ({currentUser.email ? `${currentUser.email.slice(0, 3)}***@${currentUser.email.split('@')[1] || ''}` : '인증됨'})
-            </span>
-          </div>
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              style={{
-                padding: '2px 7px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: 600,
-                color: '#64748B',
-                cursor: 'pointer',
-                flexShrink: 0
-              }}
-              title="로그아웃"
-            >
-              로그아웃
-            </button>
-          )}
-        </div>
-      )}
+      {showUserBar && renderUserBar()}
 
       {/* Function Segmented Tabs (2 Rows x 4 Columns) */}
       <div
@@ -4429,10 +4435,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     </div>
   );
 
-  const renderMobileFooter = (screenHeader) => (
+  const renderMobileFooter = (screenHeader, showUserBar = true) => (
     <div style={styles.mobileFooterContainer}>
       {screenHeader}
-      {renderMainModeBar()}
+      {renderMainModeBar(showUserBar)}
     </div>
   );
 
@@ -4814,6 +4820,68 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           {/* Main Mode Tab Switcher & Header for Desktop */}
           {!isMobile && renderMainModeBar()}
 
+          {/* Mobile Top Header: Login Management Bar + Category Add Bar */}
+          {isMobile && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: '#E2ECF7',
+              borderBottom: '1px solid #D4E3F3',
+              flexShrink: 0
+            }}>
+              {currentUser && (
+                <div style={{ padding: '8px 10px 4px 10px' }}>
+                  {renderUserBar()}
+                </div>
+              )}
+              {activeMainTab === 'template' ? (
+                <div style={{
+                  ...styles.pane1Header,
+                  backgroundColor: 'transparent',
+                  borderBottom: 'none',
+                  height: '44px',
+                  padding: '0 12px 0 16px',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={{ ...styles.pane1Title, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Layout size={16} color="#2563EB" />
+                    템플릿1 목록 ({templates.length})
+                  </span>
+                  <button
+                    onClick={handleCreateNewTemplateInTab}
+                    style={styles.iconBtnDark}
+                    title="새 템플릿1 만들기"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              ) : activeMainTab !== 'calendar' ? (
+                <div style={{
+                  ...styles.pane1Header,
+                  backgroundColor: 'transparent',
+                  borderBottom: 'none',
+                  height: '44px',
+                  padding: '0 12px 0 16px'
+                }}>
+                  <span style={styles.pane1Title}>카테고리</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={() => {
+                        setIsAddingCategory(true);
+                        setAddingParentId(null);
+                        setNewCategoryName('');
+                      }}
+                      style={styles.iconBtnDark}
+                      title="최상위 카테고리 추가"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {activeMainTab === 'template' ? (
             <>
               {!isMobile && (
@@ -4881,23 +4949,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 )}
               </div>
 
-              {isMobile && renderMobileFooter(
-                <div style={{
-                  ...styles.pane1Header,
-                  borderBottom: 'none',
-                  borderTop: '1px solid #D4E3F3',
-                  justifyContent: 'space-between'
-                }}>
-                  <span style={styles.pane1Title}>템플릿1 목록 ({templates.length})</span>
-                  <button
-                    onClick={handleCreateNewTemplateInTab}
-                    style={styles.iconBtnDark}
-                    title="새 템플릿1 만들기"
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-              )}
+              {isMobile && renderMobileFooter(null, false)}
             </>
           ) : activeMainTab !== 'calendar' ? (
             <>
@@ -5115,28 +5167,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               </div>
 
               {/* Mobile Footer for Pane 1 */}
-              {isMobile && renderMobileFooter(
-                <div style={{
-                  ...styles.pane1Header,
-                  borderBottom: 'none',
-                  borderTop: '1px solid #D4E3F3'
-                }}>
-                  <span style={styles.pane1Title}>카테고리</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <button
-                      onClick={() => {
-                        setIsAddingCategory(true);
-                        setAddingParentId(null);
-                        setNewCategoryName('');
-                      }}
-                      style={styles.iconBtnDark}
-                      title="최상위 카테고리 추가"
-                    >
-                      <Plus size={18} />
-                    </button>
-                  </div>
-                </div>
-              )}
+              {isMobile && renderMobileFooter(null, false)}
             </>
           ) : (
             <>
@@ -5144,7 +5175,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               <div style={{ ...styles.paneContent, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', color: '#94A3B8', textAlign: 'center' }}>
                 {/* Empty container for calendar mode sidebar */}
               </div>
-              {isMobile && renderMobileFooter(null)}
+              {isMobile && renderMobileFooter(null, false)}
             </>
           )}
         </div>
