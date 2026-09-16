@@ -6758,7 +6758,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }
                                               }}
                                               style={{
-                                                fontSize: '13px',
+                                                fontSize: '14px',
                                                 fontWeight: 700,
                                                 color: '#0F172A',
                                                 padding: '2px 6px',
@@ -6800,7 +6800,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 setEditingCheckText(group.section.text);
                                               }}
                                               title="더블클릭하여 그룹 이름 수정"
-                                              style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                              style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
                                             >
                                               {group.section.text}
                                             </span>
@@ -8072,7 +8072,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               }
                                             }}
                                             style={{
-                                              fontSize: '13px',
+                                              fontSize: '14px',
                                               fontWeight: 700,
                                               color: '#1E293B',
                                               padding: '2px 6px',
@@ -8114,7 +8114,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                setEditingCheckText(group.section.text);
                                              }}
                                              title="더블클릭하여 그룹 이름 수정"
-                                             style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                             style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
                                            >
                                              {group.section.text}
                                            </span>

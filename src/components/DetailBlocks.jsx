@@ -1300,7 +1300,7 @@ export const DetailBlocksManager = ({
                       autoFocus
                       style={{
                         flex: 1,
-                        fontSize: '13px',
+                        fontSize: '14px',
                         fontWeight: 700,
                         color: '#052E16',
                         padding: '2px 6px',
@@ -1362,7 +1362,7 @@ export const DetailBlocksManager = ({
                     <Folder size={14} color="#065F46" style={{ flexShrink: 0 }} />
                     <span
                       style={{
-                        fontSize: '13px',
+                        fontSize: '14px',
                         fontWeight: 700,
                         color: '#052E16',
                         overflow: 'hidden',
