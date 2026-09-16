@@ -6697,15 +6697,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     style={group.section ? {
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      gap: isMobile ? '4px' : '6px',
-                                      padding: isMobile ? '4px 2px' : '8px',
-                                      backgroundColor: '#F8FAFC',
-                                      borderRadius: isMobile ? '6px' : '10px',
-                                      border: '2px solid #94A3B8',
-                                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
+                                      gap: '0px',
+                                      padding: '0px',
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: isMobile ? '6px' : '8px',
+                                      border: '1.5px solid #64748B',
+                                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '4px' : '6px'),
                                       marginLeft: 0,
-                                      marginRight: 0
+                                      marginRight: 0,
+                                      overflow: 'hidden'
                                     } : {
                                       display: 'flex',
                                       flexDirection: 'column',
@@ -6720,13 +6721,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           alignItems: 'center',
                                           justifyContent: 'space-between',
                                           gap: isMobile ? '4px' : '8px',
-                                          padding: isMobile ? '5px 4px' : '7px 10px',
+                                          padding: isMobile ? '5px 8px' : '7px 12px',
                                           marginTop: '0',
-                                          marginBottom: isSecCollapsed ? '0' : '2px',
+                                          marginBottom: '0',
                                           backgroundColor: '#B3C8DD',
-                                          border: '1px solid #7B95AC',
-                                          borderRadius: isMobile ? '5px' : '8px',
-                                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                          border: 'none',
+                                          borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
+                                          borderRadius: '0',
+                                          boxShadow: 'none',
                                           cursor: isSecEditing ? 'default' : 'pointer',
                                           userSelect: 'none'
                                         }}
@@ -7118,8 +7120,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
                                     {/* 하위 항목들 */}
                                     {!isSecCollapsed && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '3px' : '4px' }}>
-                                        {group.sortedItems.map((checkItem) => {
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                                        {group.sortedItems.map((checkItem, itemIdx) => {
                                           const isEditing = editingCheckId === checkItem.id;
                                           const isSelected = selectedChecklistId === checkItem.id;
                                           const isDragged = draggedNoteChecklistId === checkItem.id;
@@ -7168,7 +7170,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }
                                                 }
                                               }}
-                                              style={{
+                                              style={group.section ? {
+                                                ...styles.checklistItemRow,
+                                                padding: isMobile ? '5px 8px' : '6px 12px',
+                                                borderRadius: '0',
+                                                backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                                border: 'none',
+                                                borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                                boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                                opacity: isDragged ? 0.4 : 1,
+                                                cursor: 'pointer'
+                                              } : {
                                                 ...styles.checklistItemRow,
                                                 padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
                                                 borderRadius: isMobile ? '6px' : '8px',
@@ -7998,15 +8010,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   style={group.section ? {
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: isMobile ? '4px' : '6px',
-                                    padding: isMobile ? '4px 2px' : '8px',
-                                    backgroundColor: '#F8FAFC',
-                                    borderRadius: isMobile ? '6px' : '10px',
-                                    border: '2px solid #94A3B8',
-                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '6px' : '8px'),
+                                    gap: '0px',
+                                    padding: '0px',
+                                    backgroundColor: '#FFFFFF',
+                                    borderRadius: isMobile ? '6px' : '8px',
+                                    border: '1.5px solid #64748B',
+                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '4px' : '6px'),
                                     marginLeft: 0,
-                                    marginRight: 0
+                                    marginRight: 0,
+                                    overflow: 'hidden'
                                   } : {
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -8021,13 +8034,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         gap: isMobile ? '4px' : '8px',
-                                        padding: isMobile ? '5px 4px' : '7px 10px',
+                                        padding: isMobile ? '5px 8px' : '7px 12px',
                                         marginTop: '0',
-                                        marginBottom: isSecCollapsed ? '0' : '2px',
+                                        marginBottom: '0',
                                         backgroundColor: '#B3C8DD',
-                                        border: '1px solid #7B95AC',
-                                        borderRadius: isMobile ? '5px' : '8px',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                        border: 'none',
+                                        borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
+                                        borderRadius: '0',
+                                        boxShadow: 'none',
                                         cursor: isSecEditing ? 'default' : 'pointer',
                                         userSelect: 'none'
                                       }}
@@ -8420,8 +8434,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
                                   {/* 그룹 하위 체크리스트 항목들 (접혀있지 않을 때만 렌더링) */}
                                   {!isSecCollapsed && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '3px' : '4px' }}>
-                                      {group.sortedItems.map((checkItem) => {
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                                      {group.sortedItems.map((checkItem, itemIdx) => {
                                         const isEditing = editingCheckId === checkItem.id;
                                         const isSelected = selectedChecklistId === checkItem.id;
                                         const isDragged = draggedNoteChecklistId === checkItem.id;
@@ -8470,7 +8484,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }
                                               }
                                             }}
-                                            style={{
+                                            style={group.section ? {
+                                              ...styles.checklistItemRow,
+                                              padding: isMobile ? '5px 8px' : '6px 12px',
+                                              borderRadius: '0',
+                                              backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                              border: 'none',
+                                              borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                              boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                              opacity: isDragged ? 0.4 : 1,
+                                              cursor: 'pointer'
+                                            } : {
                                               ...styles.checklistItemRow,
                                               padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
                                               borderRadius: isMobile ? '6px' : '8px',
