@@ -6061,7 +6061,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
                                 gap: isMobile ? '4px' : '8px',
-                                padding: isMobile ? '5px 8px' : '7px 12px',
+                                height: isMobile ? '28px' : '30px',
+                                padding: isMobile ? '2px 8px' : '2px 10px',
+                                boxSizing: 'border-box',
                                 backgroundColor: isGroupDragOver ? '#DBEAFE' : '#B3C8DD',
                                 border: 'none',
                                 borderBottom: isSecCollapsed ? 'none' : '1px solid #7B95AC',
@@ -6076,13 +6078,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 }
                               }}
                             >
-                              {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
+                              {/* 좌측: 토글 화살표 + 그룹명 */}
                               {isSecEditing ? (
                                 <div
                                   style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <Folder size={14} color="#2563EB" />
                                   <input
                                     type="text"
                                     value={editingItemGroupName}
@@ -6131,7 +6132,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   >
                                     {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                   </span>
-                                  <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
                                   <span
                                     onDoubleClick={(e) => {
                                       e.stopPropagation();
@@ -6151,16 +6151,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                   >
                                     {group.name}
-                                  </span>
-                                  <span style={{
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    color: '#1E3A8A',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                                    padding: '1px 5px',
-                                    borderRadius: '10px'
-                                  }}>
-                                    {grpItems.length}
                                   </span>
                                   {isSecCollapsed && (
                                     <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
