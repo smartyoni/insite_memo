@@ -170,6 +170,7 @@ function DetailChecklistItemRow({
   onAddNext,
   onToggle,
   onCopy,
+  onCopyItem,
   onDelete,
   openItemMenuId,
   openItemMenuPos,
@@ -476,10 +477,27 @@ function DetailChecklistItemRow({
                     style={blockMenuItemStyle}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="현재 목록에 바로 복제"
                   >
                     <Copy size={13} color="#475569" />
-                    <span>복사</span>
+                    <span>복제</span>
                   </button>
+                  {onCopyItem && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCloseItemMenu();
+                        onCopyItem(item);
+                      }}
+                      style={blockMenuItemStyle}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      title="클립보드에 복사하여 다른 블록이나 다른 항목에 붙여넣기"
+                    >
+                      <Copy size={13} color="#2563EB" />
+                      <span style={{ color: '#2563EB', fontWeight: 600 }}>항목 복사</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onDelete(blockId, item.id)}
@@ -578,6 +596,10 @@ export const DetailBlocksManager = ({
   setEditingBlockId,
   openDeleteModal,
   onOpenMoveModal,
+  onCopyBlock,
+  onCopyItem,
+  detailClipboard,
+  onPasteItemToChecklist,
   collapsedBlockIds: externalCollapsedBlockIds,
   setCollapsedBlockIds: externalSetCollapsedBlockIds
 }) => {
@@ -1435,6 +1457,41 @@ export const DetailBlocksManager = ({
                     <Plus size={15} strokeWidth={2.5} />
                   </button>
 
+                  {detailClipboard && detailClipboard.type === 'item' && onPasteItemToChecklist && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPasteItemToChecklist(block.id);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '26px',
+                        height: '100%',
+                        border: 'none',
+                        borderRight: '1px solid #E2E8F0',
+                        backgroundColor: '#EFF6FF',
+                        color: '#2563EB',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#DBEAFE';
+                        e.currentTarget.style.color = '#1D4ED8';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        e.currentTarget.style.color = '#2563EB';
+                      }}
+                      title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
+                    >
+                      <Copy size={13} strokeWidth={2.5} />
+                    </button>
+                  )}
+
                   {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
                   <div
                     style={{
@@ -1641,6 +1698,7 @@ export const DetailBlocksManager = ({
                       onAddNext={handleAddNextChecklistItem}
                       onToggle={handleToggleChecklistItem}
                       onCopy={handleCopyChecklistItem}
+                      onCopyItem={onCopyItem}
                       onDelete={handleDeleteChecklistItem}
                       openItemMenuId={openItemMenuId}
                       openItemMenuPos={openItemMenuPos}
@@ -2184,6 +2242,66 @@ export const DetailBlocksManager = ({
                   <Edit2 size={14} color="#475569" />
                   <span>수정</span>
                 </button>
+                {onCopyBlock && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onCopyBlock(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#2563EB',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="블록 전체를 복사하여 다른 카테고리나 다른 탭의 항목에 붙여넣기"
+                  >
+                    <Copy size={14} color="#2563EB" />
+                    <span>블록 복사</span>
+                  </button>
+                )}
+                {detailClipboard && detailClipboard.type === 'item' && onPasteItemToChecklist && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onPasteItemToChecklist(activeMenuBlock.id);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#059669',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title={`복사한 항목('${detailClipboard.title}') 여기에 붙여넣기`}
+                  >
+                    <Copy size={14} color="#059669" />
+                    <span>복사 항목 붙여넣기</span>
+                  </button>
+                )}
                 {onOpenMoveModal && (
                   <button
                     type="button"
@@ -2295,6 +2413,36 @@ export const DetailBlocksManager = ({
                   <Edit2 size={14} color="#475569" />
                   <span>수정</span>
                 </button>
+                {onCopyBlock && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onCopyBlock(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#2563EB',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="블록 전체를 복사하여 다른 카테고리나 다른 탭의 항목에 붙여넣기"
+                  >
+                    <Copy size={14} color="#2563EB" />
+                    <span>블록 복사</span>
+                  </button>
+                )}
                 {onOpenMoveModal && (
                   <button
                     type="button"

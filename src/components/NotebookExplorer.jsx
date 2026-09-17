@@ -953,6 +953,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
+  // Detail Blocks Clipboard State (For copying blocks or items across items, categories, and tabs)
+  const [detailClipboard, setDetailClipboard] = useState(() => {
+    try {
+      const saved = localStorage.getItem('insite_memo_detail_clipboard');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   // Global Navigation History States (for '이전' button)
   const [navHistory, setNavHistory] = useState([]);
   const lastNavLocationRef = useRef(null);
@@ -2692,6 +2702,146 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const updated = [...checklistDetailBlocks, newBlock];
     setChecklistDetailBlocks(updated);
     handleSaveChecklistDetail(selectedChecklistId, updated);
+  };
+
+  // Detail Blocks Clipboard Handlers
+  const handleCopyBlockToClipboard = (block) => {
+    if (!block) return;
+    const title = block.title && block.title.trim()
+      ? block.title.trim()
+      : (block.type === 'checklist' ? '체크리스트' : '텍스트 박스');
+    const payload = {
+      type: 'block',
+      data: {
+        type: block.type,
+        title: block.title || '',
+        content: block.content || '',
+        items: Array.isArray(block.items) ? block.items.map((it) => ({ ...it })) : []
+      },
+      title,
+      copiedAt: Date.now()
+    };
+    setDetailClipboard(payload);
+    try {
+      localStorage.setItem('insite_memo_detail_clipboard', JSON.stringify(payload));
+    } catch (e) {
+      console.error('Failed to save detail clipboard to localStorage:', e);
+    }
+    setCopyToastText(`✓ '${title}' 블록이 복사되었습니다. 다른 항목이나 탭에서 붙여넣기 하세요.`);
+    if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2500);
+  };
+
+  const handleCopyItemToClipboard = (item) => {
+    if (!item) return;
+    const rawText = (item.text || '').trim();
+    const preview = rawText.length > 20 ? rawText.slice(0, 20) + '...' : (rawText || '체크 항목');
+    const payload = {
+      type: 'item',
+      data: {
+        text: item.text || '',
+        completed: Boolean(item.completed)
+      },
+      title: preview,
+      copiedAt: Date.now()
+    };
+    setDetailClipboard(payload);
+    try {
+      localStorage.setItem('insite_memo_detail_clipboard', JSON.stringify(payload));
+    } catch (e) {
+      console.error('Failed to save detail clipboard to localStorage:', e);
+    }
+    setCopyToastText(`✓ '${preview}' 항목이 복사되었습니다.`);
+    if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2500);
+  };
+
+  const handleClearDetailClipboard = () => {
+    setDetailClipboard(null);
+    try {
+      localStorage.removeItem('insite_memo_detail_clipboard');
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handlePasteBlockFromClipboard = () => {
+    if (!detailClipboard || detailClipboard.type !== 'block' || !selectedChecklistId) return;
+    recordWorkLocation();
+    const source = detailClipboard.data;
+    const isChk = source.type === 'checklist';
+    const newBlockId = isChk
+      ? `chk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      : `b_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const newBlock = {
+      id: newBlockId,
+      type: source.type || 'text',
+      title: source.title || '',
+      content: source.content || '',
+      ...(isChk ? {
+        items: Array.isArray(source.items) && source.items.length > 0
+          ? source.items.map((it, idx) => ({
+              id: `item_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 5)}`,
+              text: it.text || '',
+              completed: Boolean(it.completed)
+            }))
+          : [{ id: `item_${Date.now()}_0`, text: '', completed: false }]
+      } : {})
+    };
+
+    const updated = [...checklistDetailBlocks, newBlock];
+    setChecklistDetailBlocks(updated);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
+    setCopyToastText(`✓ '${detailClipboard.title}' 블록을 붙여넣었습니다.`);
+    if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2200);
+  };
+
+  const handlePasteItemFromClipboard = (targetBlockId) => {
+    if (!detailClipboard || detailClipboard.type !== 'item' || !selectedChecklistId) return;
+    recordWorkLocation();
+    const sourceItem = detailClipboard.data;
+    const newItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      text: sourceItem.text || '',
+      completed: Boolean(sourceItem.completed)
+    };
+
+    let updated = [];
+    if (targetBlockId) {
+      // 특정 체크리스트 블록에 붙여넣기
+      updated = checklistDetailBlocks.map((b) => {
+        if (b.id !== targetBlockId) return b;
+        const currentItems = Array.isArray(b.items) ? [...b.items] : [];
+        return { ...b, items: [...currentItems, newItem] };
+      });
+    } else {
+      // 상단 툴바 등에서 붙여넣기 시:
+      // 기존 체크리스트 블록이 있으면 마지막 체크리스트 블록에 추가, 없으면 새 체크리스트 블록 생성 후 추가
+      const lastChkIdx = checklistDetailBlocks.map(b => b.type).lastIndexOf('checklist');
+      if (lastChkIdx !== -1) {
+        updated = checklistDetailBlocks.map((b, idx) => {
+          if (idx !== lastChkIdx) return b;
+          const currentItems = Array.isArray(b.items) ? [...b.items] : [];
+          return { ...b, items: [...currentItems, newItem] };
+        });
+      } else {
+        const newBlock = {
+          id: `chk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          type: 'checklist',
+          title: '체크리스트',
+          items: [newItem]
+        };
+        updated = [...checklistDetailBlocks, newBlock];
+      }
+    }
+
+    setChecklistDetailBlocks(updated);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
+    setCopyToastText(`✓ '${detailClipboard.title}' 항목을 붙여넣었습니다.`);
+    if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2200);
   };
 
   const handleOpenMoveBlockModal = (block) => {
@@ -8886,6 +9036,104 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           {selectedChecklistId === '__main__' ? (
                             draftTemplateId === null ? (
                               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'flex-end',
+                                  paddingBottom: '8px',
+                                  marginBottom: '6px',
+                                  borderBottom: '1px solid #E2E8F0',
+                                  flexWrap: 'wrap',
+                                  gap: '6px'
+                                }} className="no-print">
+                                  <button
+                                    type="button"
+                                    onClick={handleAddNewTextBlock}
+                                    style={{
+                                      ...styles.btnSecondary,
+                                      color: '#1D4ED8',
+                                      backgroundColor: '#EFF6FF',
+                                      borderColor: '#BFDBFE',
+                                      fontWeight: 600
+                                    }}
+                                    title="새 텍스트 추가"
+                                  >
+                                    <Plus size={13} />
+                                    <span>텍스트</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleAddNewChecklistBlock}
+                                    style={{
+                                      ...styles.btnSecondary,
+                                      color: '#D97706',
+                                      backgroundColor: '#FEF3C7',
+                                      borderColor: '#FDE68A',
+                                      fontWeight: 600
+                                    }}
+                                    title="새 체크 추가"
+                                  >
+                                    <CheckSquare size={13} />
+                                    <span>체크</span>
+                                  </button>
+                                  {detailClipboard && (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                      {detailClipboard.type === 'block' ? (
+                                        <button
+                                          type="button"
+                                          onClick={handlePasteBlockFromClipboard}
+                                          style={{
+                                            ...styles.btnSecondary,
+                                            color: '#047857',
+                                            backgroundColor: '#ECFDF5',
+                                            borderColor: '#A7F3D0',
+                                            fontWeight: 600
+                                          }}
+                                          title={`복사한 블록('${detailClipboard.title}') 붙여넣기`}
+                                        >
+                                          <Copy size={13} />
+                                          <span>블록 붙여넣기</span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handlePasteItemFromClipboard()}
+                                          style={{
+                                            ...styles.btnSecondary,
+                                            color: '#047857',
+                                            backgroundColor: '#ECFDF5',
+                                            borderColor: '#A7F3D0',
+                                            fontWeight: 600
+                                          }}
+                                          title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
+                                        >
+                                          <Copy size={13} />
+                                          <span>항목 붙여넣기</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={handleClearDetailClipboard}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '24px',
+                                          height: isMobile ? '28px' : '30px',
+                                          border: '1px solid #CBD5E1',
+                                          borderRadius: '6px',
+                                          backgroundColor: '#FFFFFF',
+                                          color: '#64748B',
+                                          cursor: 'pointer',
+                                          padding: 0
+                                        }}
+                                        title="복사한 내용 지우기"
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                                 <DetailBlocksManager
                                   blocks={checklistDetailBlocks}
                                   onChangeAndSave={(newBlocks) => {
@@ -8897,6 +9145,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   setEditingBlockId={setEditingBlockId}
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
+                                  onCopyBlock={handleCopyBlockToClipboard}
+                                  onCopyItem={handleCopyItemToClipboard}
+                                  detailClipboard={detailClipboard}
+                                  onPasteItemToChecklist={handlePasteItemFromClipboard}
                                   collapsedBlockIds={detailCollapsedBlockIds}
                                   setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                 />
@@ -9204,8 +9456,66 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         <CheckSquare size={13} />
                                         <span>체크</span>
                                       </button>
+                                      {detailClipboard && (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                          {detailClipboard.type === 'block' ? (
+                                            <button
+                                              type="button"
+                                              onClick={handlePasteBlockFromClipboard}
+                                              style={{
+                                                ...styles.btnSecondary,
+                                                color: '#047857',
+                                                backgroundColor: '#ECFDF5',
+                                                borderColor: '#A7F3D0',
+                                                fontWeight: 600
+                                              }}
+                                              title={`복사한 블록('${detailClipboard.title}') 붙여넣기`}
+                                            >
+                                              <Copy size={13} />
+                                              <span>블록 붙여넣기</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => handlePasteItemFromClipboard()}
+                                              style={{
+                                                ...styles.btnSecondary,
+                                                color: '#047857',
+                                                backgroundColor: '#ECFDF5',
+                                                borderColor: '#A7F3D0',
+                                                fontWeight: 600
+                                              }}
+                                              title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
+                                            >
+                                              <Copy size={13} />
+                                              <span>항목 붙여넣기</span>
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={handleClearDetailClipboard}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: '24px',
+                                              height: isMobile ? '28px' : '30px',
+                                              border: '1px solid #CBD5E1',
+                                              borderRadius: '6px',
+                                              backgroundColor: '#FFFFFF',
+                                              color: '#64748B',
+                                              cursor: 'pointer',
+                                              padding: 0
+                                            }}
+                                            title="복사한 내용 지우기"
+                                          >
+                                            <X size={12} />
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
+                                  {/* Detail Content: Always interactive DetailBlocksManager */}
                                   <DetailBlocksManager
                                     blocks={checklistDetailBlocks}
                                     onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
@@ -9214,6 +9524,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     setEditingBlockId={setEditingBlockId}
                                     openDeleteModal={openDeleteModal}
                                     onOpenMoveModal={handleOpenMoveBlockModal}
+                                    onCopyBlock={handleCopyBlockToClipboard}
+                                    onCopyItem={handleCopyItemToClipboard}
+                                    detailClipboard={detailClipboard}
+                                    onPasteItemToChecklist={handlePasteItemFromClipboard}
                                     collapsedBlockIds={detailCollapsedBlockIds}
                                     setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                   />
@@ -10541,26 +10855,87 @@ onClick={() => {
                                         borderColor: '#FDE68A',
                                         fontWeight: 600
                                       }}
-                                      title="새 체크 추가"
-                                    >
-                                      <CheckSquare size={13} />
-                                      <span>체크</span>
-                                    </button>
+                                        title="새 체크 추가"
+                                      >
+                                        <CheckSquare size={13} />
+                                        <span>체크</span>
+                                      </button>
+                                      {detailClipboard && (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                          {detailClipboard.type === 'block' ? (
+                                            <button
+                                              type="button"
+                                              onClick={handlePasteBlockFromClipboard}
+                                              style={{
+                                                ...styles.btnSecondary,
+                                                color: '#047857',
+                                                backgroundColor: '#ECFDF5',
+                                                borderColor: '#A7F3D0',
+                                                fontWeight: 600
+                                              }}
+                                              title={`복사한 블록('${detailClipboard.title}') 붙여넣기`}
+                                            >
+                                              <Copy size={13} />
+                                              <span>블록 붙여넣기</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => handlePasteItemFromClipboard()}
+                                              style={{
+                                                ...styles.btnSecondary,
+                                                color: '#047857',
+                                                backgroundColor: '#ECFDF5',
+                                                borderColor: '#A7F3D0',
+                                                fontWeight: 600
+                                              }}
+                                              title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
+                                            >
+                                              <Copy size={13} />
+                                              <span>항목 붙여넣기</span>
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={handleClearDetailClipboard}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: '24px',
+                                              height: isMobile ? '28px' : '30px',
+                                              border: '1px solid #CBD5E1',
+                                              borderRadius: '6px',
+                                              backgroundColor: '#FFFFFF',
+                                              color: '#64748B',
+                                              cursor: 'pointer',
+                                              padding: 0
+                                            }}
+                                            title="복사한 내용 지우기"
+                                          >
+                                            <X size={12} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Detail Content: Always interactive DetailBlocksManager */}
-                                <DetailBlocksManager
-                                  blocks={checklistDetailBlocks}
-                                  onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
-                                  searchQuery={searchQuery}
-                                  editingBlockId={editingBlockId}
-                                  setEditingBlockId={setEditingBlockId}
-                                  openDeleteModal={openDeleteModal}
-                                  onOpenMoveModal={handleOpenMoveBlockModal}
-                                  collapsedBlockIds={detailCollapsedBlockIds}
-                                  setCollapsedBlockIds={updateDetailCollapsedBlockIds}
-                                />
+                                  {/* Detail Content: Always interactive DetailBlocksManager */}
+                                  <DetailBlocksManager
+                                    blocks={checklistDetailBlocks}
+                                    onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
+                                    searchQuery={searchQuery}
+                                    editingBlockId={editingBlockId}
+                                    setEditingBlockId={setEditingBlockId}
+                                    openDeleteModal={openDeleteModal}
+                                    onOpenMoveModal={handleOpenMoveBlockModal}
+                                    onCopyBlock={handleCopyBlockToClipboard}
+                                    onCopyItem={handleCopyItemToClipboard}
+                                    detailClipboard={detailClipboard}
+                                    onPasteItemToChecklist={handlePasteItemFromClipboard}
+                                    collapsedBlockIds={detailCollapsedBlockIds}
+                                    setCollapsedBlockIds={updateDetailCollapsedBlockIds}
+                                  />
                               </>
                             );
                           })()
