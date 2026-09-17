@@ -332,7 +332,7 @@ const getDefaultCategoryIdForTab = (tab, catList = []) => {
   if (tab === 'explorer') return 'quick_memo';
   const scope = getScopeForTab(tab);
   const scopeCategories = (catList || []).filter(c => {
-    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id) || c.isDeleted) return false;
     return c.scope === scope;
   });
   if (scopeCategories.length > 0) {
@@ -662,7 +662,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   const getHierarchicalCategoryOptions = (scope, excludeId = null) => {
     const scopeCategories = categories.filter(c => {
-      if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
+      if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id) || c.isDeleted) return false;
       if (scope === 'explorer') return !c.scope || c.scope === 'explorer';
       return c.scope === scope;
     });
@@ -746,7 +746,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const currentFixedTrashCategory = getFixedTrashCategoryForTab(activeMainTab);
   const currentScope = getScopeForTab(activeMainTab);
   const filteredCategories = categories.filter((c) => {
-    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id)) return false;
+    if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id) || c.isDeleted) return false;
     if (currentScope === 'explorer') {
       return !c.scope || c.scope === 'explorer';
     }
@@ -3477,9 +3477,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       const trashId = getTrashIdForTab(activeMainTab);
       const batch = writeBatch(db);
 
-      // 1. Delete all categories in the tree
+      // 1. Safely Soft Delete all categories in the tree (Never hard delete!)
       allTargetCatIds.forEach((id) => {
-        batch.delete(doc(db, 'categories', id));
+        batch.update(doc(db, 'categories', id), {
+          isDeleted: true,
+          deletedAt: serverTimestamp()
+        });
       });
 
       // 2. Safely Soft Delete all child items to Trash (Never hard delete!)
@@ -4156,7 +4159,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     try {
       const fallbackCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
       const targetCategoryId = (item.originalCategoryId && !LEGACY_INBOX_IDS.includes(item.originalCategoryId)) ? item.originalCategoryId : fallbackCatId;
-      const isValidCat = (activeMainTab === 'explorer' && targetCategoryId === 'quick_memo') || categories.some((c) => c.id === targetCategoryId);
+      const isValidCat = (activeMainTab === 'explorer' && targetCategoryId === 'quick_memo') || categories.some((c) => c.id === targetCategoryId && !c.isDeleted);
       const restoreCatId = isValidCat ? targetCategoryId : fallbackCatId;
 
       await updateDoc(doc(db, 'items', item.id), {
