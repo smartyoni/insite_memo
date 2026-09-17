@@ -845,6 +845,23 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [dragOverItemGroupId, setDragOverItemGroupId] = useState(null);
   const [dragOverItemId, setDragOverItemId] = useState(null);
 
+  // Category groups (그룹화된 카테고리 관리) states
+  const [categoryGroups, setCategoryGroups] = useState([]);
+  const [collapsedCategoryGroups, setCollapsedCategoryGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('memo_collapsed_category_groups');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isAddingCategoryGroup, setIsAddingCategoryGroup] = useState(false);
+  const [newCategoryGroupName, setNewCategoryGroupName] = useState('');
+  const [editingCategoryGroupId, setEditingCategoryGroupId] = useState(null);
+  const [editingCategoryGroupName, setEditingCategoryGroupName] = useState('');
+  const [addingCategoryGroupId, setAddingCategoryGroupId] = useState(null);
+  const [dragOverCategoryGroupId, setDragOverCategoryGroupId] = useState(null);
+
   // Item inline editing states (Pane 2)
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemTitle, setEditingItemTitle] = useState('');
@@ -1467,6 +1484,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     return () => unsubscribe();
   }, []);
 
+  // 1.5. Subscribe to Category Groups
+  useEffect(() => {
+    const q = query(collection(db, 'categoryGroups'), orderBy('order', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+      setCategoryGroups(list);
+    }, (err) => {
+      console.error("Firestore categoryGroups snapshot error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Ensure valid selectedCategoryId when categories or tab change
   useEffect(() => {
     if (categories.length === 0) return;
@@ -1741,9 +1773,70 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   }, [selectedCategoryId, filteredItems.length, items.length]);
 
-  // Get active selected item & category objects
+  // Current active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
+
+  // Current active tab scope category groups
+  const currentScopeCategoryGroups = React.useMemo(() => {
+    const currentScope = getScopeForTab(activeMainTab);
+    return categoryGroups
+      .filter((g) => (g.scope || 'explorer') === currentScope)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [categoryGroups, activeMainTab]);
+
+  // Group displayed categories by categoryGroups
+  const displayedCategoryGrouped = React.useMemo(() => {
+    if (currentScopeCategoryGroups.length === 0) {
+      return [{ group: null, categories: filteredCategories }];
+    }
+
+    const groupMap = new Map();
+    currentScopeCategoryGroups.forEach((g) => {
+      groupMap.set(g.id, { group: g, categories: [] });
+    });
+
+    const unassignedCategories = [];
+
+    filteredCategories.forEach((cat) => {
+      if (cat.groupId && groupMap.has(cat.groupId)) {
+        groupMap.get(cat.groupId).categories.push(cat);
+      } else {
+        unassignedCategories.push(cat);
+      }
+    });
+
+    const result = [];
+    currentScopeCategoryGroups.forEach((g) => {
+      result.push(groupMap.get(g.id));
+    });
+
+    if (unassignedCategories.length > 0) {
+      result.push({
+        group: { id: '__unassigned__', name: '미분류 카테고리', isUnassigned: true },
+        categories: unassignedCategories
+      });
+    }
+
+    result.forEach((grp) => {
+      if (grp && Array.isArray(grp.categories)) {
+        grp.categories.sort((a, b) => {
+          const orderA = typeof a.order === 'number' ? a.order : null;
+          const orderB = typeof b.order === 'number' ? b.order : null;
+          if (orderA !== null && orderB !== null) {
+            if (orderA !== orderB) return orderA - orderB;
+          } else if (orderA !== null) {
+            return -1;
+          } else if (orderB !== null) {
+            return 1;
+          }
+          return (a.name || '').localeCompare(b.name || '', 'ko-KR', { numeric: true });
+        });
+      }
+    });
+
+    return result;
+  }, [currentScopeCategoryGroups, filteredCategories]);
 
   // Current active category item groups
   const currentCategoryItemGroups = React.useMemo(() => {
@@ -2909,11 +3002,143 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     };
   }, [openChecklistMenuId, openCatMenuId]);
 
+  // ---------------- Category Group Handlers ----------------
+  const toggleCategoryGroupCollapse = (groupId) => {
+    setCollapsedCategoryGroups((prev) => {
+      const updated = { ...prev, [groupId]: !prev[groupId] };
+      try {
+        localStorage.setItem('memo_collapsed_category_groups', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleAddCategoryGroup = async () => {
+    const trimmed = newCategoryGroupName.trim();
+    if (!trimmed) {
+      setIsAddingCategoryGroup(false);
+      setNewCategoryGroupName('');
+      return;
+    }
+    const currentScope = getScopeForTab(activeMainTab);
+    try {
+      const newRef = doc(collection(db, 'categoryGroups'));
+      await setDoc(newRef, {
+        name: trimmed,
+        order: currentScopeCategoryGroups.length,
+        scope: currentScope,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      setNewCategoryGroupName('');
+      setIsAddingCategoryGroup(false);
+    } catch (err) {
+      console.error('Error adding category group:', err);
+    }
+  };
+
+  const handleUpdateCategoryGroupName = async (groupId) => {
+    const trimmed = editingCategoryGroupName.trim();
+    if (!trimmed) {
+      setEditingCategoryGroupId(null);
+      return;
+    }
+    try {
+      await updateDoc(doc(db, 'categoryGroups', groupId), {
+        name: trimmed,
+        updatedAt: serverTimestamp()
+      });
+      setEditingCategoryGroupId(null);
+    } catch (err) {
+      console.error('Error updating category group name:', err);
+    }
+  };
+
+  const handleDeleteCategoryGroup = (groupId) => {
+    openDeleteModal(
+      '그룹 삭제',
+      '이 카테고리 그룹을 삭제하시겠습니까? 소속된 카테고리들은 안전하게 [미분류 카테고리]로 이동됩니다.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'categoryGroups', groupId));
+          const catsInGroup = categories.filter((c) => c.groupId === groupId);
+          if (catsInGroup.length > 0) {
+            const batch = writeBatch(db);
+            catsInGroup.forEach((c) => {
+              batch.update(doc(db, 'categories', c.id), {
+                groupId: null,
+                updatedAt: serverTimestamp()
+              });
+            });
+            await batch.commit();
+          }
+        } catch (err) {
+          console.error('Error deleting category group:', err);
+        }
+      }
+    );
+  };
+
+  const handleMoveCategoryGroup = async (groupId, direction) => {
+    const list = [...currentScopeCategoryGroups];
+    const index = list.findIndex((g) => g.id === groupId);
+    if (index === -1) return;
+
+    let newIndex = index;
+    if (direction === 'top') newIndex = 0;
+    else if (direction === 'bottom') newIndex = list.length - 1;
+    else if (direction === 'up') newIndex = Math.max(0, index - 1);
+    else if (direction === 'down') newIndex = Math.min(list.length - 1, index + 1);
+
+    if (newIndex === index) return;
+
+    const [moved] = list.splice(index, 1);
+    list.splice(newIndex, 0, moved);
+
+    try {
+      const batch = writeBatch(db);
+      list.forEach((g, idx) => {
+        batch.update(doc(db, 'categoryGroups', g.id), {
+          order: idx,
+          updatedAt: serverTimestamp()
+        });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Error moving category group:', err);
+    }
+  };
+
+  const handleDropCategoryOnGroup = async (e, targetGroupId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverCategoryGroupId(null);
+    const catId = draggedCategoryId || e.dataTransfer.getData('text/plain');
+    setDraggedCategoryId(null);
+    if (!catId) return;
+
+    try {
+      await updateDoc(doc(db, 'categories', catId), {
+        groupId: targetGroupId === '__unassigned__' ? null : targetGroupId,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Error moving category to group:', err);
+    }
+  };
+
+  const handleStartAddCategoryToGroup = (groupId) => {
+    setAddingCategoryGroupId(groupId === '__unassigned__' ? null : groupId);
+    setIsAddingCategory(true);
+    setNewCategoryName('');
+  };
+
   // ---------------- Category Handlers ----------------
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
       setIsAddingCategory(false);
       setAddingParentId(null);
+      setAddingCategoryGroupId(null);
       return;
     }
     try {
@@ -2923,16 +3148,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         name: newCategoryName.trim(),
         order: categories.length,
         scope: currentScope,
-        parentId: addingParentId || null,
+        groupId: addingCategoryGroupId || null,
         createdAt: serverTimestamp()
       });
-      if (addingParentId) {
-        setExpandedFolders((prev) => ({ ...prev, [addingParentId]: true }));
-      }
       navigateToItems(newRef.id);
       setNewCategoryName('');
       setIsAddingCategory(false);
       setAddingParentId(null);
+      setAddingCategoryGroupId(null);
     } catch (err) {
       console.error('Error adding category:', err);
     }
@@ -4852,367 +5075,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     </div>
   );
 
-  const renderCategoryNode = (node, level = 0, siblings = [], idx = 0) => {
-    const isSelected = node.id === selectedCategoryId;
-    const isEditing = node.id === editingCategoryId;
-    const count = items.filter((item) => item.categoryId === node.id && !item.isDeleted && !FIXED_TRASH_IDS.includes(item.categoryId)).length;
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedFolders[node.id] !== false;
-    const isBeingDragged = draggedCategoryId === node.id;
-    const isDropTarget = dragOverCategoryId === node.id;
-
-    return (
-      <div key={node.id} style={{ display: 'flex', flexDirection: 'column' }}>
-        <div
-          draggable={!isEditing}
-          onDragStart={(e) => {
-            e.stopPropagation();
-            e.dataTransfer.setData('text/plain', node.id);
-            e.dataTransfer.effectAllowed = 'move';
-            setDraggedCategoryId(node.id);
-          }}
-          onDragEnd={() => {
-            setDraggedCategoryId(null);
-            setDragOverCategoryId(null);
-            setIsDragOverRoot(false);
-          }}
-          onDragOver={(e) => {
-            if (draggedCategoryId && canMoveCategory(draggedCategoryId, node.id)) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.dataTransfer.dropEffect = 'move';
-              if (dragOverCategoryId !== node.id) {
-                setDragOverCategoryId(node.id);
-              }
-            } else if (draggedItemId) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.dataTransfer.dropEffect = 'move';
-              if (dragOverCategoryId !== node.id) {
-                setDragOverCategoryId(node.id);
-              }
-            }
-          }}
-          onDragLeave={(e) => {
-            e.stopPropagation();
-            if (dragOverCategoryId === node.id) {
-              setDragOverCategoryId(null);
-            }
-          }}
-          onDrop={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDragOverCategoryId(null);
-
-            if (draggedItemId) {
-              const itemId = draggedItemId;
-              setDraggedItemId(null);
-              try {
-                await updateDoc(doc(db, 'items', itemId), {
-                  categoryId: node.id,
-                  updatedAt: serverTimestamp()
-                });
-                setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
-              } catch (err) {
-                console.error('Error moving item to category:', err);
-              }
-              return;
-            }
-
-            const sourceId = draggedCategoryId || e.dataTransfer.getData('text/plain');
-            setDraggedCategoryId(null);
-            if (!sourceId || !canMoveCategory(sourceId, node.id)) return;
-            try {
-              await updateDoc(doc(db, 'categories', sourceId), {
-                parentId: node.id
-              });
-              setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
-            } catch (err) {
-              console.error('Error moving category:', err);
-            }
-          }}
-          onClick={() => {
-            if (!isEditing) {
-              navigateToItems(node.id);
-              if (hasChildren) {
-                toggleFolder(node.id);
-              }
-            }
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            if (ALL_FIXED_CATEGORY_IDS.includes(node.id)) return;
-            setEditingCategoryId(node.id);
-            setEditingCategoryName(node.name);
-          }}
-          onContextMenu={(e) => {
-            handleCategoryContextMenu(e, node);
-          }}
-          style={{
-            ...styles.catRow,
-            backgroundColor: isDropTarget ? '#EFF6FF' : isSelected ? '#D8E6F5' : 'transparent',
-            border: isDropTarget ? '1.5px dashed #2563EB' : isBeingDragged ? '1px dashed #94A3B8' : '1px solid transparent',
-            opacity: isBeingDragged ? 0.5 : 1,
-            color: isSelected ? '#0F172A' : '#1E293B',
-            fontWeight: isSelected ? 600 : 500,
-            paddingLeft: '4px',
-            paddingRight: '2px',
-            paddingTop: '5px',
-            paddingBottom: '5px',
-            gap: '4px',
-            userSelect: 'none',
-            transition: 'background-color 0.15s, border-color 0.15s'
-          }}
-        >
-          {/* Chevron toggle arrow if has children, else blank spacer */}
-          {hasChildren ? (
-            <button
-              onClick={(e) => toggleFolder(node.id, e)}
-              onDoubleClick={(e) => e.stopPropagation()}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: isSelected ? '#2563EB' : '#475569',
-                cursor: 'pointer',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '3px',
-                flexShrink: 0
-              }}
-              title={isExpanded ? '접기' : '펼치기'}
-            >
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-          ) : (
-            <span style={{ width: 14, height: 14, flexShrink: 0 }} />
-          )}
-
-          {isEditing ? (
-            <input
-              autoFocus
-              type="text"
-              value={editingCategoryName}
-              onChange={(e) => setEditingCategoryName(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUpdateCategoryName(node.id);
-                if (e.key === 'Escape') setEditingCategoryId(null);
-              }}
-              onBlur={() => handleUpdateCategoryName(node.id)}
-              style={styles.inputDarkInline}
-              onClick={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <div
-              style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}
-              title="더블클릭하여 카테고리명 수정"
-            >
-              <span style={{
-                fontSize: level === 0 ? '14.5px' : '13.5px',
-                color: isSelected ? '#0F172A' : '#1E293B',
-                fontWeight: level === 0 ? (isSelected ? 700 : 600) : (isSelected ? 600 : 500),
-                whiteSpace: 'normal',
-                wordBreak: 'break-word',
-                lineHeight: 1.35,
-                letterSpacing: '-0.2px',
-                WebkitFontSmoothing: 'antialiased'
-              }}>
-                {node.name}
-              </span>
-              <span style={{
-                fontSize: '11px',
-                color: isSelected ? '#2563EB' : '#64748B',
-                fontWeight: isSelected ? 700 : 600,
-                flexShrink: 0
-              }}>
-                ({count})
-              </span>
-            </div>
-          )}
-
-          {!isEditing && (
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, marginLeft: 'auto' }}
-              onClick={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => e.stopPropagation()}
-            >
-              {/* 3점 메뉴 */}
-              <div style={{ position: 'relative', flexShrink: 0 }} className="no-print">
-                <button
-                  type="button"
-                  onClick={(e) => handleOpenCatMenu(e, node.id)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '18px',
-                    height: '22px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    backgroundColor: openCatMenuId === node.id ? '#DBEAFE' : 'transparent',
-                    color: openCatMenuId === node.id ? '#2563EB' : '#64748B',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                  title="메뉴"
-                >
-                  <MoreVertical size={14} />
-                </button>
-
-                {openCatMenuId === node.id && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 9999,
-                        backgroundColor: 'transparent'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenCatMenuId(null);
-                      }}
-                    />
-                    <div
-                      style={{
-                        ...styles.checklistDropdownMenu,
-                        top: openCatMenuPos?.top ?? 0,
-                        right: openCatMenuPos?.right ?? 0
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenCatMenuId(null);
-                          handleCopyCategoryLink(node);
-                        }}
-                        style={styles.checklistDropdownItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Copy size={14} color="#2563EB" />
-                        <span>목록주소복사</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenCatMenuId(null);
-                          setAddingParentId(node.id);
-                          setIsAddingCategory(true);
-                          setNewCategoryName('');
-                          setExpandedFolders((prev) => ({ ...prev, [node.id]: true }));
-                        }}
-                        style={styles.checklistDropdownItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <FolderPlus size={14} color="#2563EB" />
-                        <span>하위폴더추가</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenCatMenuId(null);
-                          setMovingCategory(node);
-                          setTargetMoveParentId(node.parentId || '');
-                        }}
-                        style={styles.checklistDropdownItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <FolderInput size={14} color="#475569" />
-                        <span>폴더이동</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenCatMenuId(null);
-                          setEditingCategoryId(node.id);
-                          setEditingCategoryName(node.name);
-                        }}
-                        style={styles.checklistDropdownItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Edit2 size={14} color="#475569" />
-                        <span>수정</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenCatMenuId(null);
-                          openDeleteCategoryModal(node);
-                        }}
-                        style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <Trash2 size={14} color="#DC2626" />
-                        <span>삭제</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOpenCatMenuId(null)}
-                        style={styles.checklistDropdownItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <X size={14} color="#64748B" />
-                        <span>취소</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Subfolders & inline add container with Obsidian-style vertical line */}
-        {isExpanded && (hasChildren || (isAddingCategory && addingParentId === node.id)) && (
-          <div
-            style={{
-              marginLeft: '14px',
-              paddingLeft: '6px',
-              borderLeft: '1.5px solid #CBD5E1',
-              display: 'flex',
-              flexDirection: 'column',
-              marginTop: '1px'
-            }}
-          >
-            {isAddingCategory && addingParentId === node.id && (
-              <div style={{ ...styles.inlineInputRowDark, padding: '2px 0' }}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddCategory();
-                    if (e.key === 'Escape') {
-                      setIsAddingCategory(false);
-                      setAddingParentId(null);
-                    }
-                  }}
-                  onBlur={handleAddCategory}
-                  placeholder="하위 폴더명..."
-                  style={styles.inputDark}
-                />
-              </div>
-            )}
-            {hasChildren && node.children.map((child, childIdx) => renderCategoryNode(child, level + 1, node.children, childIdx))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Legacy tree renderer replaced with group-card layout
 
   // ---------------- Render ----------------
   return (
@@ -5365,24 +5228,132 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
             <>
               {!isMobile && (
                 <div style={styles.pane1Header}>
-                  <span style={styles.pane1Title}>카테고리</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <button
-                      onClick={() => {
-                        setIsAddingCategory(true);
-                        setAddingParentId(null);
-                        setNewCategoryName('');
+                  <span style={styles.pane1Title}>
+                    카테고리 ({filteredCategories.length})
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '6px',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        overflow: 'hidden',
+                        height: '27px'
                       }}
-                      style={styles.iconBtnDark}
-                      title="최상위 카테고리 추가"
                     >
-                      <Plus size={18} />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategoryGroup((prev) => !prev);
+                          setNewCategoryGroupName('');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 8px',
+                          height: '100%',
+                          border: 'none',
+                          borderRight: '1px solid #E2E8F0',
+                          backgroundColor: isAddingCategoryGroup ? '#DCFCE7' : 'transparent',
+                          color: isAddingCategoryGroup ? '#059669' : '#334155',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                        title="새 카테고리 그룹 추가"
+                      >
+                        그룹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategory(true);
+                          setAddingCategoryGroupId(null);
+                          setNewCategoryName('');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 9px',
+                          height: '100%',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#059669',
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="카테고리 추가"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div style={{ ...styles.paneContent, paddingLeft: '6px', paddingRight: '2px' }}>
+              {/* Inline input for creating new category group */}
+              {isAddingCategoryGroup && (
+                <div style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#F0FDF4',
+                  borderBottom: '1px solid #86EFAC',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <FolderPlus size={16} color="#059669" style={{ flexShrink: 0 }} />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="새 카테고리 그룹명 입력..."
+                    value={newCategoryGroupName}
+                    onChange={(e) => setNewCategoryGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (e.nativeEvent.isComposing) return;
+                        handleAddCategoryGroup();
+                      }
+                      if (e.key === 'Escape') {
+                        setIsAddingCategoryGroup(false);
+                        setNewCategoryGroupName('');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      fontSize: '13px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #10B981',
+                      outline: 'none'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategoryGroup}
+                    style={{ ...styles.btnPrimary, backgroundColor: '#059669', padding: '4px 8px', fontSize: '11px' }}
+                  >
+                    추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCategoryGroup(false);
+                      setNewCategoryGroupName('');
+                    }}
+                    style={{ ...styles.btnSecondary, padding: '4px 8px', fontSize: '11px' }}
+                  >
+                    취소
+                  </button>
+                </div>
+              )}
+
+              <div style={{ ...styles.paneContent, padding: 0 }}>
                 {/* Fixed Quick-memo Category (Only in explorer/note tab) */}
                 {activeMainTab === 'explorer' && (() => {
                   const isSelected = QUICK_MEMO_CATEGORY.id === selectedCategoryId;
@@ -5428,104 +5399,631 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       }}
                       onClick={() => navigateToItems(QUICK_MEMO_CATEGORY.id)}
                       style={{
-                        ...styles.catRow,
-                        backgroundColor: isDropTarget ? '#FEF08A' : isSelected ? '#FEF3C7' : 'transparent',
-                        border: isDropTarget ? '1.5px dashed #D97706' : '1px solid transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '7px 10px',
+                        marginBottom: '2px',
+                        backgroundColor: isDropTarget ? '#FEF08A' : isSelected ? '#FEF3C7' : '#FFFFFF',
+                        borderBottom: '1px solid #E2E8F0',
+                        boxShadow: isSelected ? 'inset 3px 0 0 #D97706' : 'none',
                         color: isSelected ? '#92400E' : '#1E293B',
                         fontWeight: isSelected ? 700 : 500,
-                        paddingLeft: '4px',
-                        paddingRight: '2px',
-                        paddingTop: '6px',
-                        paddingBottom: '6px',
-                        gap: '6px'
+                        cursor: 'pointer',
+                        userSelect: 'none'
                       }}
                     >
-                      <span style={{ width: 14, height: 14, flexShrink: 0 }} />
-                      <Zap size={16} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#F59E0B' : 'transparent'} style={{ flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13.5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                        <Zap size={15} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#F59E0B' : 'transparent'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {QUICK_MEMO_CATEGORY.name}
                         </span>
-                        <span style={{
-                          fontSize: '11px',
-                          color: isSelected ? '#D97706' : '#F59E0B',
-                          fontWeight: isSelected ? 700 : 500,
-                          flexShrink: 0
-                        }}>
-                          ({count})
-                        </span>
                       </div>
+                      <span style={{
+                        fontSize: '11px',
+                        color: isSelected ? '#D97706' : '#94A3B8',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}>
+                        ({count})
+                      </span>
                     </div>
                   );
                 })()}
 
-                {/* Drag-to-Root Drop Target */}
-                {draggedCategoryId && (
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragOverRoot(true);
-                    }}
-                    onDragLeave={() => setIsDragOverRoot(false)}
-                    onDrop={async (e) => {
-                      e.preventDefault();
-                      setIsDragOverRoot(false);
-                      const sourceId = draggedCategoryId || e.dataTransfer.getData('text/plain');
-                      setDraggedCategoryId(null);
-                      if (!sourceId) return;
-                      try {
-                        await updateDoc(doc(db, 'categories', sourceId), {
-                          parentId: null
-                        });
-                      } catch (err) {
-                        console.error('Error moving category to root:', err);
-                      }
-                    }}
-                    style={{
-                      padding: '8px 10px',
-                      margin: '4px 0 6px 0',
-                      border: isDragOverRoot ? '2px dashed #2563EB' : '1.5px dashed #93C5FD',
-                      backgroundColor: isDragOverRoot ? '#EFF6FF' : '#F0F7FF',
-                      borderRadius: '6px',
-                      color: '#2563EB',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    최상위(루트)로 이동하려면 여기에 놓으세요
-                  </div>
-                )}
-
-                {/* Inline input for creating root category */}
-                {isAddingCategory && addingParentId === null && (
-                  <div style={styles.inlineInputRowDark}>
+                {/* Inline input for creating category at root/unassigned */}
+                {isAddingCategory && addingCategoryGroupId === null && (
+                  <div style={{
+                    padding: '8px 10px',
+                    margin: '4px 6px 6px 6px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '6px',
+                    border: '1.5px solid #10B981',
+                    boxShadow: '0 2px 5px rgba(16,185,129,0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
                     <input
                       autoFocus
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddCategory();
+                        if (e.key === 'Enter') {
+                          if (e.nativeEvent.isComposing) return;
+                          handleAddCategory();
+                        }
                         if (e.key === 'Escape') {
                           setIsAddingCategory(false);
-                          setAddingParentId(null);
+                          setNewCategoryName('');
                         }
                       }}
                       onBlur={handleAddCategory}
-                      placeholder="새 최상위 카테고리명..."
-                      style={styles.inputDark}
+                      placeholder="새 카테고리명 입력..."
+                      style={{
+                        width: '100%',
+                        border: 'none',
+                        outline: 'none',
+                        fontSize: '13.5px',
+                        fontWeight: 600,
+                        color: '#1E293B',
+                        backgroundColor: 'transparent'
+                      }}
                     />
                   </div>
                 )}
 
-                {/* Hierarchical category tree nodes */}
-                {(() => {
-                  const rootNodes = buildCategoryTree(filteredCategories);
-                  return rootNodes.map((node, idx) => renderCategoryNode(node, 0, rootNodes, idx));
-                })()}
+                {/* Categories Grouped Rendering */}
+                {filteredCategories.length === 0 && !isAddingCategory ? (
+                  <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                    등록된 카테고리가 없습니다.
+                  </div>
+                ) : (
+                  displayedCategoryGrouped.map((groupObj, groupIdx) => {
+                    const { group, categories: grpCats } = groupObj;
+                    const isSecCollapsed = group ? Boolean(collapsedCategoryGroups[group.id]) : false;
+                    const isSecEditing = group ? editingCategoryGroupId === group.id : false;
+                    const isFirstGroup = groupIdx === 0;
+                    const isLastGroup = groupIdx === displayedCategoryGrouped.length - 1;
+                    const isGroupDragOver = group && dragOverCategoryGroupId === group.id;
+
+                    return (
+                      <div
+                        key={group ? group.id : 'default_cat_grp'}
+                        onDragOver={(e) => {
+                          if (!draggedCategoryId) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (group && dragOverCategoryGroupId !== group.id) {
+                            setDragOverCategoryGroupId(group.id);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (group && dragOverCategoryGroupId === group.id) {
+                            setDragOverCategoryGroupId(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          if (!draggedCategoryId) return;
+                          handleDropCategoryOnGroup(e, group?.id);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          marginBottom: group ? '2px' : '0',
+                          borderRadius: 0,
+                          overflow: 'hidden',
+                          border: group
+                            ? isGroupDragOver
+                              ? '2px dashed #059669'
+                              : '1px solid #CBD5E1'
+                            : 'none',
+                          borderLeft: isGroupDragOver ? undefined : 'none',
+                          borderRight: isGroupDragOver ? undefined : 'none',
+                          backgroundColor: '#FFFFFF',
+                          boxShadow: 'none'
+                        }}
+                      >
+                        {/* 녹색 그룹 헤더 바 */}
+                        {group && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: isMobile ? '4px' : '8px',
+                              height: isMobile ? '28px' : '30px',
+                              padding: isMobile ? '2px 0 2px 8px' : '2px 0 2px 10px',
+                              boxSizing: 'border-box',
+                              backgroundColor: isGroupDragOver ? '#DCFCE7' : '#BBF7D0',
+                              border: 'none',
+                              borderBottom: isSecCollapsed ? 'none' : '1px solid #86EFAC',
+                              borderRadius: '0',
+                              boxShadow: 'none',
+                              cursor: isSecEditing ? 'default' : 'pointer',
+                              userSelect: 'none'
+                            }}
+                            onClick={() => {
+                              if (!isSecEditing) {
+                                toggleCategoryGroupCollapse(group.id);
+                              }
+                            }}
+                          >
+                            {/* 좌측: 토글 화살표 + 그룹명 */}
+                            {isSecEditing ? (
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="text"
+                                  value={editingCategoryGroupName}
+                                  onChange={(e) => setEditingCategoryGroupName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleUpdateCategoryGroupName(group.id);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      setEditingCategoryGroupId(null);
+                                    }
+                                  }}
+                                  style={{
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    color: '#064E3B',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #059669',
+                                    outline: 'none',
+                                    flex: 1
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCategoryGroupName(group.id)}
+                                  style={{ ...styles.btnPrimary, backgroundColor: '#059669', padding: '2px 8px', fontSize: '11px' }}
+                                >
+                                  저장
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCategoryGroupId(null)}
+                                  style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                <span
+                                  style={{ display: 'flex', alignItems: 'center', color: '#047857' }}
+                                  title={isSecCollapsed ? '펼치기' : '접기'}
+                                >
+                                  {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                </span>
+                                <span
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    if (group.isUnassigned) return;
+                                    setEditingCategoryGroupId(group.id);
+                                    setEditingCategoryGroupName(group.name);
+                                  }}
+                                  title={group.isUnassigned ? undefined : "더블클릭하여 그룹 이름 수정"}
+                                  style={{
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    color: '#064E3B',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    cursor: group.isUnassigned ? 'default' : 'text'
+                                  }}
+                                >
+                                  {group.name}
+                                </span>
+                                {isSecCollapsed && (
+                                  <span style={{ fontSize: '11px', color: '#047857', opacity: 0.8, fontWeight: 600 }}>
+                                    (접힘)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 우측 버튼 탭 (미분류가 아닐 때) */}
+                            {!isSecEditing && !group.isUnassigned && (
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  backgroundColor: '#FFFFFF',
+                                  border: '1px solid #A7F3D0',
+                                  borderRight: 'none',
+                                  borderTopRightRadius: 0,
+                                  borderBottomRightRadius: 0,
+                                  borderTopLeftRadius: '6px',
+                                  borderBottomLeftRadius: '6px',
+                                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                                  height: isMobile ? '24px' : '26px',
+                                  flexShrink: 0
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {/* 1. 카테고리 추가 버튼 */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartAddCategoryToGroup(group.id);
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: isMobile ? '24px' : '26px',
+                                    height: '100%',
+                                    border: 'none',
+                                    borderRight: '1px solid #E2E8F0',
+                                    backgroundColor: 'transparent',
+                                    color: '#059669',
+                                    cursor: 'pointer',
+                                    padding: 0
+                                  }}
+                                  title="이 그룹에 카테고리 추가"
+                                >
+                                  <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                </button>
+
+                                {/* 2. 위치이동 버튼 세트 */}
+                                <div
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    borderRight: '1px solid #E2E8F0',
+                                    height: '100%',
+                                    padding: '0 2px',
+                                    gap: '1px'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveCategoryGroup(group.id, 'top');
+                                      }}
+                                      disabled={isFirstGroup}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '11px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        color: isFirstGroup ? '#CBD5E1' : '#1E293B',
+                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                        padding: 0
+                                      }}
+                                      title="그룹 최상단으로 이동"
+                                    >
+                                      <ChevronsUp size={11} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveCategoryGroup(group.id, 'bottom');
+                                      }}
+                                      disabled={isLastGroup}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '11px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        color: isLastGroup ? '#CBD5E1' : '#1E293B',
+                                        cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                        padding: 0
+                                      }}
+                                      title="그룹 최하단으로 이동"
+                                    >
+                                      <ChevronsDown size={11} strokeWidth={2.5} />
+                                    </button>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveCategoryGroup(group.id, 'up');
+                                      }}
+                                      disabled={isFirstGroup}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '11px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        color: isFirstGroup ? '#CBD5E1' : '#1E293B',
+                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer',
+                                        padding: 0
+                                      }}
+                                      title="그룹 위로 이동"
+                                    >
+                                      <ChevronUp size={11} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMoveCategoryGroup(group.id, 'down');
+                                      }}
+                                      disabled={isLastGroup}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '11px',
+                                        border: 'none',
+                                        backgroundColor: 'transparent',
+                                        color: isLastGroup ? '#CBD5E1' : '#1E293B',
+                                        cursor: isLastGroup ? 'not-allowed' : 'pointer',
+                                        padding: 0
+                                      }}
+                                      title="그룹 아래로 이동"
+                                    >
+                                      <ChevronDown size={11} strokeWidth={2.5} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* 3. 삭제 버튼 */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteCategoryGroup(group.id);
+                                  }}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: isMobile ? '24px' : '26px',
+                                    height: '100%',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: '#DC2626',
+                                    cursor: 'pointer',
+                                    padding: 0
+                                  }}
+                                  title="그룹 삭제 (소속 카테고리는 미분류로 이동)"
+                                >
+                                  <Trash2 size={isMobile ? 12 : 13} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 그룹 소속 카테고리 렌더링 */}
+                        {!isSecCollapsed && (
+                          <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFFFF' }}>
+                            {/* 그룹 내 인라인 카테고리 추가창 */}
+                            {isAddingCategory && addingCategoryGroupId === (group ? group.id : null) && (
+                              <div style={{
+                                padding: '6px 8px',
+                                margin: '4px 6px 6px 6px',
+                                backgroundColor: '#F0FDF4',
+                                borderRadius: '4px',
+                                border: '1.5px solid #10B981',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}>
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={newCategoryName}
+                                  onChange={(e) => setNewCategoryName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      if (e.nativeEvent.isComposing) return;
+                                      handleAddCategory();
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setIsAddingCategory(false);
+                                      setNewCategoryName('');
+                                      setAddingCategoryGroupId(null);
+                                    }
+                                  }}
+                                  onBlur={handleAddCategory}
+                                  placeholder="새 카테고리명 입력..."
+                                  style={{
+                                    width: '100%',
+                                    border: 'none',
+                                    outline: 'none',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    color: '#1E293B',
+                                    backgroundColor: 'transparent'
+                                  }}
+                                />
+                              </div>
+                            )}
+
+                            {grpCats.length === 0 && (!isAddingCategory || addingCategoryGroupId !== (group ? group.id : null)) ? (
+                              <div style={{
+                                padding: '10px 12px',
+                                fontSize: '11.5px',
+                                color: '#94A3B8',
+                                backgroundColor: '#F8FAFC',
+                                textAlign: 'center'
+                              }}>
+                                카테고리를 드래그하거나 [+] 버튼으로 추가하세요.
+                              </div>
+                            ) : (
+                              grpCats.map((cat, catIdx) => {
+                                const isSelected = cat.id === selectedCategoryId;
+                                const isEditing = cat.id === editingCategoryId;
+                                const isDropTarget = dragOverCategoryId === cat.id;
+                                const count = items.filter((item) => item.categoryId === cat.id && !item.isDeleted && !FIXED_TRASH_IDS.includes(item.categoryId)).length;
+
+                                return (
+                                  <div
+                                    key={cat.id}
+                                    draggable={!isEditing}
+                                    onDragStart={(e) => {
+                                      e.stopPropagation();
+                                      e.dataTransfer.setData('text/plain', cat.id);
+                                      e.dataTransfer.effectAllowed = 'move';
+                                      setDraggedCategoryId(cat.id);
+                                    }}
+                                    onDragOver={(e) => {
+                                      if (draggedItemId) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.dataTransfer.dropEffect = 'move';
+                                        if (dragOverCategoryId !== cat.id) {
+                                          setDragOverCategoryId(cat.id);
+                                        }
+                                      }
+                                    }}
+                                    onDragLeave={(e) => {
+                                      e.stopPropagation();
+                                      if (dragOverCategoryId === cat.id) {
+                                        setDragOverCategoryId(null);
+                                      }
+                                    }}
+                                    onDrop={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setDragOverCategoryId(null);
+                                      if (draggedItemId) {
+                                        const itemId = draggedItemId;
+                                        setDraggedItemId(null);
+                                        try {
+                                          await updateDoc(doc(db, 'items', itemId), {
+                                            categoryId: cat.id,
+                                            updatedAt: serverTimestamp()
+                                          });
+                                        } catch (err) {
+                                          console.error('Error moving item to category:', err);
+                                        }
+                                      }
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedCategoryId(null);
+                                      setDragOverCategoryId(null);
+                                      setDragOverCategoryGroupId(null);
+                                    }}
+                                    onClick={() => {
+                                      if (!isEditing) {
+                                        navigateToItems(cat.id);
+                                      }
+                                    }}
+                                    onDoubleClick={(e) => {
+                                      e.stopPropagation();
+                                      if (ALL_FIXED_CATEGORY_IDS.includes(cat.id)) return;
+                                      setEditingCategoryId(cat.id);
+                                      setEditingCategoryName(cat.name);
+                                    }}
+                                    style={{
+                                      padding: isMobile ? '7px 8px' : '8px 10px',
+                                      backgroundColor: isDropTarget
+                                        ? '#DCFCE7'
+                                        : isSelected
+                                        ? '#ECFDF5'
+                                        : '#FFFFFF',
+                                      borderBottom: catIdx < grpCats.length - 1 ? '1px solid #F1F5F9' : 'none',
+                                      boxShadow: isSelected ? 'inset 3px 0 0 #059669' : 'none',
+                                      color: isSelected ? '#065F46' : '#1E293B',
+                                      fontWeight: isSelected ? 700 : 500,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: '8px',
+                                      userSelect: 'none',
+                                      transition: 'background-color 0.15s ease'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, minWidth: 0 }}>
+                                      <Folder size={15} color={isSelected ? '#059669' : '#64748B'} style={{ flexShrink: 0 }} />
+                                      {isEditing ? (
+                                        <input
+                                          autoFocus
+                                          type="text"
+                                          value={editingCategoryName}
+                                          onChange={(e) => setEditingCategoryName(e.target.value)}
+                                          onFocus={(e) => e.target.select()}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleUpdateCategoryName(cat.id);
+                                            if (e.key === 'Escape') setEditingCategoryId(null);
+                                          }}
+                                          onBlur={() => handleUpdateCategoryName(cat.id)}
+                                          style={{
+                                            ...styles.inputLightInline,
+                                            border: '1px solid #10B981',
+                                            flex: 1
+                                          }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          onDoubleClick={(e) => e.stopPropagation()}
+                                        />
+                                      ) : (
+                                        <span
+                                          title="더블클릭하여 카테고리명 수정"
+                                          style={{
+                                            fontSize: '13px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          {cat.name}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                                      <span style={{
+                                        fontSize: '11px',
+                                        color: isSelected ? '#059669' : '#94A3B8',
+                                        fontWeight: 600
+                                      }}>
+                                        ({count})
+                                      </span>
+                                      {!ALL_FIXED_CATEGORY_IDS.includes(cat.id) && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openDeleteCategoryModal(cat);
+                                          }}
+                                          style={styles.actionBtnLight}
+                                          title="카테고리 삭제"
+                                        >
+                                          <Trash2 size={13} color="#DC2626" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
 
                 {/* Fixed Trash Category at bottom */}
                 {(() => {
