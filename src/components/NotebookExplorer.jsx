@@ -3128,6 +3128,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   };
 
   const handleStartAddCategoryToGroup = (groupId) => {
+    if (groupId && groupId !== '__unassigned__') {
+      setCollapsedCategoryGroups((prev) => {
+        if (!prev[groupId]) return prev;
+        const updated = { ...prev, [groupId]: false };
+        try {
+          localStorage.setItem('memo_collapsed_category_groups', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    }
     setAddingCategoryGroupId(groupId === '__unassigned__' ? null : groupId);
     setIsAddingCategory(true);
     setNewCategoryName('');
@@ -5459,10 +5469,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           setNewCategoryName('');
                         }
                       }}
-                      onBlur={handleAddCategory}
                       placeholder="새 카테고리명 입력..."
                       style={{
-                        width: '100%',
+                        flex: 1,
                         border: 'none',
                         outline: 'none',
                         fontSize: '13.5px',
@@ -5471,11 +5480,30 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         backgroundColor: 'transparent'
                       }}
                     />
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleAddCategory}
+                      style={{ ...styles.btnPrimary, backgroundColor: '#059669', padding: '4px 8px', fontSize: '11px', flexShrink: 0 }}
+                    >
+                      추가
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCategoryName('');
+                      }}
+                      style={{ ...styles.btnSecondary, padding: '4px 8px', fontSize: '11px', flexShrink: 0 }}
+                    >
+                      취소
+                    </button>
                   </div>
                 )}
 
                 {/* Categories Grouped Rendering */}
-                {filteredCategories.length === 0 && !isAddingCategory ? (
+                {filteredCategories.length === 0 && currentScopeCategoryGroups.length === 0 && !isAddingCategory ? (
                   <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
                     등록된 카테고리가 없습니다.
                   </div>
@@ -5654,7 +5682,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 {/* 1. 카테고리 추가 버튼 */}
                                 <button
                                   type="button"
-                                  onClick={(e) => {
+                                  onMouseDown={(e) => e.preventDefault()}
+                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleStartAddCategoryToGroup(group.id);
                                   }}
@@ -5844,10 +5873,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       setAddingCategoryGroupId(null);
                                     }
                                   }}
-                                  onBlur={handleAddCategory}
                                   placeholder="새 카테고리명 입력..."
                                   style={{
-                                    width: '100%',
+                                    flex: 1,
                                     border: 'none',
                                     outline: 'none',
                                     fontSize: '13px',
@@ -5856,6 +5884,37 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     backgroundColor: 'transparent'
                                   }}
                                 />
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={handleAddCategory}
+                                  style={{
+                                    ...styles.btnPrimary,
+                                    backgroundColor: '#059669',
+                                    padding: '3px 8px',
+                                    fontSize: '11px',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  추가
+                                </button>
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setIsAddingCategory(false);
+                                    setNewCategoryName('');
+                                    setAddingCategoryGroupId(null);
+                                  }}
+                                  style={{
+                                    ...styles.btnSecondary,
+                                    padding: '3px 8px',
+                                    fontSize: '11px',
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  취소
+                                </button>
                               </div>
                             )}
 
