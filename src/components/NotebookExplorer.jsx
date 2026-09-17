@@ -8963,9 +8963,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       gap: '0px',
                                       padding: '0px',
                                       backgroundColor: '#FFFFFF',
-                                      borderRadius: isMobile ? '6px' : '8px',
+                                      borderRadius: 0,
                                       border: '1.5px solid #64748B',
-                                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                                      borderLeft: 'none',
+                                      borderRight: 'none',
+                                      boxShadow: 'none',
                                       marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
                                       marginLeft: 0,
                                       marginRight: 0,
@@ -8973,7 +8975,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     } : {
                                       display: 'flex',
                                       flexDirection: 'column',
-                                      gap: isMobile ? '4px' : '8px'
+                                      gap: '0px',
+                                      padding: '0px',
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: 0,
+                                      border: '1px solid #CBD5E1',
+                                      borderLeft: 'none',
+                                      borderRight: 'none',
+                                      boxShadow: 'none',
+                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                      marginLeft: 0,
+                                      marginRight: 0,
+                                      overflow: 'hidden'
                                     }}
                                   >
                                     {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
@@ -9390,19 +9403,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 cursor: 'pointer'
                                               } : {
                                                 ...styles.checklistItemRow,
-                                                padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
-                                                borderRadius: isMobile ? '6px' : '8px',
-                                                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                                                border: isDragOver
-                                                  ? '2px solid #2563EB'
-                                                  : isSelected
-                                                    ? '2px solid #2563EB'
-                                                    : isEditing
-                                                      ? '2px solid #3B82F6'
-                                                      : '1.5px solid #CBD5E1',
-                                                boxShadow: isSelected
-                                                  ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.12)'
-                                                  : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                                                padding: isMobile ? '5px 8px' : '6px 12px',
+                                                borderRadius: '0',
+                                                backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                                border: 'none',
+                                                borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                                boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
                                                 opacity: isDragged ? 0.4 : 1,
                                                 cursor: 'pointer'
                                               }}
@@ -10402,7 +10408,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   } : {
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: isMobile ? '4px' : '8px'
+                                    gap: '0px',
+                                    padding: '0px',
+                                    backgroundColor: '#FFFFFF',
+                                    borderRadius: 0,
+                                    border: '1px solid #CBD5E1',
+                                    borderLeft: 'none',
+                                    borderRight: 'none',
+                                    boxShadow: 'none',
+                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                    marginLeft: 0,
+                                    marginRight: 0,
+                                    overflow: 'hidden'
                                   }}
                                 >
                                   {/* 그룹 헤더 바 (섹션 구분이 있는 경우) */}
@@ -10821,21 +10838,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               cursor: 'pointer'
                                             } : {
                                               ...styles.checklistItemRow,
-                                              padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
+                                              padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: 0,
-                                              backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                                              border: isDragOver
-                                                ? '2px solid #2563EB'
-                                                : isSelected
-                                                  ? '2px solid #2563EB'
-                                                  : isEditing
-                                                    ? '2px solid #3B82F6'
-                                                    : '1px solid #CBD5E1',
-                                              borderLeft: 'none',
-                                              borderRight: 'none',
-                                              boxShadow: isSelected
-                                                ? 'inset 3px 0 0 #2563EB'
-                                                : 'none',
+                                              backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                              border: 'none',
+                                              borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                              boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             }}
