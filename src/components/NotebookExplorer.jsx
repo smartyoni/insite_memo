@@ -2738,6 +2738,60 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     handleSaveChecklistDetail(selectedChecklistId, updated);
   };
 
+  // Detail Block 통합 텍스트 복사 핸들러 (그룹 헤더 3점 메뉴용)
+  const handleCopyBlockAsPlainText = async (block) => {
+    if (!block) return;
+    const title = block.title && block.title.trim() ? block.title.trim() : '';
+    const parts = [];
+
+    if (block.type === 'checklist') {
+      const validItems = (block.items || []).filter((it) => it && typeof it.text === 'string' && it.text.trim());
+      if (title && title !== '체크리스트') {
+        parts.push(`[${title}]`);
+      }
+      validItems.forEach((it) => {
+        parts.push(`• ${it.text.trim()}`);
+      });
+    } else {
+      if (title) parts.push(`[${title}]`);
+      if (block.content && block.content.trim()) parts.push(block.content.trim());
+    }
+
+    const textToCopy = parts.join('\n');
+    if (!textToCopy.trim()) {
+      setCopyToastText('복사할 내용이 없습니다.');
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 1800);
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      const displayTitle = title || (block.type === 'checklist' ? '체크리스트' : '블록');
+      setCopyToastText(`✓ '${displayTitle}' 내용이 통합 복사되었습니다.`);
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2000);
+    } catch (err) {
+      console.error('통합 복사 실패:', err);
+      setCopyToastText('복사에 실패했습니다.');
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2000);
+    }
+  };
+
   // Detail Blocks Clipboard Handlers
   const handleCopyBlockToClipboard = (block) => {
     if (!block) return;
@@ -9354,6 +9408,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   openDeleteModal={openDeleteModal}
                                   onOpenMoveModal={handleOpenMoveBlockModal}
                                   onCopyBlock={handleCopyBlockToClipboard}
+                                  onCopyBlockAsText={handleCopyBlockAsPlainText}
                                   onCopyItem={handleCopyItemToClipboard}
                                   detailClipboard={detailClipboard}
                                   onPasteItemToChecklist={handlePasteItemFromClipboard}
@@ -9734,6 +9789,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     openDeleteModal={openDeleteModal}
                                     onOpenMoveModal={handleOpenMoveBlockModal}
                                     onCopyBlock={handleCopyBlockToClipboard}
+                                    onCopyBlockAsText={handleCopyBlockAsPlainText}
                                     onCopyItem={handleCopyItemToClipboard}
                                     detailClipboard={detailClipboard}
                                     onPasteItemToChecklist={handlePasteItemFromClipboard}
@@ -11085,6 +11141,7 @@ onClick={() => {
                                     openDeleteModal={openDeleteModal}
                                     onOpenMoveModal={handleOpenMoveBlockModal}
                                     onCopyBlock={handleCopyBlockToClipboard}
+                                    onCopyBlockAsText={handleCopyBlockAsPlainText}
                                     onCopyItem={handleCopyItemToClipboard}
                                     detailClipboard={detailClipboard}
                                     onPasteItemToChecklist={handlePasteItemFromClipboard}

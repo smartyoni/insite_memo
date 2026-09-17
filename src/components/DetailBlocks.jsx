@@ -21,7 +21,8 @@ import {
   Triangle,
   MoreVertical,
   GripVertical,
-  Copy
+  Copy,
+  FileText
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 
@@ -598,6 +599,7 @@ export const DetailBlocksManager = ({
   openDeleteModal,
   onOpenMoveModal,
   onCopyBlock,
+  onCopyBlockAsText,
   onCopyItem,
   detailClipboard,
   onPasteItemToChecklist,
@@ -2093,6 +2095,36 @@ export const DetailBlocksManager = ({
                     <span>블록 복사</span>
                   </button>
                 )}
+                {onCopyBlockAsText && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onCopyBlockAsText(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#059669',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="체크리스트 내용 전체를 줄바꿈 텍스트로 통합 복사"
+                  >
+                    <FileText size={14} color="#059669" />
+                    <span>통합복사</span>
+                  </button>
+                )}
                 {detailClipboard && detailClipboard.type === 'item' && onPasteItemToChecklist && (
                   <button
                     type="button"
@@ -2262,6 +2294,36 @@ export const DetailBlocksManager = ({
                   >
                     <Copy size={14} color="#2563EB" />
                     <span>블록 복사</span>
+                  </button>
+                )}
+                {onCopyBlockAsText && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      onCopyBlockAsText(activeMenuBlock);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#059669',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="블록 내용을 줄바꿈 텍스트로 통합 복사"
+                  >
+                    <FileText size={14} color="#059669" />
+                    <span>통합복사</span>
                   </button>
                 )}
                 {onOpenMoveModal && (
