@@ -3453,14 +3453,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const openDeleteCategoryModal = (cat) => {
     const allTargetCatIds = getCategoryDescendantIds(cat.id);
     const subFolderCount = allTargetCatIds.length - 1;
-    const childItemsCount = items.filter((item) => allTargetCatIds.includes(item.categoryId)).length;
+    const childItemsCount = items.filter((item) => allTargetCatIds.includes(item.categoryId) && !item.isDeleted).length;
 
     let confirmMsg = `'${cat.name}' 폴더를 삭제하시겠습니까?`;
     if (subFolderCount > 0 || childItemsCount > 0) {
       const parts = [];
       if (subFolderCount > 0) parts.push(`하위 폴더 ${subFolderCount}개`);
       if (childItemsCount > 0) parts.push(`메모 ${childItemsCount}개`);
-      confirmMsg = `'${cat.name}' 폴더를 삭제하시겠습니까?\n${parts.join('와 ')}가 모두 함께 일괄 삭제됩니다.`;
+      confirmMsg = `'${cat.name}' 폴더를 삭제하시겠습니까?\n소속된 ${parts.join('와 ')}는 안전하게 [휴지통]으로 이동되어 언제든 복원할 수 있습니다.`;
     }
 
     openDeleteModal(
@@ -3474,17 +3474,25 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     if (ALL_FIXED_CATEGORY_IDS.includes(catId)) return;
     try {
       const allTargetCatIds = getCategoryDescendantIds(catId);
+      const trashId = getTrashIdForTab(activeMainTab);
       const batch = writeBatch(db);
 
-      // Delete all categories in the tree
+      // 1. Delete all categories in the tree
       allTargetCatIds.forEach((id) => {
         batch.delete(doc(db, 'categories', id));
       });
 
-      // Delete all items in these categories (Option A)
-      const childItems = items.filter((item) => allTargetCatIds.includes(item.categoryId));
+      // 2. Safely Soft Delete all child items to Trash (Never hard delete!)
+      const childItems = items.filter((item) => allTargetCatIds.includes(item.categoryId) && !item.isDeleted);
       childItems.forEach((item) => {
-        batch.delete(doc(db, 'items', item.id));
+        batch.update(doc(db, 'items', item.id), {
+          isDeleted: true,
+          deletedAt: serverTimestamp(),
+          originalCategoryId: item.categoryId || null,
+          categoryId: trashId,
+          deletedTab: activeMainTab,
+          updatedAt: serverTimestamp()
+        });
       });
       await batch.commit();
 
@@ -3493,7 +3501,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         setSelectedCategoryId(getDefaultCategoryIdForTab(activeMainTab, categories));
       }
     } catch (err) {
-      console.error('Error deleting category tree and child items:', err);
+      console.error('Error deleting category tree and safely moving items to trash:', err);
     }
   };
 
