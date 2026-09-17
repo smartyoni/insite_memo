@@ -1821,7 +1821,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       result.push(groupMap.get(g.id));
     });
 
-    if (unassignedCategories.length > 0) {
+    if (unassignedCategories.length > 0 || draggedCategoryId) {
       result.push({
         group: { id: '__unassigned__', name: '미분류 카테고리', isUnassigned: true },
         categories: unassignedCategories
@@ -1846,7 +1846,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     });
 
     return result;
-  }, [currentScopeCategoryGroups, filteredCategories]);
+  }, [currentScopeCategoryGroups, filteredCategories, draggedCategoryId]);
 
   // Current active category item groups
   const currentCategoryItemGroups = React.useMemo(() => {
@@ -1881,7 +1881,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       result.push(groupMap.get(g.id));
     });
 
-    if (unassignedItems.length > 0) {
+    if (unassignedItems.length > 0 || draggedItemId) {
       result.push({
         group: { id: '__unassigned__', name: '미분류 메모', isUnassigned: true },
         items: unassignedItems
@@ -1912,7 +1912,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     });
 
     return result;
-  }, [displayedItems, currentCategoryItemGroups, isSearchActive, isTrashSelected]);
+  }, [displayedItems, currentCategoryItemGroups, isSearchActive, isTrashSelected, draggedItemId]);
 
   const toggleItemGroupCollapse = (groupId) => {
     setCollapsedItemGroups((prev) => {
@@ -3920,7 +3920,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const handleDropItemOnGroup = async (e, targetGroupId) => {
     e.preventDefault();
     e.stopPropagation();
-    const itemId = e.dataTransfer.getData('text/plain') || draggedItemId;
+    const itemId = draggedItemId || e.dataTransfer?.getData('text/plain');
     setDragOverItemGroupId(null);
     setDragOverItemId(null);
     setDraggedItemId(null);
@@ -3955,7 +3955,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const handleDropItemOnItem = async (e, targetItem, targetGroupId) => {
     e.preventDefault();
     e.stopPropagation();
-    const sourceItemId = e.dataTransfer.getData('text/plain') || draggedItemId;
+    const sourceItemId = draggedItemId || e.dataTransfer?.getData('text/plain');
     setDragOverItemGroupId(null);
     setDragOverItemId(null);
     setDraggedItemId(null);
@@ -3972,7 +3972,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     });
     if (!targetGroupObj) return;
 
-    const groupItems = targetGroupObj.items.filter((it) => it.id !== sourceItemId);
+    const groupItems = (targetGroupObj.items || []).filter((it) => it.id !== sourceItemId);
     const targetIdx = groupItems.findIndex((it) => it.id === targetItem.id);
     if (targetIdx === -1) return;
 
@@ -5771,6 +5771,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         {/* 녹색 그룹 헤더 바 */}
                         {group && (
                           <div
+                            onDragOver={(e) => {
+                              if (!draggedCategoryId) return;
+                              e.preventDefault();
+                              e.stopPropagation();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (dragOverCategoryGroupId !== group.id) {
+                                setDragOverCategoryGroupId(group.id);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              if (!draggedCategoryId) return;
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDropCategoryOnGroup(e, group.id);
+                            }}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -6181,12 +6196,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         if (dragOverCategoryId !== cat.id) {
                                           setDragOverCategoryId(cat.id);
                                         }
+                                        if (group && dragOverCategoryGroupId !== group.id) {
+                                          setDragOverCategoryGroupId(group.id);
+                                        }
                                       }
                                     }}
                                     onDragLeave={(e) => {
                                       e.stopPropagation();
-                                      if (dragOverCategoryId === cat.id) {
-                                        setDragOverCategoryId(null);
+                                      if (!e.currentTarget.contains(e.relatedTarget)) {
+                                        if (dragOverCategoryId === cat.id) {
+                                          setDragOverCategoryId(null);
+                                        }
                                       }
                                     }}
                                     onDrop={async (e) => {
@@ -6850,6 +6870,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           {/* 그룹 헤더 바 */}
                           {group && (
                             <div
+                              onDragOver={(e) => {
+                                if (!draggedItemId) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.dataTransfer.dropEffect = 'move';
+                                if (dragOverItemGroupId !== group.id) {
+                                  setDragOverItemGroupId(group.id);
+                                }
+                              }}
+                              onDrop={(e) => {
+                                if (!draggedItemId) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDropItemOnGroup(e, group.id);
+                              }}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -7178,16 +7213,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         if (dragOverItemId !== item.id) {
                                           setDragOverItemId(item.id);
                                         }
+                                        if (group && dragOverItemGroupId !== group.id) {
+                                          setDragOverItemGroupId(group.id);
+                                        }
                                       }}
                                       onDragLeave={(e) => {
                                         e.stopPropagation();
-                                        if (dragOverItemId === item.id) {
-                                          setDragOverItemId(null);
+                                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                                          if (dragOverItemId === item.id) {
+                                            setDragOverItemId(null);
+                                          }
                                         }
                                       }}
                                       onDrop={(e) => {
-                                        if (!draggedItemId) return;
+                                        e.preventDefault();
                                         e.stopPropagation();
+                                        if (!draggedItemId) return;
                                         handleDropItemOnItem(e, item, group?.id);
                                       }}
                                       onDragEnd={() => {
