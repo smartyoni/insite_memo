@@ -5841,9 +5841,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              gap: isMobile ? '4px' : '8px',
-                              height: isMobile ? '28px' : '30px',
-                              padding: isMobile ? '2px 0 2px 8px' : '2px 0 2px 10px',
+                              gap: isMobile ? '4px' : '6px',
+                              height: isMobile ? '22px' : '24px',
+                              padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                               boxSizing: 'border-box',
                               backgroundColor: isGroupDragOver ? '#DCFCE7' : '#BBF7D0',
                               border: 'none',
@@ -5911,7 +5911,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   style={{ display: 'flex', alignItems: 'center', color: '#047857' }}
                                   title={isSecCollapsed ? '펼치기' : '접기'}
                                 >
-                                  {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                  {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                 </span>
                                 <span
                                   onDoubleClick={(e) => {
@@ -5922,7 +5922,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   }}
                                   title={group.isUnassigned ? undefined : "더블클릭하여 그룹 이름 수정"}
                                   style={{
-                                    fontSize: '13px',
+                                    fontSize: '12px',
                                     fontWeight: 700,
                                     color: '#064E3B',
                                     overflow: 'hidden',
@@ -5935,13 +5935,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 </span>
                                 <span
                                   style={{
-                                    fontSize: '11px',
+                                    fontSize: '10px',
                                     color: '#047857',
                                     opacity: 0.85,
                                     fontWeight: 600,
                                     backgroundColor: '#A7F3D0',
-                                    padding: '1px 5px',
-                                    borderRadius: '10px',
+                                    padding: '0 4px',
+                                    borderRadius: '8px',
                                     lineHeight: 1.2
                                   }}
                                   title={`하위 카테고리 ${grpCats.length}개`}
@@ -5962,10 +5962,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   borderRight: 'none',
                                   borderTopRightRadius: 0,
                                   borderBottomRightRadius: 0,
-                                  borderTopLeftRadius: '6px',
-                                  borderBottomLeftRadius: '6px',
+                                  borderTopLeftRadius: '4px',
+                                  borderBottomLeftRadius: '4px',
                                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                  height: isMobile ? '24px' : '26px',
+                                  height: isMobile ? '18px' : '20px',
                                   flexShrink: 0
                                 }}
                                 onClick={(e) => e.stopPropagation()}
@@ -5982,7 +5982,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: isMobile ? '24px' : '26px',
+                                    width: isMobile ? '20px' : '22px',
                                     height: '100%',
                                     border: 'none',
                                     borderRight: '1px solid #E2E8F0',
@@ -5993,7 +5993,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   }}
                                   title="이 그룹에 카테고리 추가"
                                 >
-                                  <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                  <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                 </button>
 
                                 {/* 2. 3점 더보기 (⋮) 메뉴 버튼 */}
@@ -6005,7 +6005,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      width: isMobile ? '24px' : '26px',
+                                      width: isMobile ? '20px' : '22px',
                                       height: '100%',
                                       border: 'none',
                                       backgroundColor: openCategoryGroupMenuId === group.id ? '#DCFCE7' : 'transparent',
@@ -6022,7 +6022,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                     title="그룹 메뉴"
                                   >
-                                    <MoreVertical size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                    <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                   </button>
 
                                   {/* 3점 드롭다운 팝업 메뉴 */}
@@ -6988,9 +6988,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                gap: isMobile ? '4px' : '8px',
-                                height: isMobile ? '28px' : '30px',
-                                padding: isMobile ? '2px 0 2px 8px' : '2px 0 2px 10px',
+                                gap: isMobile ? '4px' : '6px',
+                                height: isMobile ? '22px' : '24px',
+                                padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                                 boxSizing: 'border-box',
                                 backgroundColor: isGroupDragOver ? '#FFEDD5' : '#F8C8A0',
                                 border: 'none',
@@ -7058,7 +7058,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     style={{ display: 'flex', alignItems: 'center', color: '#C2410C' }}
                                     title={isSecCollapsed ? '펼치기' : '접기'}
                                   >
-                                    {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                    {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                   </span>
                                   <span
                                     onDoubleClick={(e) => {
@@ -7069,7 +7069,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                     title={group.isUnassigned ? undefined : "더블클릭하여 그룹 이름 수정"}
                                     style={{
-                                      fontSize: '13px',
+                                      fontSize: '12px',
                                       fontWeight: 700,
                                       color: '#0F172A',
                                       overflow: 'hidden',
@@ -7081,7 +7081,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     {group.name}
                                   </span>
                                   {isSecCollapsed && (
-                                    <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                                    <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
                                       (접힘)
                                     </span>
                                   )}
@@ -7099,10 +7099,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     borderRight: 'none',
                                     borderTopRightRadius: 0,
                                     borderBottomRightRadius: 0,
-                                    borderTopLeftRadius: '6px',
-                                    borderBottomLeftRadius: '6px',
+                                    borderTopLeftRadius: '4px',
+                                    borderBottomLeftRadius: '4px',
                                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                    height: isMobile ? '24px' : '26px',
+                                    height: isMobile ? '18px' : '20px',
                                     flexShrink: 0
                                   }}
                                   onClick={(e) => e.stopPropagation()}
@@ -7118,7 +7118,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      width: isMobile ? '24px' : '26px',
+                                      width: isMobile ? '20px' : '22px',
                                       height: '100%',
                                       border: 'none',
                                       borderRight: '1px solid #E2E8F0',
@@ -7129,7 +7129,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                     title="이 그룹에 메모 추가"
                                   >
-                                    <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                    <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                   </button>
 
                                   {/* 2. 3점 더보기 (⋮) 메뉴 버튼 */}
@@ -7141,7 +7141,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        width: isMobile ? '24px' : '26px',
+                                        width: isMobile ? '20px' : '22px',
                                         height: '100%',
                                         border: 'none',
                                         backgroundColor: openItemGroupMenuId === group.id ? '#EFF6FF' : 'transparent',
@@ -7158,7 +7158,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       }}
                                       title="그룹 메뉴"
                                     >
-                                      <MoreVertical size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                      <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                     </button>
 
                                     {/* 3점 드롭다운 팝업 메뉴 */}
@@ -8585,8 +8585,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           display: 'flex',
                                           alignItems: 'center',
                                           justifyContent: 'space-between',
-                                          gap: isMobile ? '4px' : '8px',
-                                          padding: isMobile ? '5px 8px' : '7px 12px',
+                                          gap: isMobile ? '4px' : '6px',
+                                          height: isMobile ? '22px' : '24px',
+                                          padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                                          boxSizing: 'border-box',
                                           marginTop: '0',
                                           marginBottom: '0',
                                           backgroundColor: '#B3C8DD',
@@ -8608,7 +8610,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            <Folder size={14} color="#2563EB" />
+                                            <Folder size={13} color="#2563EB" />
                                             <input
                                               type="text"
                                               value={editingCheckText}
@@ -8623,10 +8625,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }
                                               }}
                                               style={{
-                                                fontSize: '14px',
+                                                fontSize: '12px',
                                                 fontWeight: 700,
                                                 color: '#0F172A',
-                                                padding: '2px 6px',
+                                                padding: '1px 4px',
                                                 borderRadius: '4px',
                                                 border: '1px solid #2563EB',
                                                 outline: 'none',
@@ -8637,14 +8639,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             <button
                                               type="button"
                                               onClick={() => handleSaveEditChecklist(group.section.id)}
-                                              style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
+                                              style={{ ...styles.btnPrimary, padding: '1px 6px', fontSize: '10px' }}
                                             >
                                               저장
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => setEditingCheckId(null)}
-                                              style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                              style={{ ...styles.btnSecondary, padding: '1px 6px', fontSize: '10px' }}
                                             >
                                               취소
                                             </button>
@@ -8655,9 +8657,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
                                               title={isSecCollapsed ? '펼치기' : '접기'}
                                             >
-                                              {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                              {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                             </span>
-                                            <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
+                                            <Folder size={13} color="#1E3A8A" style={{ flexShrink: 0 }} />
                                             <span
                                               onDoubleClick={(e) => {
                                                 e.stopPropagation();
@@ -8665,12 +8667,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 setEditingCheckText(group.section.text);
                                               }}
                                               title="더블클릭하여 그룹 이름 수정"
-                                              style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                              style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
                                             >
                                               {group.section.text}
                                             </span>
                                             {isSecCollapsed && (
-                                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                                              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
                                                 (접힘)
                                               </span>
                                             )}
@@ -8684,9 +8686,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               alignItems: 'center',
                                               backgroundColor: '#FFFFFF',
                                               border: '1px solid #CBD5E1',
-                                              borderRadius: '6px',
+                                              borderRadius: '4px',
                                               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                              height: isMobile ? '24px' : '26px',
+                                              height: isMobile ? '18px' : '20px',
                                               flexShrink: 0
                                             }}
                                             className="no-print"
@@ -8704,7 +8706,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
+                                                  width: isMobile ? '20px' : '22px',
                                                   height: '100%',
                                                   border: 'none',
                                                   borderRight: '1px solid #E2E8F0',
@@ -8724,7 +8726,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="이 그룹에 체크 항목 추가"
                                               >
-                                                <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                                <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                               </button>
                                             )}
 
@@ -8764,7 +8766,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isFirstGroup ? '#CBD5E1' : '#1E293B',
@@ -8773,7 +8775,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 가장 위로 이동"
                                                 >
-                                                  <ChevronsUp size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                  <ChevronsUp size={isMobile ? 10 : 11} strokeWidth={2.5} />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -8789,7 +8791,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isLastGroup ? '#CBD5E1' : '#1E293B',
@@ -8798,7 +8800,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 가장 아래로 이동"
                                                 >
-                                                  <ChevronsDown size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                  <ChevronsDown size={isMobile ? 10 : 11} strokeWidth={2.5} />
                                                 </button>
                                               </div>
 
@@ -8809,7 +8811,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '18px' : '20px',
+                                                  width: isMobile ? '16px' : '18px',
                                                   height: '100%'
                                                 }}
                                               >
@@ -8827,7 +8829,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isFirstGroup ? '#CBD5E1' : '#1E293B',
@@ -8836,7 +8838,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 위로 이동"
                                                 >
-                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" />
+                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -8852,7 +8854,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isLastGroup ? '#CBD5E1' : '#1E293B',
@@ -8861,7 +8863,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 아래로 이동"
                                                 >
-                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                                                 </button>
                                               </div>
                                             </div>
@@ -8875,7 +8877,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
+                                                  width: isMobile ? '20px' : '22px',
                                                   height: '100%',
                                                   border: 'none',
                                                   backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
@@ -8892,7 +8894,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="그룹 메뉴"
                                               >
-                                                <MoreVertical size={isMobile ? 15 : 16} strokeWidth={2.5} />
+                                                <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                               </button>
 
                                               {openGroupMenuId === group.section.id && (
@@ -9414,6 +9416,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   onPasteItemToChecklist={handlePasteItemFromClipboard}
                                   collapsedBlockIds={detailCollapsedBlockIds}
                                   setCollapsedBlockIds={updateDetailCollapsedBlockIds}
+                                  isMobile={isMobile}
                                 />
                               </div>
                             ) : (
@@ -9793,6 +9796,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     onPasteItemToChecklist={handlePasteItemFromClipboard}
                                     collapsedBlockIds={detailCollapsedBlockIds}
                                     setCollapsedBlockIds={updateDetailCollapsedBlockIds}
+                                    isMobile={isMobile}
                                   />
                                 </div>
                               );
@@ -10065,8 +10069,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
-                                        gap: isMobile ? '4px' : '8px',
-                                        padding: isMobile ? '5px 0 5px 8px' : '7px 0 7px 10px',
+                                        gap: isMobile ? '4px' : '6px',
+                                        height: isMobile ? '22px' : '24px',
+                                        padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                                        boxSizing: 'border-box',
                                         marginTop: '0',
                                         marginBottom: '0',
                                         backgroundColor: '#B3C8DD',
@@ -10089,7 +10095,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Folder size={14} color="#2563EB" />
+                                          <Folder size={13} color="#2563EB" />
                                           <input
                                             type="text"
                                             value={editingCheckText}
@@ -10104,10 +10110,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               }
                                             }}
                                             style={{
-                                              fontSize: '14px',
+                                              fontSize: '12px',
                                               fontWeight: 700,
                                               color: '#1E293B',
-                                              padding: '2px 6px',
+                                              padding: '1px 4px',
                                               borderRadius: '4px',
                                               border: '1px solid #2563EB',
                                               outline: 'none',
@@ -10118,14 +10124,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           <button
                                             type="button"
                                             onClick={() => handleSaveEditChecklist(group.section.id)}
-                                            style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px' }}
+                                            style={{ ...styles.btnPrimary, padding: '1px 6px', fontSize: '10px' }}
                                           >
                                             저장
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => setEditingCheckId(null)}
-                                            style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                            style={{ ...styles.btnSecondary, padding: '1px 6px', fontSize: '10px' }}
                                           >
                                             취소
                                           </button>
@@ -10136,9 +10142,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             style={{ display: 'flex', alignItems: 'center', color: '#1E3A8A' }}
                                             title={isSecCollapsed ? '펼치기' : '접기'}
                                           >
-                                            {isSecCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                            {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                                           </span>
-                                          <Folder size={14} color="#1E3A8A" style={{ flexShrink: 0 }} />
+                                          <Folder size={13} color="#1E3A8A" style={{ flexShrink: 0 }} />
                                           <span
                                              onDoubleClick={(e) => {
                                                e.stopPropagation();
@@ -10146,12 +10152,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                setEditingCheckText(group.section.text);
                                              }}
                                              title="더블클릭하여 그룹 이름 수정"
-                                             style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                                             style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
                                            >
                                              {group.section.text}
                                            </span>
                                           {isSecCollapsed && (
-                                            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                                            <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
                                               (접힘)
                                             </span>
                                           )}
@@ -10167,9 +10173,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               backgroundColor: '#FFFFFF',
                                               border: '1px solid #CBD5E1',
                                               borderRight: 'none',
-                                              borderRadius: '6px 0 0 6px',
+                                              borderRadius: '4px 0 0 4px',
                                               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                              height: isMobile ? '24px' : '26px',
+                                              height: isMobile ? '18px' : '20px',
                                               flexShrink: 0
                                             }}
                                             className="no-print"
@@ -10187,7 +10193,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
+                                                  width: isMobile ? '20px' : '22px',
                                                   height: '100%',
                                                   border: 'none',
                                                   borderRight: '1px solid #E2E8F0',
@@ -10207,7 +10213,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="이 그룹에 체크 항목 추가"
                                               >
-                                                <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                                <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                               </button>
                                             )}
 
@@ -10256,7 +10262,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 가장 위로 이동"
                                                 >
-                                                  <ChevronsUp size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                  <ChevronsUp size={isMobile ? 10 : 11} strokeWidth={2.5} />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -10272,7 +10278,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isLastGroup ? '#CBD5E1' : '#1E293B',
@@ -10281,7 +10287,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 가장 아래로 이동"
                                                 >
-                                                  <ChevronsDown size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                  <ChevronsDown size={isMobile ? 10 : 11} strokeWidth={2.5} />
                                                 </button>
                                               </div>
 
@@ -10292,7 +10298,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   flexDirection: 'column',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '18px' : '20px',
+                                                  width: isMobile ? '16px' : '18px',
                                                   height: '100%'
                                                 }}
                                               >
@@ -10310,7 +10316,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isFirstGroup ? '#CBD5E1' : '#1E293B',
@@ -10319,7 +10325,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 위로 이동"
                                                 >
-                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" />
+                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
                                                 </button>
                                                 <button
                                                   type="button"
@@ -10335,7 +10341,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
+                                                    height: isMobile ? '8px' : '9px',
                                                     border: 'none',
                                                     backgroundColor: 'transparent',
                                                     color: isLastGroup ? '#CBD5E1' : '#1E293B',
@@ -10344,7 +10350,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="그룹 아래로 이동"
                                                 >
-                                                  <Triangle size={isMobile ? 8 : 9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                                                 </button>
                                               </div>
                                             </div>
@@ -10358,7 +10364,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '24px' : '26px',
+                                                  width: isMobile ? '20px' : '22px',
                                                   height: '100%',
                                                   border: 'none',
                                                   backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
@@ -10375,7 +10381,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="그룹 메뉴"
                                               >
-                                                <MoreVertical size={isMobile ? 15 : 16} strokeWidth={2.5} />
+                                                <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                                               </button>
                                             {openGroupMenuId === group.section.id && (
                                               <>
@@ -11198,6 +11204,7 @@ onClick={() => {
                                     onPasteItemToChecklist={handlePasteItemFromClipboard}
                                     collapsedBlockIds={detailCollapsedBlockIds}
                                     setCollapsedBlockIds={updateDetailCollapsedBlockIds}
+                                    isMobile={isMobile}
                                   />
                               </>
                             );

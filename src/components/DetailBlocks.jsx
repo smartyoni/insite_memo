@@ -601,7 +601,8 @@ export const DetailBlocksManager = ({
   detailClipboard,
   onPasteItemToChecklist,
   collapsedBlockIds: externalCollapsedBlockIds,
-  setCollapsedBlockIds: externalSetCollapsedBlockIds
+  setCollapsedBlockIds: externalSetCollapsedBlockIds,
+  isMobile = false
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -1281,7 +1282,9 @@ export const DetailBlocksManager = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '6px 0 6px 8px',
+                  height: isMobile ? '22px' : '24px',
+                  boxSizing: 'border-box',
+                  padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                   backgroundColor: '#A8D5B8',
                   borderBottom: isCollapsed ? 'none' : '1px solid #6B9E7D',
                   cursor: isEditingTitle ? 'default' : 'pointer',
@@ -1300,10 +1303,10 @@ export const DetailBlocksManager = ({
                 {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
                 {isEditingTitle ? (
                   <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, marginRight: '6px' }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Folder size={14} color="#065F46" style={{ flexShrink: 0 }} />
+                    <Folder size={isMobile ? 12 : 13} color="#065F46" style={{ flexShrink: 0 }} />
                     <input
                       type="text"
                       value={draftChecklistTitle}
@@ -1321,26 +1324,27 @@ export const DetailBlocksManager = ({
                       autoFocus
                       style={{
                         flex: 1,
-                        fontSize: '14px',
+                        fontSize: '12px',
                         fontWeight: 700,
                         color: '#052E16',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
                         border: '1px solid #065F46',
                         outline: 'none',
-                        backgroundColor: '#FFFFFF'
+                        backgroundColor: '#FFFFFF',
+                        minWidth: 0
                       }}
                     />
                     <button
                       type="button"
                       onClick={() => handleSaveChecklistTitle(block.id, draftChecklistTitle)}
                       style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
                         border: 'none',
                         backgroundColor: '#065F46',
                         color: '#FFFFFF',
-                        fontSize: '11px',
+                        fontSize: '10px',
                         fontWeight: 600,
                         cursor: 'pointer'
                       }}
@@ -1351,12 +1355,12 @@ export const DetailBlocksManager = ({
                       type="button"
                       onClick={() => setEditingChecklistTitleId(null)}
                       style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
                         border: '1px solid #CBD5E1',
                         backgroundColor: '#FFFFFF',
                         color: '#64748B',
-                        fontSize: '11px',
+                        fontSize: '10px',
                         fontWeight: 600,
                         cursor: 'pointer'
                       }}
@@ -1369,7 +1373,7 @@ export const DetailBlocksManager = ({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
+                      gap: '4px',
                       flex: 1,
                       minWidth: 0
                     }}
@@ -1378,12 +1382,12 @@ export const DetailBlocksManager = ({
                       style={{ display: 'flex', alignItems: 'center', color: '#065F46' }}
                       title={isCollapsed ? '펼치기' : '접기'}
                     >
-                      {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                      {isCollapsed ? <ChevronRight size={isMobile ? 13 : 14} /> : <ChevronDown size={isMobile ? 13 : 14} />}
                     </span>
-                    <Folder size={14} color="#065F46" style={{ flexShrink: 0 }} />
+                    <Folder size={isMobile ? 12 : 13} color="#065F46" style={{ flexShrink: 0 }} />
                     <span
                       style={{
-                        fontSize: '14px',
+                        fontSize: isMobile ? '11px' : '12px',
                         fontWeight: 700,
                         color: '#052E16',
                         overflow: 'hidden',
@@ -1400,7 +1404,7 @@ export const DetailBlocksManager = ({
                       {block.title && block.title.trim() ? block.title : '체크리스트'}
                     </span>
                     {isCollapsed && (
-                      <span style={{ fontSize: '11px', color: '#065F46', fontWeight: 600 }}>
+                      <span style={{ fontSize: '10px', color: '#065F46', fontWeight: 600 }}>
                         (접힘)
                       </span>
                     )}
@@ -1415,9 +1419,9 @@ export const DetailBlocksManager = ({
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #CBD5E1',
                     borderRight: 'none',
-                    borderRadius: '6px 0 0 6px',
+                    borderRadius: '4px 0 0 4px',
                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    height: '26px',
+                    height: isMobile ? '18px' : '20px',
                     flexShrink: 0
                   }}
                   className="no-print"
@@ -1434,7 +1438,7 @@ export const DetailBlocksManager = ({
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: '26px',
+                      width: isMobile ? '20px' : '22px',
                       height: '100%',
                       border: 'none',
                       borderRight: '1px solid #E2E8F0',
@@ -1454,7 +1458,7 @@ export const DetailBlocksManager = ({
                     }}
                     title="체크 항목 추가 (단축키: Shift+Enter)"
                   >
-                    <Plus size={15} strokeWidth={2.5} />
+                    <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                   </button>
 
                   {detailClipboard && detailClipboard.type === 'item' && onPasteItemToChecklist && (
@@ -1468,7 +1472,7 @@ export const DetailBlocksManager = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '26px',
+                        width: isMobile ? '20px' : '22px',
                         height: '100%',
                         border: 'none',
                         borderRight: '1px solid #E2E8F0',
@@ -1488,7 +1492,7 @@ export const DetailBlocksManager = ({
                       }}
                       title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
                     >
-                      <Copy size={13} strokeWidth={2.5} />
+                      <Copy size={isMobile ? 11 : 12} strokeWidth={2.5} />
                     </button>
                   )}
 
@@ -1499,7 +1503,7 @@ export const DetailBlocksManager = ({
                       alignItems: 'center',
                       borderRight: '1px solid #E2E8F0',
                       height: '100%',
-                      padding: '0 2px',
+                      padding: '0 1px',
                       gap: '1px'
                     }}
                   >
@@ -1510,7 +1514,7 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '20px',
+                        width: isMobile ? '16px' : '18px',
                         height: '100%'
                       }}
                     >
@@ -1528,7 +1532,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isFirstBlock ? '#CBD5E1' : '#1E293B',
@@ -1537,7 +1541,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="가장 위로 이동"
                       >
-                        <ChevronsUp size={13} strokeWidth={2.5} />
+                        <ChevronsUp size={isMobile ? 9 : 10} strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
@@ -1553,7 +1557,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isLastBlock ? '#CBD5E1' : '#1E293B',
@@ -1562,7 +1566,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="가장 아래로 이동"
                       >
-                        <ChevronsDown size={13} strokeWidth={2.5} />
+                        <ChevronsDown size={isMobile ? 9 : 10} strokeWidth={2.5} />
                       </button>
                     </div>
 
@@ -1573,7 +1577,7 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '20px',
+                        width: isMobile ? '16px' : '18px',
                         height: '100%'
                       }}
                     >
@@ -1591,7 +1595,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isFirstBlock ? '#CBD5E1' : '#1E293B',
@@ -1600,7 +1604,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="위로 이동"
                       >
-                        <Triangle size={9} fill="currentColor" />
+                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
                       </button>
                       <button
                         type="button"
@@ -1616,7 +1620,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isLastBlock ? '#CBD5E1' : '#1E293B',
@@ -1625,7 +1629,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="아래로 이동"
                       >
-                        <Triangle size={9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                       </button>
                     </div>
                   </div>
@@ -1639,7 +1643,7 @@ export const DetailBlocksManager = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '26px',
+                        width: isMobile ? '20px' : '22px',
                         height: '100%',
                         border: 'none',
                         backgroundColor: openBlockMenuId === block.id ? '#DCFCE7' : 'transparent',
@@ -1656,7 +1660,7 @@ export const DetailBlocksManager = ({
                       }}
                       title="메뉴"
                     >
-                      <MoreVertical size={16} strokeWidth={2.5} />
+                      <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>
@@ -1752,7 +1756,9 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '6px 0 6px 8px',
+                height: isMobile ? '22px' : '24px',
+                boxSizing: 'border-box',
+                padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                 backgroundColor: isEditingThisBlock ? '#EDE9FE' : '#C8B6E2',
                 borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #C4B5FD' : '1px solid #9578B8'),
                 cursor: isEditingThisBlock ? 'default' : 'pointer',
@@ -1771,7 +1777,7 @@ export const DetailBlocksManager = ({
               {/* 좌측: 토글 화살표 + 텍스트 이름 (T 아이콘 제거) */}
               {isEditingThisBlock ? (
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, marginRight: '8px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, marginRight: '6px' }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
@@ -1791,11 +1797,11 @@ export const DetailBlocksManager = ({
                     placeholder="텍스트 이름 입력... (예: 계약조건, 전달사항)"
                     style={{
                       flex: 1,
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: 700,
                       color: '#2E1065',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
                       border: '1px solid #7C3AED',
                       outline: 'none',
                       backgroundColor: '#FFFFFF',
@@ -1806,12 +1812,12 @@ export const DetailBlocksManager = ({
                     type="button"
                     onClick={() => handleSaveBlock(block.id)}
                     style={{
-                      padding: '2px 8px',
-                      borderRadius: '4px',
+                      padding: '1px 6px',
+                      borderRadius: '3px',
                       border: 'none',
                       backgroundColor: '#7C3AED',
                       color: '#FFFFFF',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: 600,
                       cursor: 'pointer'
                     }}
@@ -1822,12 +1828,12 @@ export const DetailBlocksManager = ({
                     type="button"
                     onClick={handleCancelEdit}
                     style={{
-                      padding: '2px 8px',
-                      borderRadius: '4px',
+                      padding: '1px 6px',
+                      borderRadius: '3px',
                       border: '1px solid #CBD5E1',
                       backgroundColor: '#FFFFFF',
                       color: '#64748B',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: 600,
                       cursor: 'pointer'
                     }}
@@ -1840,7 +1846,7 @@ export const DetailBlocksManager = ({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '4px',
                     flex: 1,
                     minWidth: 0
                   }}
@@ -1849,11 +1855,11 @@ export const DetailBlocksManager = ({
                     style={{ display: 'flex', alignItems: 'center', color: '#4C1D95' }}
                     title={isCollapsed ? '펼치기' : '접기'}
                   >
-                    {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                    {isCollapsed ? <ChevronRight size={isMobile ? 13 : 14} /> : <ChevronDown size={isMobile ? 13 : 14} />}
                   </span>
                   <span
                     style={{
-                      fontSize: '13px',
+                      fontSize: isMobile ? '11px' : '12px',
                       fontWeight: 700,
                       color: block.title && block.title.trim() ? '#2E1065' : '#7C6F93',
                       overflow: 'hidden',
@@ -1870,7 +1876,7 @@ export const DetailBlocksManager = ({
                     {block.title && block.title.trim() ? block.title : '텍스트'}
                   </span>
                   {isCollapsed && (
-                    <span style={{ fontSize: '11px', color: '#581C87', fontWeight: 600 }}>
+                    <span style={{ fontSize: '10px', color: '#581C87', fontWeight: 600 }}>
                       (접힘)
                     </span>
                   )}
@@ -1886,9 +1892,9 @@ export const DetailBlocksManager = ({
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #CBD5E1',
                     borderRight: 'none',
-                    borderRadius: '6px 0 0 6px',
+                    borderRadius: '4px 0 0 4px',
                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    height: '26px',
+                    height: isMobile ? '18px' : '20px',
                     flexShrink: 0
                   }}
                   className="no-print"
@@ -1901,7 +1907,7 @@ export const DetailBlocksManager = ({
                       alignItems: 'center',
                       borderRight: '1px solid #E2E8F0',
                       height: '100%',
-                      padding: '0 2px',
+                      padding: '0 1px',
                       gap: '1px'
                     }}
                   >
@@ -1912,7 +1918,7 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '20px',
+                        width: isMobile ? '16px' : '18px',
                         height: '100%'
                       }}
                     >
@@ -1930,7 +1936,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isFirstBlock ? '#CBD5E1' : '#1E293B',
@@ -1939,7 +1945,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="가장 위로 이동"
                       >
-                        <ChevronsUp size={13} strokeWidth={2.5} />
+                        <ChevronsUp size={isMobile ? 9 : 10} strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
@@ -1955,7 +1961,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isLastBlock ? '#CBD5E1' : '#1E293B',
@@ -1964,7 +1970,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="가장 아래로 이동"
                       >
-                        <ChevronsDown size={13} strokeWidth={2.5} />
+                        <ChevronsDown size={isMobile ? 9 : 10} strokeWidth={2.5} />
                       </button>
                     </div>
 
@@ -1975,7 +1981,7 @@ export const DetailBlocksManager = ({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '20px',
+                        width: isMobile ? '16px' : '18px',
                         height: '100%'
                       }}
                     >
@@ -1993,7 +1999,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isFirstBlock ? '#CBD5E1' : '#1E293B',
@@ -2002,7 +2008,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="위로 이동"
                       >
-                        <Triangle size={9} fill="currentColor" />
+                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
                       </button>
                       <button
                         type="button"
@@ -2018,7 +2024,7 @@ export const DetailBlocksManager = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
-                          height: '12px',
+                          height: '50%',
                           border: 'none',
                           backgroundColor: 'transparent',
                           color: isLastBlock ? '#CBD5E1' : '#1E293B',
@@ -2027,7 +2033,7 @@ export const DetailBlocksManager = ({
                         }}
                         title="아래로 이동"
                       >
-                        <Triangle size={9} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
+                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
                       </button>
                     </div>
                   </div>
@@ -2041,7 +2047,7 @@ export const DetailBlocksManager = ({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '26px',
+                        width: isMobile ? '20px' : '22px',
                         height: '100%',
                         border: 'none',
                         backgroundColor: openBlockMenuId === block.id ? '#E2E8F0' : 'transparent',
@@ -2058,7 +2064,7 @@ export const DetailBlocksManager = ({
                       }}
                       title="메뉴"
                     >
-                      <MoreVertical size={16} strokeWidth={2.5} />
+                      <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>
