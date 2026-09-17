@@ -9186,8 +9186,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           marginBottom: '10px',
                           paddingBottom: '10px',
                           borderBottom: '1px solid #F1F5F9',
-                          paddingLeft: isMobile ? '4px' : '0',
-                          paddingRight: isMobile ? '4px' : '0'
+                          paddingLeft: '10px',
+                          paddingRight: '10px'
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                             {isMobile && (
@@ -9340,7 +9340,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         {!isItemInTrash && (
                           <div style={{
                             ...styles.checklistInputContainer,
-                            ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
+                            paddingLeft: '10px',
+                            paddingRight: '10px'
                           }} className="no-print">
                             <div style={styles.checklistInputGroup}>
                               <textarea
@@ -9382,7 +9383,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                         <div style={{
                           ...styles.checklistListContainer,
-                          ...(isMobile ? { padding: '2px 0 6px 0' } : {})
+                          padding: '0'
                         }}>
                           {currentChecklists.length === 0 ? (
                             <div style={styles.checklistEmptyText}>
@@ -9406,9 +9407,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     gap: '0px',
                                     padding: '0px',
                                     backgroundColor: '#FFFFFF',
-                                    borderRadius: isMobile ? '6px' : '8px',
+                                    borderRadius: 0,
                                     border: '1.5px solid #64748B',
-                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                                    borderLeft: 'none',
+                                    borderRight: 'none',
+                                    boxShadow: 'none',
                                     marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
                                     marginLeft: 0,
                                     marginRight: 0,
@@ -9427,7 +9430,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         gap: isMobile ? '4px' : '8px',
-                                        padding: isMobile ? '5px 8px' : '7px 12px',
+                                        padding: isMobile ? '5px 0 5px 8px' : '7px 0 7px 10px',
                                         marginTop: '0',
                                         marginBottom: '0',
                                         backgroundColor: '#B3C8DD',
@@ -9527,7 +9530,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               alignItems: 'center',
                                               backgroundColor: '#FFFFFF',
                                               border: '1px solid #CBD5E1',
-                                              borderRadius: '6px',
+                                              borderRight: 'none',
+                                              borderRadius: '6px 0 0 6px',
                                               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                                               height: isMobile ? '24px' : '26px',
                                               flexShrink: 0
@@ -9890,7 +9894,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             } : {
                                               ...styles.checklistItemRow,
                                               padding: isMobile ? '5px 4px 5px 8px' : '6px 4px 6px 12px',
-                                              borderRadius: isMobile ? '6px' : '8px',
+                                              borderRadius: 0,
                                               backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
                                               border: isDragOver
                                                 ? '2px solid #2563EB'
@@ -9898,10 +9902,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   ? '2px solid #2563EB'
                                                   : isEditing
                                                     ? '2px solid #3B82F6'
-                                                    : '1.5px solid #CBD5E1',
+                                                    : '1px solid #CBD5E1',
+                                              borderLeft: 'none',
+                                              borderRight: 'none',
                                               boxShadow: isSelected
-                                                ? '0 0 0 1px #2563EB, 0 2px 6px rgba(37, 99, 235, 0.12)'
-                                                : '0 1px 2px rgba(0, 0, 0, 0.03)',
+                                                ? 'inset 3px 0 0 #2563EB'
+                                                : 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             }}
@@ -10326,7 +10332,7 @@ onClick={() => {
                             const selectedCheckItem = currentChecklists.find(c => c.id === selectedChecklistId) || currentChecklists[0];
                             if (!selectedCheckItem) {
                               return (
-                                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8' }}>
+                                <div style={{ padding: '30px 10px', textAlign: 'center', color: '#94A3B8' }}>
                                   좌측에서 체크리스트 항목을 선택하거나 추가해 주세요.
                                 </div>
                               );
@@ -10349,8 +10355,8 @@ onClick={() => {
                                   backgroundColor: '#F8FAFC',
                                   zIndex: 10,
                                   flexShrink: 0,
-                                  paddingLeft: isMobile ? '4px' : '0',
-                                  paddingRight: isMobile ? '4px' : '0'
+                                  paddingLeft: '10px',
+                                  paddingRight: '10px'
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                     <span style={{
@@ -12633,7 +12639,7 @@ const styles = {
     backgroundColor: '#FFFFFF',
     border: '1px solid #E2E8F0',
     borderRadius: '8px',
-    padding: '14px 16px',
+    padding: '10px 0',
     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)'
   },
   rightPaneCard: {
@@ -12644,7 +12650,7 @@ const styles = {
     backgroundColor: '#F8FAFC',
     border: '1px solid #CBD5E1',
     borderRadius: '8px',
-    padding: '14px 16px',
+    padding: '10px 0',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
     display: 'flex',
     flexDirection: 'column'
@@ -12876,7 +12882,7 @@ const styles = {
     gap: '6px',
     overflowY: 'auto',
     flex: 1,
-    padding: '4px 6px 8px 4px'
+    padding: '4px 0 8px 0'
   },
   checklistItemRow: {
     display: 'flex',

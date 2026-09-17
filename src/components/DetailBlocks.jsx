@@ -1188,7 +1188,7 @@ export const DetailBlocksManager = ({
         flex: 1,
         minHeight: 0,
         overflowY: 'auto',
-        paddingRight: '1px'
+        padding: 0
       }}
     >
       {blocks.length === 0 ? (
@@ -1242,9 +1242,11 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#FFFFFF',
-                borderRadius: '8px',
+                borderRadius: 0,
                 border: isBlockDragOver ? '2px dashed #059669' : '1.5px solid #4D7C5D',
-                boxShadow: isBlockDragOver ? '0 0 0 2px rgba(5, 150, 105, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                borderLeft: 'none',
+                borderRight: 'none',
+                boxShadow: isBlockDragOver ? '0 0 0 2px rgba(5, 150, 105, 0.2)' : 'none',
                 overflow: 'hidden',
                 flexShrink: 0
               }}
@@ -1257,7 +1259,7 @@ export const DetailBlocksManager = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '6px 8px',
+                  padding: '6px 0 6px 8px',
                   backgroundColor: '#A8D5B8',
                   borderBottom: isCollapsed ? 'none' : '1px solid #6B9E7D',
                   cursor: isEditingTitle ? 'default' : 'pointer',
@@ -1390,7 +1392,8 @@ export const DetailBlocksManager = ({
                     alignItems: 'center',
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
+                    borderRight: 'none',
+                    borderRadius: '6px 0 0 6px',
                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                     height: '26px',
                     flexShrink: 0
@@ -1673,11 +1676,13 @@ export const DetailBlocksManager = ({
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: '#FFFFFF',
-              borderRadius: '8px',
+              borderRadius: 0,
               border: isEditingThisBlock ? '1.5px solid #8B5CF6' : '1px solid #9D84BE',
+              borderLeft: 'none',
+              borderRight: 'none',
               boxShadow: isEditingThisBlock
                 ? '0 0 0 2px rgba(139, 92, 246, 0.2)'
-                : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                : 'none',
               overflow: 'hidden',
               flexShrink: 0,
               transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
@@ -1689,7 +1694,7 @@ export const DetailBlocksManager = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '6px 8px',
+                padding: '6px 0 6px 8px',
                 backgroundColor: isEditingThisBlock ? '#EDE9FE' : '#C8B6E2',
                 borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #C4B5FD' : '1px solid #9578B8'),
                 cursor: isEditingThisBlock ? 'default' : 'pointer',
@@ -1822,7 +1827,8 @@ export const DetailBlocksManager = ({
                     alignItems: 'center',
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
+                    borderRight: 'none',
+                    borderRadius: '6px 0 0 6px',
                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                     height: '26px',
                     flexShrink: 0
