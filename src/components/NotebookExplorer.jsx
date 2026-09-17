@@ -1024,6 +1024,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [openGroupMenuPos, setOpenGroupMenuPos] = useState({ top: 0, right: 0 });
   const [openCatMenuId, setOpenCatMenuId] = useState(null);
   const [openCatMenuPos, setOpenCatMenuPos] = useState({ top: 0, right: 0 });
+  const [openCategoryGroupMenuId, setOpenCategoryGroupMenuId] = useState(null);
+  const [openCategoryGroupMenuPos, setOpenCategoryGroupMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
@@ -2625,6 +2627,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  const handleOpenCategoryGroupMenu = (e, groupId) => {
+    e.stopPropagation();
+    if (openCategoryGroupMenuId === groupId) {
+      setOpenCategoryGroupMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 220;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenCategoryGroupMenuPos({ top, right });
+      setOpenCategoryGroupMenuId(groupId);
+    }
+  };
+
   const handleSaveChecklistDetail = async (checkId, blocksToSave) => {
     recordWorkLocation();
     const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
@@ -3111,6 +3128,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         }
         if (movingCategory) {
           setMovingCategory(null);
+        } else if (openCategoryGroupMenuId) {
+          setOpenCategoryGroupMenuId(null);
         } else if (openCatMenuId) {
           setOpenCatMenuId(null);
         } else if (openChecklistMenuId) {
@@ -3136,13 +3155,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openChecklistMenuId, openCatMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
+  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
 
   useEffect(() => {
-    if (!openChecklistMenuId && !openCatMenuId) return;
+    if (!openChecklistMenuId && !openCatMenuId && !openCategoryGroupMenuId) return;
     const handleCloseMenu = () => {
       setOpenChecklistMenuId(null);
       setOpenCatMenuId(null);
+      setOpenCategoryGroupMenuId(null);
     };
     window.addEventListener('resize', handleCloseMenu);
     window.addEventListener('scroll', handleCloseMenu, true);
@@ -3150,7 +3170,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       window.removeEventListener('resize', handleCloseMenu);
       window.removeEventListener('scroll', handleCloseMenu, true);
     };
-  }, [openChecklistMenuId, openCatMenuId]);
+  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId]);
 
   // ---------------- Category Group Handlers ----------------
   const toggleCategoryGroupCollapse = (groupId) => {
@@ -5911,7 +5931,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               </div>
                             )}
 
-                            {/* 우측 버튼 탭 (미분류가 아닐 때) */}
+                            {/* 우측 버튼 탭 (미분류가 아닐 때: + 버튼과 3점 메뉴만 노출) */}
                             {!isSecEditing && !group.isUnassigned && (
                               <div
                                 style={{
@@ -5930,11 +5950,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                {/* 1. 카테고리 추가 버튼 */}
+                                {/* 1. 카테고리 추가 (+) 버튼 */}
                                 <button
                                   type="button"
                                   onMouseDown={(e) => e.preventDefault()}
-                                   onClick={(e) => {
+                                  onClick={(e) => {
                                     e.stopPropagation();
                                     handleStartAddCategoryToGroup(group.id);
                                   }}
@@ -5956,138 +5976,176 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   <Plus size={isMobile ? 14 : 15} strokeWidth={2.5} />
                                 </button>
 
-                                {/* 2. 위치이동 버튼 세트 */}
-                                <div
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    borderRight: '1px solid #E2E8F0',
-                                    height: '100%',
-                                    padding: '0 2px',
-                                    gap: '1px'
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveCategoryGroup(group.id, 'top');
-                                      }}
-                                      disabled={isFirstGroup}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '100%',
-                                        height: '11px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                        padding: 0
-                                      }}
-                                      title="그룹 최상단으로 이동"
-                                    >
-                                      <ChevronsUp size={11} strokeWidth={2.5} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveCategoryGroup(group.id, 'bottom');
-                                      }}
-                                      disabled={isLastGroup}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '100%',
-                                        height: '11px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                        cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                        padding: 0
-                                      }}
-                                      title="그룹 최하단으로 이동"
-                                    >
-                                      <ChevronsDown size={11} strokeWidth={2.5} />
-                                    </button>
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: isMobile ? '16px' : '18px', height: '100%' }}>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveCategoryGroup(group.id, 'up');
-                                      }}
-                                      disabled={isFirstGroup}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '100%',
-                                        height: '11px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                        padding: 0
-                                      }}
-                                      title="그룹 위로 이동"
-                                    >
-                                      <ChevronUp size={11} strokeWidth={2.5} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMoveCategoryGroup(group.id, 'down');
-                                      }}
-                                      disabled={isLastGroup}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '100%',
-                                        height: '11px',
-                                        border: 'none',
-                                        backgroundColor: 'transparent',
-                                        color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                        cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                        padding: 0
-                                      }}
-                                      title="그룹 아래로 이동"
-                                    >
-                                      <ChevronDown size={11} strokeWidth={2.5} />
-                                    </button>
-                                  </div>
-                                </div>
+                                {/* 2. 3점 더보기 (⋮) 메뉴 버튼 */}
+                                <div style={{ position: 'relative', height: '100%' }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenCategoryGroupMenu(e, group.id)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: isMobile ? '24px' : '26px',
+                                      height: '100%',
+                                      border: 'none',
+                                      backgroundColor: openCategoryGroupMenuId === group.id ? '#DCFCE7' : 'transparent',
+                                      color: openCategoryGroupMenuId === group.id ? '#059669' : '#047857',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (openCategoryGroupMenuId !== group.id) e.currentTarget.style.backgroundColor = '#F0FDF4';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (openCategoryGroupMenuId !== group.id) e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                    title="그룹 메뉴"
+                                  >
+                                    <MoreVertical size={isMobile ? 14 : 15} strokeWidth={2.5} />
+                                  </button>
 
-                                {/* 3. 삭제 버튼 */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteCategoryGroup(group.id);
-                                  }}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: isMobile ? '24px' : '26px',
-                                    height: '100%',
-                                    border: 'none',
-                                    backgroundColor: 'transparent',
-                                    color: '#DC2626',
-                                    cursor: 'pointer',
-                                    padding: 0
-                                  }}
-                                  title="그룹 삭제 (소속 카테고리는 미분류로 이동)"
-                                >
-                                  <Trash2 size={isMobile ? 12 : 13} />
-                                </button>
+                                  {/* 3점 드롭다운 팝업 메뉴 */}
+                                  {openCategoryGroupMenuId === group.id && (
+                                    <>
+                                      <div
+                                        style={{
+                                          position: 'fixed',
+                                          top: 0,
+                                          left: 0,
+                                          right: 0,
+                                          bottom: 0,
+                                          zIndex: 9999,
+                                          backgroundColor: 'transparent'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenCategoryGroupMenuId(null);
+                                        }}
+                                      />
+                                      <div
+                                        style={{
+                                          ...styles.checklistDropdownMenu,
+                                          top: openCategoryGroupMenuPos?.top ?? 0,
+                                          right: openCategoryGroupMenuPos?.right ?? 0,
+                                          minWidth: '150px',
+                                          padding: '5px'
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          type="button"
+                                          disabled={isFirstGroup}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            handleMoveCategoryGroup(group.id, 'top');
+                                          }}
+                                          style={{
+                                            ...styles.checklistDropdownItem,
+                                            opacity: isFirstGroup ? 0.4 : 1,
+                                            cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                          }}
+                                          onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                          onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <ChevronsUp size={15} color={isFirstGroup ? '#94A3B8' : '#047857'} strokeWidth={2.2} />
+                                          <span>맨 위로 이동</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isFirstGroup}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            handleMoveCategoryGroup(group.id, 'up');
+                                          }}
+                                          style={{
+                                            ...styles.checklistDropdownItem,
+                                            opacity: isFirstGroup ? 0.4 : 1,
+                                            cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                          }}
+                                          onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                          onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <ChevronUp size={15} color={isFirstGroup ? '#94A3B8' : '#047857'} strokeWidth={2.2} />
+                                          <span>위로 이동</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isLastGroup}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            handleMoveCategoryGroup(group.id, 'down');
+                                          }}
+                                          style={{
+                                            ...styles.checklistDropdownItem,
+                                            opacity: isLastGroup ? 0.4 : 1,
+                                            cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                          }}
+                                          onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                          onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <ChevronDown size={15} color={isLastGroup ? '#94A3B8' : '#047857'} strokeWidth={2.2} />
+                                          <span>아래로 이동</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isLastGroup}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            handleMoveCategoryGroup(group.id, 'bottom');
+                                          }}
+                                          style={{
+                                            ...styles.checklistDropdownItem,
+                                            opacity: isLastGroup ? 0.4 : 1,
+                                            cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                          }}
+                                          onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                          onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <ChevronsDown size={15} color={isLastGroup ? '#94A3B8' : '#047857'} strokeWidth={2.2} />
+                                          <span>맨 아래로 이동</span>
+                                        </button>
+
+                                        <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            setEditingCategoryGroupId(group.id);
+                                            setEditingCategoryGroupName(group.name);
+                                          }}
+                                          style={styles.checklistDropdownItem}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          <Edit2 size={14} color="#475569" />
+                                          <span>그룹 이름 변경</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCategoryGroupMenuId(null);
+                                            handleDeleteCategoryGroup(group.id);
+                                          }}
+                                          style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                          <Trash2 size={14} color="#DC2626" />
+                                          <span>그룹 삭제</span>
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
