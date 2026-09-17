@@ -14,6 +14,7 @@ import {
   Folder,
   FolderInput,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   ChevronsUp,
   ChevronsDown,
@@ -1496,145 +1497,7 @@ export const DetailBlocksManager = ({
                     </button>
                   )}
 
-                  {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      borderRight: '1px solid #E2E8F0',
-                      height: '100%',
-                      padding: '0 1px',
-                      gap: '1px'
-                    }}
-                  >
-                    {/* 가장 위 / 가장 아래 이동 (좌측) */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: isMobile ? '16px' : '18px',
-                        height: '100%'
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveToTop(idx);
-                        }}
-                        disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#059669'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="가장 위로 이동"
-                      >
-                        <ChevronsUp size={isMobile ? 9 : 10} strokeWidth={2.5} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveToBottom(idx);
-                        }}
-                        disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#059669'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="가장 아래로 이동"
-                      >
-                        <ChevronsDown size={isMobile ? 9 : 10} strokeWidth={2.5} />
-                      </button>
-                    </div>
-
-                    {/* 한 칸 위 / 아래로 이동 (우측) */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: isMobile ? '16px' : '18px',
-                        height: '100%'
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveUp(idx);
-                        }}
-                        disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#059669'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="위로 이동"
-                      >
-                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveDown(idx);
-                        }}
-                        disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#059669'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="아래로 이동"
-                      >
-                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 3. 3점 메뉴 (가장 우측) */}
+                  {/* 2. 3점 메뉴 (가장 우측) */}
                   <div style={{ position: 'relative', height: '100%' }}>
                     <button
                       type="button"
@@ -1900,144 +1763,6 @@ export const DetailBlocksManager = ({
                   className="no-print"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* 위치이동 버튼 세트 */}
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      borderRight: '1px solid #E2E8F0',
-                      height: '100%',
-                      padding: '0 1px',
-                      gap: '1px'
-                    }}
-                  >
-                    {/* 가장 위 / 가장 아래 이동 */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: isMobile ? '16px' : '18px',
-                        height: '100%'
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveToTop(idx);
-                        }}
-                        disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="가장 위로 이동"
-                      >
-                        <ChevronsUp size={isMobile ? 9 : 10} strokeWidth={2.5} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveToBottom(idx);
-                        }}
-                        disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="가장 아래로 이동"
-                      >
-                        <ChevronsDown size={isMobile ? 9 : 10} strokeWidth={2.5} />
-                      </button>
-                    </div>
-
-                    {/* 한 칸 위 / 아래로 이동 */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: isMobile ? '16px' : '18px',
-                        height: '100%'
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveUp(idx);
-                        }}
-                        disabled={isFirstBlock}
-                        onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isFirstBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isFirstBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="위로 이동"
-                      >
-                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveDown(idx);
-                        }}
-                        disabled={isLastBlock}
-                        onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#2563EB'; }}
-                        onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.color = '#1E293B'; }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '50%',
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: isLastBlock ? '#CBD5E1' : '#1E293B',
-                          cursor: isLastBlock ? 'not-allowed' : 'pointer',
-                          padding: 0
-                        }}
-                        title="아래로 이동"
-                      >
-                        <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                      </button>
-                    </div>
-                  </div>
-
                   {/* 3점 메뉴 */}
                   <div style={{ position: 'relative', height: '100%' }}>
                     <button
@@ -2179,9 +1904,9 @@ export const DetailBlocksManager = ({
               borderRadius: '8px',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
               border: '1px solid #CBD5E1',
-              padding: '4px',
+              padding: '5px',
               zIndex: 99999,
-              minWidth: '115px',
+              minWidth: '150px',
               display: 'flex',
               flexDirection: 'column',
               gap: '2px',
@@ -2191,6 +1916,96 @@ export const DetailBlocksManager = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* 1. 블록 위치 이동 세트 (맨 위 / 위 / 아래 / 맨 아래) */}
+            {(() => {
+              const isFirstBlock = activeMenuBlockIdx <= 0;
+              const isLastBlock = activeMenuBlockIdx >= blocks.length - 1;
+              const moveIconColor = activeMenuBlock.type === 'checklist' ? '#059669' : '#7C3AED';
+
+              return (
+                <>
+                  <button
+                    type="button"
+                    disabled={isFirstBlock}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenBlockMenuId(null);
+                      handleMoveToTop(activeMenuBlockIdx);
+                    }}
+                    style={{
+                      ...blockMenuItemStyle,
+                      opacity: isFirstBlock ? 0.4 : 1,
+                      cursor: isFirstBlock ? 'not-allowed' : 'pointer'
+                    }}
+                    onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                    onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <ChevronsUp size={15} color={isFirstBlock ? '#94A3B8' : moveIconColor} strokeWidth={2.2} />
+                    <span>맨 위로 이동</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isFirstBlock}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenBlockMenuId(null);
+                      handleMoveUp(activeMenuBlockIdx);
+                    }}
+                    style={{
+                      ...blockMenuItemStyle,
+                      opacity: isFirstBlock ? 0.4 : 1,
+                      cursor: isFirstBlock ? 'not-allowed' : 'pointer'
+                    }}
+                    onMouseEnter={(e) => { if (!isFirstBlock) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                    onMouseLeave={(e) => { if (!isFirstBlock) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <ChevronUp size={15} color={isFirstBlock ? '#94A3B8' : moveIconColor} strokeWidth={2.2} />
+                    <span>위로 이동</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLastBlock}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenBlockMenuId(null);
+                      handleMoveDown(activeMenuBlockIdx);
+                    }}
+                    style={{
+                      ...blockMenuItemStyle,
+                      opacity: isLastBlock ? 0.4 : 1,
+                      cursor: isLastBlock ? 'not-allowed' : 'pointer'
+                    }}
+                    onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                    onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <ChevronDown size={15} color={isLastBlock ? '#94A3B8' : moveIconColor} strokeWidth={2.2} />
+                    <span>아래로 이동</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLastBlock}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenBlockMenuId(null);
+                      handleMoveToBottom(activeMenuBlockIdx);
+                    }}
+                    style={{
+                      ...blockMenuItemStyle,
+                      opacity: isLastBlock ? 0.4 : 1,
+                      cursor: isLastBlock ? 'not-allowed' : 'pointer'
+                    }}
+                    onMouseEnter={(e) => { if (!isLastBlock) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                    onMouseLeave={(e) => { if (!isLastBlock) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <ChevronsDown size={15} color={isLastBlock ? '#94A3B8' : moveIconColor} strokeWidth={2.2} />
+                    <span>맨 아래로 이동</span>
+                  </button>
+
+                  <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+                </>
+              );
+            })()}
+
             {activeMenuBlock.type === 'checklist' ? (
               <>
                 <button
@@ -2218,7 +2033,7 @@ export const DetailBlocksManager = ({
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <Plus size={14} color="#065F46" />
-                  <span>추가</span>
+                  <span>항목 추가</span>
                 </button>
                 <button
                   type="button"

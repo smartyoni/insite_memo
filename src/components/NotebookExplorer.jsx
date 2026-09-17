@@ -8730,145 +8730,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               </button>
                                             )}
 
-                                            {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                                            <div
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                borderRight: '1px solid #E2E8F0',
-                                                height: '100%',
-                                                padding: '0 2px',
-                                                gap: '1px'
-                                              }}
-                                            >
-                                              {/* 가장 위 / 가장 아래 이동 (좌측) */}
-                                              <div
-                                                style={{
-                                                  display: 'flex',
-                                                  flexDirection: 'column',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  width: isMobile ? '18px' : '20px',
-                                                  height: '100%'
-                                                }}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'top');
-                                                  }}
-                                                  disabled={isFirstGroup}
-                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 가장 위로 이동"
-                                                >
-                                                  <ChevronsUp size={isMobile ? 10 : 11} strokeWidth={2.5} />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'bottom');
-                                                  }}
-                                                  disabled={isLastGroup}
-                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 가장 아래로 이동"
-                                                >
-                                                  <ChevronsDown size={isMobile ? 10 : 11} strokeWidth={2.5} />
-                                                </button>
-                                              </div>
-
-                                              {/* 한 칸 위 / 아래로 이동 (우측) */}
-                                              <div
-                                                style={{
-                                                  display: 'flex',
-                                                  flexDirection: 'column',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  width: isMobile ? '16px' : '18px',
-                                                  height: '100%'
-                                                }}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'up');
-                                                  }}
-                                                  disabled={isFirstGroup}
-                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 위로 이동"
-                                                >
-                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'down');
-                                                  }}
-                                                  disabled={isLastGroup}
-                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 아래로 이동"
-                                                >
-                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                                                </button>
-                                              </div>
-                                            </div>
-
-                                            {/* 3. Group 3-dot Menu (가장 우측) */}
+                                            {/* 2. Group 3-dot Menu (가장 우측) */}
                                             <div style={{ position: 'relative', height: '100%' }}>
                                               <button
                                                 type="button"
@@ -8918,10 +8780,91 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     style={{
                                                       ...styles.checklistDropdownMenu,
                                                       top: openGroupMenuPos?.top ?? 0,
-                                                      right: openGroupMenuPos?.right ?? 0
+                                                      right: openGroupMenuPos?.right ?? 0,
+                                                      minWidth: '150px',
+                                                      padding: '5px'
                                                     }}
                                                     onClick={(e) => e.stopPropagation()}
                                                   >
+                                                    <button
+                                                      type="button"
+                                                      disabled={isFirstGroup}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenGroupMenuId(null);
+                                                        handleMoveGroup(group.section.id, 'top');
+                                                      }}
+                                                      style={{
+                                                        ...styles.checklistDropdownItem,
+                                                        opacity: isFirstGroup ? 0.4 : 1,
+                                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                      }}
+                                                      onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                      onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                    >
+                                                      <ChevronsUp size={15} color={isFirstGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                      <span>맨 위로 이동</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      disabled={isFirstGroup}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenGroupMenuId(null);
+                                                        handleMoveGroup(group.section.id, 'up');
+                                                      }}
+                                                      style={{
+                                                        ...styles.checklistDropdownItem,
+                                                        opacity: isFirstGroup ? 0.4 : 1,
+                                                        cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                      }}
+                                                      onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                      onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                    >
+                                                      <ChevronUp size={15} color={isFirstGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                      <span>위로 이동</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      disabled={isLastGroup}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenGroupMenuId(null);
+                                                        handleMoveGroup(group.section.id, 'down');
+                                                      }}
+                                                      style={{
+                                                        ...styles.checklistDropdownItem,
+                                                        opacity: isLastGroup ? 0.4 : 1,
+                                                        cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                      }}
+                                                      onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                      onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                    >
+                                                      <ChevronDown size={15} color={isLastGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                      <span>아래로 이동</span>
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      disabled={isLastGroup}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenGroupMenuId(null);
+                                                        handleMoveGroup(group.section.id, 'bottom');
+                                                      }}
+                                                      style={{
+                                                        ...styles.checklistDropdownItem,
+                                                        opacity: isLastGroup ? 0.4 : 1,
+                                                        cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                      }}
+                                                      onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                      onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                    >
+                                                      <ChevronsDown size={15} color={isLastGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                      <span>맨 아래로 이동</span>
+                                                    </button>
+
+                                                    <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+
                                                     <button
                                                       type="button"
                                                       onClick={() => {
@@ -8933,7 +8876,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                     >
                                                       <Plus size={14} color="#2563EB" />
-                                                      <span>추가</span>
+                                                      <span>항목 추가</span>
                                                     </button>
                                                     <button
                                                       type="button"
@@ -10217,145 +10160,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               </button>
                                             )}
 
-                                            {/* 2. 위치이동 버튼 세트 (좌: 가장 위/아래, 우: 한칸 위/아래) */}
-                                            <div
-                                              style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                borderRight: '1px solid #E2E8F0',
-                                                height: '100%',
-                                                padding: '0 2px',
-                                                gap: '1px'
-                                              }}
-                                            >
-                                              {/* 가장 위 / 가장 아래 이동 (좌측) */}
-                                              <div
-                                                style={{
-                                                  display: 'flex',
-                                                  flexDirection: 'column',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  width: isMobile ? '18px' : '20px',
-                                                  height: '100%'
-                                                }}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'top');
-                                                  }}
-                                                  disabled={isFirstGroup}
-                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '11px' : '12px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 가장 위로 이동"
-                                                >
-                                                  <ChevronsUp size={isMobile ? 10 : 11} strokeWidth={2.5} />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'bottom');
-                                                  }}
-                                                  disabled={isLastGroup}
-                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 가장 아래로 이동"
-                                                >
-                                                  <ChevronsDown size={isMobile ? 10 : 11} strokeWidth={2.5} />
-                                                </button>
-                                              </div>
-
-                                              {/* 한 칸 위 / 아래로 이동 (우측) */}
-                                              <div
-                                                style={{
-                                                  display: 'flex',
-                                                  flexDirection: 'column',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  width: isMobile ? '16px' : '18px',
-                                                  height: '100%'
-                                                }}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'up');
-                                                  }}
-                                                  disabled={isFirstGroup}
-                                                  onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isFirstGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isFirstGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 위로 이동"
-                                                >
-                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMoveGroup(group.section.id, 'down');
-                                                  }}
-                                                  disabled={isLastGroup}
-                                                  onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#2563EB'; }}
-                                                  onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.color = '#1E293B'; }}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: isMobile ? '8px' : '9px',
-                                                    border: 'none',
-                                                    backgroundColor: 'transparent',
-                                                    color: isLastGroup ? '#CBD5E1' : '#1E293B',
-                                                    cursor: isLastGroup ? 'not-allowed' : 'pointer',
-                                                    padding: 0
-                                                  }}
-                                                  title="그룹 아래로 이동"
-                                                >
-                                                  <Triangle size={isMobile ? 7 : 8} fill="currentColor" style={{ transform: 'rotate(180deg)' }} />
-                                                </button>
-                                              </div>
-                                            </div>
-
-                                            {/* 3. Group 3-dot Menu (가장 우측) */}
+                                            {/* 2. Group 3-dot Menu (가장 우측) */}
                                             <div style={{ position: 'relative', height: '100%' }}>
                                               <button
                                                 type="button"
@@ -10404,10 +10209,91 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   style={{
                                                     ...styles.checklistDropdownMenu,
                                                     top: openGroupMenuPos?.top ?? 0,
-                                                    right: openGroupMenuPos?.right ?? 0
+                                                    right: openGroupMenuPos?.right ?? 0,
+                                                    minWidth: '150px',
+                                                    padding: '5px'
                                                   }}
                                                   onClick={(e) => e.stopPropagation()}
                                                 >
+                                                  <button
+                                                    type="button"
+                                                    disabled={isFirstGroup}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenGroupMenuId(null);
+                                                      handleMoveGroup(group.section.id, 'top');
+                                                    }}
+                                                    style={{
+                                                      ...styles.checklistDropdownItem,
+                                                      opacity: isFirstGroup ? 0.4 : 1,
+                                                      cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                    onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                  >
+                                                    <ChevronsUp size={15} color={isFirstGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                    <span>맨 위로 이동</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    disabled={isFirstGroup}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenGroupMenuId(null);
+                                                      handleMoveGroup(group.section.id, 'up');
+                                                    }}
+                                                    style={{
+                                                      ...styles.checklistDropdownItem,
+                                                      opacity: isFirstGroup ? 0.4 : 1,
+                                                      cursor: isFirstGroup ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                    onMouseLeave={(e) => { if (!isFirstGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                  >
+                                                    <ChevronUp size={15} color={isFirstGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                    <span>위로 이동</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    disabled={isLastGroup}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenGroupMenuId(null);
+                                                      handleMoveGroup(group.section.id, 'down');
+                                                    }}
+                                                    style={{
+                                                      ...styles.checklistDropdownItem,
+                                                      opacity: isLastGroup ? 0.4 : 1,
+                                                      cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                    onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                  >
+                                                    <ChevronDown size={15} color={isLastGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                    <span>아래로 이동</span>
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    disabled={isLastGroup}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenGroupMenuId(null);
+                                                      handleMoveGroup(group.section.id, 'bottom');
+                                                    }}
+                                                    style={{
+                                                      ...styles.checklistDropdownItem,
+                                                      opacity: isLastGroup ? 0.4 : 1,
+                                                      cursor: isLastGroup ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                                                    onMouseLeave={(e) => { if (!isLastGroup) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                                  >
+                                                    <ChevronsDown size={15} color={isLastGroup ? '#94A3B8' : '#2563EB'} strokeWidth={2.2} />
+                                                    <span>맨 아래로 이동</span>
+                                                  </button>
+
+                                                  <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+
                                                   <button
                                                     type="button"
                                                     onClick={() => {
@@ -10419,7 +10305,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                   >
                                                     <Plus size={14} color="#2563EB" />
-                                                    <span>추가</span>
+                                                    <span>항목 추가</span>
                                                   </button>
                                                   <button
                                                     type="button"
