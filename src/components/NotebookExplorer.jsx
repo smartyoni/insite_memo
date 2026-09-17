@@ -6522,45 +6522,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             </>
                                           ) : (
                                             <>
-                                              {/* 그룹 내 위치 이동 버튼 */}
-                                              {grpItems.length > 1 && (
-                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
-                                                  <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      handleMoveItemOrderInGroup(item, 'up');
-                                                    }}
-                                                    disabled={itemIdx === 0}
-                                                    style={{
-                                                      ...styles.actionBtnLight,
-                                                      padding: '2px',
-                                                      color: itemIdx === 0 ? '#CBD5E1' : '#4B5563',
-                                                      cursor: itemIdx === 0 ? 'not-allowed' : 'pointer'
-                                                    }}
-                                                    title="위로 이동"
-                                                  >
-                                                    <ChevronUp size={12} />
-                                                  </button>
-                                                  <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      handleMoveItemOrderInGroup(item, 'down');
-                                                    }}
-                                                    disabled={itemIdx === grpItems.length - 1}
-                                                    style={{
-                                                      ...styles.actionBtnLight,
-                                                      padding: '2px',
-                                                      color: itemIdx === grpItems.length - 1 ? '#CBD5E1' : '#4B5563',
-                                                      cursor: itemIdx === grpItems.length - 1 ? 'not-allowed' : 'pointer'
-                                                    }}
-                                                    title="아래로 이동"
-                                                  >
-                                                    <ChevronDown size={12} />
-                                                  </button>
-                                                </div>
-                                              )}
                                               <button
                                                 onClick={(e) => {
                                                   e.stopPropagation();
