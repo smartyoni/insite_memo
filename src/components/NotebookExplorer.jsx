@@ -5960,14 +5960,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   </div>
                 )}
 
-                <div style={styles.paneContent} ref={itemScrollRef}>
+                <div style={{ ...styles.paneContent, padding: 0 }} ref={itemScrollRef}>
                   {/* Inline input for creating new item */}
                   {isAddingItem && (
                     <div style={{
                       padding: '8px 10px',
-                      marginBottom: '8px',
+                      margin: '4px 6px 6px 6px',
                       backgroundColor: '#FFFFFF',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       border: '1.5px solid #2563EB',
                       boxShadow: '0 2px 5px rgba(37,99,235,0.12)',
                       display: 'flex',
@@ -6041,16 +6041,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            marginBottom: group ? '10px' : '0',
-                            borderRadius: group ? '6px' : '0',
+                            marginBottom: group ? '2px' : '0',
+                            borderRadius: 0,
                             overflow: 'hidden',
                             border: group
                               ? isGroupDragOver
                                 ? '2px dashed #EA580C'
                                 : '1px solid #CBD5E1'
                               : 'none',
+                            borderLeft: isGroupDragOver ? undefined : 'none',
+                            borderRight: isGroupDragOver ? undefined : 'none',
                             backgroundColor: '#FFFFFF',
-                            boxShadow: group ? '0 1px 3px rgba(0, 0, 0, 0.04)' : 'none'
+                            boxShadow: 'none'
                           }}
                         >
                           {/* 그룹 헤더 바 */}
