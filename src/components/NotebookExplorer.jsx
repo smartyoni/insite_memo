@@ -3262,18 +3262,81 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const handleDropCategoryOnGroup = async (e, targetGroupId) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragOverCategoryGroupId(null);
     const catId = draggedCategoryId || e.dataTransfer.getData('text/plain');
+    setDragOverCategoryGroupId(null);
+    setDragOverCategoryId(null);
     setDraggedCategoryId(null);
     if (!catId) return;
 
+    const actualGroupId = (targetGroupId === '__unassigned__' || !targetGroupId) ? null : targetGroupId;
+    const currentCat = categories.find((c) => c.id === catId);
+    if (!currentCat || currentCat.groupId === actualGroupId) return;
+
+    const targetGroupObj = displayedCategoryGrouped.find((g) => {
+      if (!g.group && !actualGroupId) return true;
+      if (g.group?.isUnassigned && !actualGroupId) return true;
+      return g.group?.id === actualGroupId;
+    });
+    const maxOrder = targetGroupObj && Array.isArray(targetGroupObj.categories)
+      ? targetGroupObj.categories.reduce((max, c) => Math.max(max, typeof c.order === 'number' ? c.order : -1), -1)
+      : -1;
+
     try {
       await updateDoc(doc(db, 'categories', catId), {
-        groupId: targetGroupId === '__unassigned__' ? null : targetGroupId,
+        groupId: actualGroupId,
+        order: maxOrder + 1,
         updatedAt: serverTimestamp()
       });
+      if (actualGroupId) {
+        setCollapsedCategoryGroups((prev) => ({ ...prev, [actualGroupId]: false }));
+      }
     } catch (err) {
       console.error('Error moving category to group:', err);
+    }
+  };
+
+  const handleDropCategoryOnCategory = async (e, targetCat, targetGroupId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceCatId = draggedCategoryId || e.dataTransfer.getData('text/plain');
+    setDragOverCategoryGroupId(null);
+    setDragOverCategoryId(null);
+    setDraggedCategoryId(null);
+    if (!sourceCatId || sourceCatId === targetCat.id) return;
+
+    const actualGroupId = (targetGroupId === '__unassigned__' || !targetGroupId) ? null : targetGroupId;
+    const sourceCat = categories.find((c) => c.id === sourceCatId);
+    if (!sourceCat) return;
+
+    const targetGroupObj = displayedCategoryGrouped.find((g) => {
+      if (!g.group && !actualGroupId) return true;
+      if (g.group?.isUnassigned && !actualGroupId) return true;
+      return g.group?.id === actualGroupId;
+    });
+    if (!targetGroupObj) return;
+
+    const groupCats = (targetGroupObj.categories || []).filter((c) => c.id !== sourceCatId);
+    const targetIdx = groupCats.findIndex((c) => c.id === targetCat.id);
+    if (targetIdx === -1) return;
+
+    groupCats.splice(targetIdx, 0, sourceCat);
+
+    const batch = writeBatch(db);
+    groupCats.forEach((c, idx) => {
+      const updateData = { order: idx, updatedAt: serverTimestamp() };
+      if (c.id === sourceCatId) {
+        updateData.groupId = actualGroupId;
+      }
+      batch.update(doc(db, 'categories', c.id), updateData);
+    });
+
+    try {
+      await batch.commit();
+      if (actualGroupId) {
+        setCollapsedCategoryGroups((prev) => ({ ...prev, [actualGroupId]: false }));
+      }
+    } catch (err) {
+      console.error('Error dropping category on category:', err);
     }
   };
 
@@ -5677,9 +5740,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             setDragOverCategoryGroupId(group.id);
                           }
                         }}
-                        onDragLeave={() => {
-                          if (group && dragOverCategoryGroupId === group.id) {
-                            setDragOverCategoryGroupId(null);
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget)) {
+                            if (group && dragOverCategoryGroupId === group.id) {
+                              setDragOverCategoryGroupId(null);
+                            }
                           }
                         }}
                         onDrop={(e) => {
@@ -6083,6 +6148,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 const isSelected = cat.id === selectedCategoryId;
                                 const isEditing = cat.id === editingCategoryId;
                                 const isDropTarget = dragOverCategoryId === cat.id;
+                                const isDragged = draggedCategoryId === cat.id;
                                 const count = items.filter((item) => item.categoryId === cat.id && !item.isDeleted && !FIXED_TRASH_IDS.includes(item.categoryId)).length;
 
                                 return (
@@ -6096,6 +6162,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       setDraggedCategoryId(cat.id);
                                     }}
                                     onDragOver={(e) => {
+                                      if (draggedCategoryId && draggedCategoryId !== cat.id) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.dataTransfer.dropEffect = 'move';
+                                        if (dragOverCategoryId !== cat.id) {
+                                          setDragOverCategoryId(cat.id);
+                                        }
+                                        if (group && dragOverCategoryGroupId !== group.id) {
+                                          setDragOverCategoryGroupId(group.id);
+                                        }
+                                        return;
+                                      }
                                       if (draggedItemId) {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -6114,9 +6192,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     onDrop={async (e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
+                                      const isCatDrag = Boolean(draggedCategoryId);
+                                      const isItemDrag = Boolean(draggedItemId);
                                       setDragOverCategoryId(null);
-                                      if (draggedItemId) {
-                                        const itemId = draggedItemId;
+                                      if (isCatDrag) {
+                                        handleDropCategoryOnCategory(e, cat, group?.id);
+                                      } else if (isItemDrag) {
+                                        const itemId = draggedItemId || e.dataTransfer.getData('text/plain');
                                         setDraggedItemId(null);
                                         try {
                                           await updateDoc(doc(db, 'items', itemId), {
@@ -6161,6 +6243,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       justifyContent: 'space-between',
                                       gap: '8px',
                                       userSelect: 'none',
+                                      opacity: isDragged ? 0.4 : 1,
                                       transition: 'background-color 0.15s ease'
                                     }}
                                   >
@@ -6736,9 +6819,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               setDragOverItemGroupId(group.id);
                             }
                           }}
-                          onDragLeave={() => {
-                            if (group && dragOverItemGroupId === group.id) {
-                              setDragOverItemGroupId(null);
+                          onDragLeave={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                              if (group && dragOverItemGroupId === group.id) {
+                                setDragOverItemGroupId(null);
+                              }
                             }
                           }}
                           onDrop={(e) => {
