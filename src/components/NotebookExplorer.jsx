@@ -5890,11 +5890,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 >
                                   {group.name}
                                 </span>
-                                {isSecCollapsed && (
-                                  <span style={{ fontSize: '11px', color: '#047857', opacity: 0.8, fontWeight: 600 }}>
-                                    (접힘)
-                                  </span>
-                                )}
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    color: '#047857',
+                                    opacity: 0.85,
+                                    fontWeight: 600,
+                                    backgroundColor: '#A7F3D0',
+                                    padding: '1px 5px',
+                                    borderRadius: '10px',
+                                    lineHeight: 1.2
+                                  }}
+                                  title={`하위 카테고리 ${grpCats.length}개`}
+                                >
+                                  {grpCats.length}
+                                </span>
                               </div>
                             )}
 
