@@ -32,6 +32,17 @@ const scopeNameMap = {
   custom6: "새탭 6"
 };
 
+function formatChecklists(checklists) {
+  if (!Array.isArray(checklists) || checklists.length === 0) return "";
+  return checklists.map((c) => {
+    let s = c.isSection ? `[섹션] ${c.text || ''}` : `• ${c.text || ''}`;
+    if (c.detail && c.detail.trim().length > 0) {
+      s += `\n${c.detail.trim()}`;
+    }
+    return s;
+  }).join("\n\n");
+}
+
 function normalizePathString(str) {
   if (!str) return "";
   return str
@@ -385,6 +396,7 @@ server.tool(
               title: data.title || "",
               body: data.body || "",
               subBody: data.subBody || "",
+              checklistContent: formatChecklists(data.checklists),
               categoryId: data.categoryId || "quick_memo",
               updatedAt: data.updatedAt,
               createdAt: data.createdAt
@@ -659,6 +671,7 @@ server.tool(
                 title: matchedMemo.title || "제목 없음",
                 body: matchedMemo.body || "",
                 subBody: matchedMemo.subBody || "",
+                checklistContent: formatChecklists(matchedMemo.checklists),
                 categoryId: matchedMemo.categoryId,
                 categoryPath: matchedMemo.catPath,
                 updatedAt: matchedMemo.updatedAt,
