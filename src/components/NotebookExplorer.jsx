@@ -273,15 +273,25 @@ const OFFICE_TRASH_CATEGORY = { id: 'office_trash', name: '휴지통', order: 99
 const AD_TRASH_CATEGORY = { id: 'ad_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'ad' };
 const TEMPLATE2_TRASH_CATEGORY = { id: 'template2_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'template2' };
 const EXPERIENCE_TRASH_CATEGORY = { id: 'experience_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'experience' };
+const CUSTOM1_TRASH_CATEGORY = { id: 'custom1_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom1' };
+const CUSTOM2_TRASH_CATEGORY = { id: 'custom2_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom2' };
+const CUSTOM3_TRASH_CATEGORY = { id: 'custom3_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom3' };
+const CUSTOM4_TRASH_CATEGORY = { id: 'custom4_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom4' };
+const CUSTOM5_TRASH_CATEGORY = { id: 'custom5_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom5' };
+const CUSTOM6_TRASH_CATEGORY = { id: 'custom6_trash', name: '휴지통', order: 99999, isFixed: true, isTrash: true, scope: 'custom6' };
 
-const FIXED_TRASH_IDS = ['trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash', 'office_trash', 'ad_trash', 'template2_trash', 'experience_trash'];
+const FIXED_TRASH_IDS = [
+  'trash', 'blog_trash', 'clipboard_trash', 'balance_trash', 'clip_trash',
+  'office_trash', 'ad_trash', 'template2_trash', 'experience_trash',
+  'custom1_trash', 'custom2_trash', 'custom3_trash', 'custom4_trash', 'custom5_trash', 'custom6_trash'
+];
 
 // Fixed Quick-memo category definition (Only in explorer/note tab)
 const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990, isFixed: true, isQuickMemo: true, scope: 'explorer' };
 
 const ALL_FIXED_CATEGORY_IDS = [...FIXED_TRASH_IDS, 'quick_memo'];
 
-// Default Main Tabs configuration (9 tabs)
+// Default Main Tabs configuration (15 tabs, 5x3 rows)
 export const DEFAULT_MAIN_TABS = [
   { id: 'explorer', label: 'ME' },
   { id: 'blog', label: '블로그' },
@@ -291,7 +301,13 @@ export const DEFAULT_MAIN_TABS = [
   { id: 'clipboard', label: '계약' },
   { id: 'ad', label: '광고' },
   { id: 'clip', label: '북마크' },
-  { id: 'template2', label: '템플릿' }
+  { id: 'template2', label: '템플릿' },
+  { id: 'custom1', label: '새탭 1' },
+  { id: 'custom2', label: '새탭 2' },
+  { id: 'custom3', label: '새탭 3' },
+  { id: 'custom4', label: '새탭 4' },
+  { id: 'custom5', label: '새탭 5' },
+  { id: 'custom6', label: '새탭 6' }
 ];
 
 export const MAIN_TABS_STORAGE_KEY = 'explorer_main_tabs_config_v1';
@@ -325,6 +341,12 @@ const getScopeForTab = (tab) => {
   if (tab === 'ad') return 'ad';
   if (tab === 'template2' || tab === 'template') return 'template2';
   if (tab === 'experience') return 'experience';
+  if (tab === 'custom1') return 'custom1';
+  if (tab === 'custom2') return 'custom2';
+  if (tab === 'custom3') return 'custom3';
+  if (tab === 'custom4') return 'custom4';
+  if (tab === 'custom5') return 'custom5';
+  if (tab === 'custom6') return 'custom6';
   return 'explorer';
 };
 
@@ -358,6 +380,12 @@ const getTrashIdForTab = (tab) => {
   if (tab === 'ad') return 'ad_trash';
   if (tab === 'template2' || tab === 'template') return 'template2_trash';
   if (tab === 'experience') return 'experience_trash';
+  if (tab === 'custom1') return 'custom1_trash';
+  if (tab === 'custom2') return 'custom2_trash';
+  if (tab === 'custom3') return 'custom3_trash';
+  if (tab === 'custom4') return 'custom4_trash';
+  if (tab === 'custom5') return 'custom5_trash';
+  if (tab === 'custom6') return 'custom6_trash';
   return 'trash';
 };
 
@@ -370,6 +398,12 @@ const getFixedTrashCategoryForTab = (tab) => {
   if (tab === 'ad') return AD_TRASH_CATEGORY;
   if (tab === 'template2' || tab === 'template') return TEMPLATE2_TRASH_CATEGORY;
   if (tab === 'experience') return EXPERIENCE_TRASH_CATEGORY;
+  if (tab === 'custom1') return CUSTOM1_TRASH_CATEGORY;
+  if (tab === 'custom2') return CUSTOM2_TRASH_CATEGORY;
+  if (tab === 'custom3') return CUSTOM3_TRASH_CATEGORY;
+  if (tab === 'custom4') return CUSTOM4_TRASH_CATEGORY;
+  if (tab === 'custom5') return CUSTOM5_TRASH_CATEGORY;
+  if (tab === 'custom6') return CUSTOM6_TRASH_CATEGORY;
   return TRASH_CATEGORY;
 };
 
@@ -474,9 +508,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (Array.isArray(data.tabs) && data.tabs.length > 0) {
-          setMainTabs(data.tabs);
+          const currentIds = new Set(data.tabs.map(t => t.id));
+          const merged = [...data.tabs];
+          DEFAULT_MAIN_TABS.forEach(d => {
+            if (!currentIds.has(d.id)) {
+              merged.push({ ...d });
+            }
+          });
+          setMainTabs(merged);
           try {
-            localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(data.tabs));
+            localStorage.setItem(MAIN_TABS_STORAGE_KEY, JSON.stringify(merged));
           } catch (err) {}
         }
       } else {
@@ -594,7 +635,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       office: '정보',
       ad: '광고',
       template2: '템플릿',
-      experience: '경험'
+      experience: '경험',
+      custom1: '새탭 1',
+      custom2: '새탭 2',
+      custom3: '새탭 3',
+      custom4: '새탭 4',
+      custom5: '새탭 5',
+      custom6: '새탭 6'
     };
     (mainTabs || []).forEach(t => {
       if (t.id && t.label) {
@@ -5185,10 +5232,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
             관리자 ({currentUser.email ? `${currentUser.email.slice(0, 3)}***@${currentUser.email.split('@')[1] || ''}` : '인증됨'})
           </span>
         </div>
-        {onLogout && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
           <button
             type="button"
-            onClick={onLogout}
+            onClick={() => setIsTabSettingModalOpen(true)}
             style={{
               padding: '2px 7px',
               backgroundColor: '#FFFFFF',
@@ -5196,15 +5243,39 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               borderRadius: '4px',
               fontSize: '10px',
               fontWeight: 600,
-              color: '#64748B',
+              color: '#475569',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
               flexShrink: 0
             }}
-            title="로그아웃"
+            title="메인탭 순서 변경 및 이름 설정"
           >
-            로그아웃
+            <Settings size={11} />
+            <span>설정</span>
           </button>
-        )}
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              style={{
+                padding: '2px 7px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#64748B',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              title="로그아웃"
+            >
+              로그아웃
+            </button>
+          )}
+        </div>
       </div>
     );
   };
@@ -5228,22 +5299,31 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       {/* User Profile & Logout Bar */}
       {showUserBar && renderUserBar()}
 
-      {/* Function Segmented Tabs (2 Rows x 4 Columns) */}
+      {/* Function Segmented Tabs (3 Rows x 5 Columns, Total 15 Tabs) */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '3px',
-          padding: '3px',
-          backgroundColor: '#D9E4F0',
-          borderRadius: '8px',
-          border: '1px solid #C4D5E7',
+          gap: '4px',
+          padding: '4px',
+          backgroundColor: '#F1F5F9',
+          borderRadius: '9px',
+          border: '1px solid #CBD5E1',
           width: '100%',
           boxSizing: 'border-box'
         }}
       >
-        {/* Top Row: 상위 5개 탭 (드래그앤드롭 및 롱프레스/우클릭 지원) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
+        {/* Row 1 (1단: 파스텔 스카이블루) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '3px',
+          width: '100%',
+          backgroundColor: '#F0F7FF',
+          padding: '2px',
+          borderRadius: '7px',
+          border: '1px solid #DBEAFE'
+        }}>
           {mainTabs.slice(0, 5).map((tab, idx) => {
             const index = idx;
             const isActive = activeMainTab === tab.id;
@@ -5273,7 +5353,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 style={{
                   flex: 1,
                   padding: '6px 0',
-                  borderRadius: '6px',
+                  borderRadius: '5px',
                   fontSize: '12px',
                   fontWeight: isActive ? 800 : 700,
                   border: isOver ? '2px dashed #2563EB' : 'none',
@@ -5284,7 +5364,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   backgroundColor: isActive ? '#FFFFFF' : 'transparent',
                   color: isMeTab
                     ? (isActive ? '#15803D' : '#16A34A')
-                    : (isActive ? '#1E40AF' : '#1E293B'),
+                    : (isActive ? '#1D4ED8' : '#334155'),
                   boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
@@ -5298,9 +5378,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           })}
         </div>
 
-        {/* Bottom Row: 나머지 4개 탭 + ⚙️ 탭 관리 버튼 (5x2 그리드 완벽 유지) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
-          {mainTabs.slice(5).map((tab, idx) => {
+        {/* 1단과 2단 사이 구분선 */}
+        <div style={{ height: '1px', backgroundColor: '#CBD5E1', margin: '0 2px', opacity: 0.8 }} />
+
+        {/* Row 2 (2단: 파스텔 세이지민트) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '3px',
+          width: '100%',
+          backgroundColor: '#F0FDF4',
+          padding: '2px',
+          borderRadius: '7px',
+          border: '1px solid #DCFCE7'
+        }}>
+          {mainTabs.slice(5, 10).map((tab, idx) => {
             const index = 5 + idx;
             const isActive = activeMainTab === tab.id;
             const isMeTab = tab.id === 'explorer';
@@ -5329,10 +5421,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 style={{
                   flex: 1,
                   padding: '6px 0',
-                  borderRadius: '6px',
+                  borderRadius: '5px',
                   fontSize: '12px',
                   fontWeight: isActive ? 800 : 700,
-                  border: isOver ? '2px dashed #2563EB' : 'none',
+                  border: isOver ? '2px dashed #16A34A' : 'none',
                   cursor: isDragging ? 'grabbing' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -5340,7 +5432,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   backgroundColor: isActive ? '#FFFFFF' : 'transparent',
                   color: isMeTab
                     ? (isActive ? '#15803D' : '#16A34A')
-                    : (isActive ? '#1E40AF' : '#1E293B'),
+                    : (isActive ? '#15803D' : '#166534'),
                   boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
@@ -5352,33 +5444,74 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               </button>
             );
           })}
-          {/* 10번째 슬롯: 탭 설정 및 순서/이름 관리 버튼 */}
-          <button
-            type="button"
-            onClick={() => setIsTabSettingModalOpen(true)}
-            title="메인탭 순서 변경 및 이름 설정"
-            style={{
-              flex: 1,
-              padding: '6px 0',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 700,
-              border: '1px dashed #94A3B8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '2px',
-              backgroundColor: isTabSettingModalOpen ? '#CBD5E1' : '#E2E8F0',
-              color: '#475569',
-              boxShadow: 'none',
-              transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <Settings size={12} />
-            <span>설정</span>
-          </button>
+        </div>
+
+        {/* 2단과 3단 사이 구분선 */}
+        <div style={{ height: '1px', backgroundColor: '#CBD5E1', margin: '0 2px', opacity: 0.8 }} />
+
+        {/* Row 3 (3단: 파스텔 라벤더) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '3px',
+          width: '100%',
+          backgroundColor: '#FAF5FF',
+          padding: '2px',
+          borderRadius: '7px',
+          border: '1px solid #F3E8FF'
+        }}>
+          {mainTabs.slice(10, 15).map((tab, idx) => {
+            const index = 10 + idx;
+            const isActive = activeMainTab === tab.id;
+            const isMeTab = tab.id === 'explorer';
+            const isDragging = draggedTabIndex === index;
+            const isOver = dragOverTabIndex === index;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                draggable
+                onDragStart={(e) => handleTabDragStart(e, index)}
+                onDragOver={(e) => handleTabDragOver(e, index)}
+                onDrop={(e) => handleTabDrop(e, index)}
+                onDragEnd={handleTabDragEnd}
+                onTouchStart={() => handleTabTouchStart(tab)}
+                onTouchEnd={handleTabTouchEnd}
+                onTouchMove={handleTabTouchEnd}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setEditingTab(tab);
+                  setEditingTabInput(tab.label);
+                }}
+                onClick={() => handleTabSwitch(tab.id)}
+                title={`${tab.label} (드래그: 순서 이동, 우클릭/길게 누름: 이름 변경)`}
+                style={{
+                  flex: 1,
+                  padding: '6px 0',
+                  borderRadius: '5px',
+                  fontSize: '12px',
+                  fontWeight: isActive ? 800 : 700,
+                  border: isOver ? '2px dashed #9333EA' : 'none',
+                  cursor: isDragging ? 'grabbing' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                  color: isMeTab
+                    ? (isActive ? '#15803D' : '#16A34A')
+                    : (isActive ? '#7E22CE' : '#6B21A8'),
+                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  opacity: isDragging ? 0.4 : 1,
+                  userSelect: 'none'
+                }}
+              >
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -7776,7 +7909,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               office: 'office',
                                               ad: 'ad',
                                               template2: 'template2',
-                                              experience: 'experience'
+                                              experience: 'experience',
+                                              custom1: 'custom1',
+                                              custom2: 'custom2',
+                                              custom3: 'custom3',
+                                              custom4: 'custom4',
+                                              custom5: 'custom5',
+                                              custom6: 'custom6'
                                             };
                                             if (scopeToTabMap[targetScope]) {
                                               setActiveMainTab(scopeToTabMap[targetScope]);
