@@ -9491,7 +9491,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (window.confirm(`'${selectedEvent.title}' 일정을 삭제하시겠습니까?`)) {
+                                  if (window.confirm(`'${selectedEvent.title}' 일정을 일정에서 해제하시겠습니까?`)) {
                                     handleDeleteCalendarEvent(selectedEvent.id);
                                   }
                                 }}
@@ -9510,7 +9510,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 }}
                               >
                                 <Trash2 size={12} />
-                                <span>일정 삭제</span>
+                                <span>일정에서 해제</span>
                               </button>
                             </div>
                           </div>

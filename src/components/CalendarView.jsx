@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,7 +6,8 @@ import {
   Plus,
   Clock,
   CheckCircle2,
-  ListTodo
+  Trash2,
+  X
 } from 'lucide-react';
 
 export default function CalendarView({
@@ -20,6 +21,62 @@ export default function CalendarView({
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day'); // 'day' | '3days' | 'month'
+  const [eventContextMenu, setEventContextMenu] = useState(null); // { x, y, event }
+  const touchTimerRef = useRef(null);
+
+  // 일정 우클릭 (PC)
+  const handleEventContextMenu = (e, event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clickX = e.clientX || 100;
+    const clickY = e.clientY || 100;
+    const menuWidth = 150;
+    const menuHeight = 50;
+    const adjustedX = (clickX + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : clickX;
+    const adjustedY = (clickY + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : clickY;
+    setEventContextMenu({
+      x: adjustedX,
+      y: adjustedY,
+      event
+    });
+  };
+
+  // 일정 모바일 롱프레스 터치 시작
+  const handleEventTouchStart = (e, event) => {
+    const touch = e.touches ? e.touches[0] : null;
+    const x = touch ? touch.clientX : 100;
+    const y = touch ? touch.clientY : 100;
+    touchTimerRef.current = setTimeout(() => {
+      const menuWidth = 150;
+      const menuHeight = 50;
+      const adjustedX = (x + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : x;
+      const adjustedY = (y + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : y;
+      setEventContextMenu({
+        x: adjustedX,
+        y: adjustedY,
+        event
+      });
+    }, 500);
+  };
+
+  // 터치 종료/취소
+  const handleEventTouchEnd = () => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+  };
+
+  // 일정에서 해제 실행
+  const handleReleaseEvent = (event) => {
+    if (!event) return;
+    setEventContextMenu(null);
+    if (window.confirm(`'${event.title || '일정'}'을(를) 일정에서 해제하시겠습니까?`)) {
+      if (onDeleteEvent) {
+        onDeleteEvent(event.id);
+      }
+    }
+  };
 
   // 날짜 유틸 함수들
   const formatDateKey = (d) => {
@@ -155,17 +212,22 @@ export default function CalendarView({
                 <div
                   key={event.id}
                   onClick={() => onSelectEvent(event)}
+                  onContextMenu={(e) => handleEventContextMenu(e, event)}
+                  onTouchStart={(e) => handleEventTouchStart(e, event)}
+                  onTouchEnd={handleEventTouchEnd}
+                  onTouchMove={handleEventTouchEnd}
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
                     border: `1.5px solid ${isSelected ? '#2563EB' : '#E2E8F0'}`,
                     backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                    boxShadow: isSelected ? '0 4px 12px rgba(37, 99, 235, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                    boxShadow: isSelected ? '0 3px 8px rgba(37, 99, 235, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s'
                   }}
+                  title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span
                         style={{
@@ -173,33 +235,26 @@ export default function CalendarView({
                           fontWeight: 700,
                           color: '#FFFFFF',
                           backgroundColor: catColor,
-                          padding: '2px 8px',
-                          borderRadius: '5px'
+                          padding: '2px 7px',
+                          borderRadius: '4px'
                         }}
                       >
                         {catName}
                       </span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
                         {event.startDate}
                       </span>
                     </div>
 
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} color="#64748B" />
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={11} color="#64748B" />
                       {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>
                     {event.title}
                   </div>
-
-                  {Array.isArray(event.blocks) && event.blocks.length > 0 && (
-                    <div style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
-                      <ListTodo size={13} />
-                      <span>하위 내용(체크리스트 등) {event.blocks.length}개 포함됨</span>
-                    </div>
-                  )}
                 </div>
               );
             })
@@ -332,6 +387,10 @@ export default function CalendarView({
                           e.stopPropagation();
                           onSelectEvent(event);
                         }}
+                        onContextMenu={(e) => handleEventContextMenu(e, event)}
+                        onTouchStart={(e) => handleEventTouchStart(e, event)}
+                        onTouchEnd={handleEventTouchEnd}
+                        onTouchMove={handleEventTouchEnd}
                         style={{
                           fontSize: '11px',
                           padding: '2px 5px',
@@ -463,6 +522,10 @@ export default function CalendarView({
                       <div
                         key={event.id}
                         onClick={() => onSelectEvent(event)}
+                        onContextMenu={(e) => handleEventContextMenu(e, event)}
+                        onTouchStart={(e) => handleEventTouchStart(e, event)}
+                        onTouchEnd={handleEventTouchEnd}
+                        onTouchMove={handleEventTouchEnd}
                         style={{
                           padding: '8px 10px',
                           borderRadius: '8px',
@@ -472,6 +535,7 @@ export default function CalendarView({
                           cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
+                        title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                           <span
@@ -494,12 +558,6 @@ export default function CalendarView({
                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', wordBreak: 'break-word' }}>
                           {event.title}
                         </div>
-                        {Array.isArray(event.blocks) && event.blocks.length > 0 && (
-                          <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <ListTodo size={11} />
-                            <span>하위 항목 {event.blocks.length}개 포함</span>
-                          </div>
-                        )}
                       </div>
                     );
                   })
@@ -562,17 +620,22 @@ export default function CalendarView({
                 <div
                   key={event.id}
                   onClick={() => onSelectEvent(event)}
+                  onContextMenu={(e) => handleEventContextMenu(e, event)}
+                  onTouchStart={(e) => handleEventTouchStart(e, event)}
+                  onTouchEnd={handleEventTouchEnd}
+                  onTouchMove={handleEventTouchEnd}
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
                     border: `1.5px solid ${isSelected ? '#2563EB' : '#E2E8F0'}`,
                     backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                    boxShadow: isSelected ? '0 4px 12px rgba(37, 99, 235, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                    boxShadow: isSelected ? '0 3px 8px rgba(37, 99, 235, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
                     cursor: 'pointer',
                     transition: 'all 0.15s'
                   }}
+                  title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span
                         style={{
@@ -580,29 +643,22 @@ export default function CalendarView({
                           fontWeight: 700,
                           color: '#FFFFFF',
                           backgroundColor: catColor,
-                          padding: '2px 8px',
-                          borderRadius: '5px'
+                          padding: '2px 7px',
+                          borderRadius: '4px'
                         }}
                       >
                         {catName}
                       </span>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={12} color="#64748B" />
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={11} color="#64748B" />
                         {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>
                     {event.title}
                   </div>
-
-                  {Array.isArray(event.blocks) && event.blocks.length > 0 && (
-                    <div style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
-                      <ListTodo size={13} />
-                      <span>하위 내용(체크리스트 등) {event.blocks.length}개 포함됨</span>
-                    </div>
-                  )}
                 </div>
               );
             })
@@ -738,6 +794,65 @@ export default function CalendarView({
         {viewMode === '3days' && render3DaysView()}
         {viewMode === 'day' && renderDayView()}
       </div>
+
+      {/* 일정 우클릭 / 모바일 롱프레스 컨텍스트 메뉴 */}
+      {eventContextMenu && (
+        <div
+          onClick={() => setEventContextMenu(null)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setEventContextMenu(null);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'transparent'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: `${eventContextMenu.y}px`,
+              left: `${eventContextMenu.x}px`,
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              borderRadius: '8px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08)',
+              padding: '4px',
+              minWidth: '140px',
+              zIndex: 10000
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => handleReleaseEvent(eventContextMenu.event)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                color: '#DC2626',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'background-color 0.12s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#FEF2F2'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <Trash2 size={14} color="#DC2626" />
+              <span>일정에서 해제</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
