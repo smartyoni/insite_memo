@@ -40,12 +40,20 @@ AI 에이전트(Claude, Gemini Antigravity 등)가 표준화된 MCP 프로토콜
    - 파라미터: `memoId` (필수), `title`, `body`, `subBody`, `categoryId`
 
 9. **`memo_delete_memo`**
-   - 메모 단건 삭제
+   - 메모 단건 삭제 (소프트 삭제 처리)
    - 파라미터: `memoId` (필수)
 
 10. **`memo_search_memos`**
     - 제목, 본문, 보충노트(체크리스트) 통합 키워드 검색
     - 파라미터: `keyword` (필수), `limit` (선택, 기본 20)
+
+11. **`memo_update_category`**
+    - 카테고리 이름 변경 및 상위 폴더/그룹 이동
+    - 파라미터: `categoryId` (필수), `name`, `parentId`, `groupId`
+
+12. **`memo_get_by_path` (핵심)**
+    - 계층 경로(예: `ME > 할일관리 > 00.진행중인 일 > 안심통장 신청할까?` 또는 `ME > 퀵메모 > 2026-09-06` 또는 `ME > 부동산`)로 메모 상세 본문 또는 카테고리 내 하위 메모 목록을 원클릭 조회
+    - 파라미터: `path` (필수)
 
 ---
 

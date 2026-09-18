@@ -492,6 +492,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   // Deep Link Category Bookmark & Navigation States
   const [categoryContextMenu, setCategoryContextMenu] = useState(null); // { x, y, category }
+  const [itemContextMenu, setItemContextMenu] = useState(null); // { x, y, item }
   const [returnLocation, setReturnLocation] = useState(null); // { tab, categoryId, categoryName, itemId }
 
   // Main Tabs Configuration State (Custom order & custom labels)
@@ -1486,6 +1487,74 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  // Helper to compute category full path
+  const getCategoryFullPath = (cat) => {
+    if (!cat) return '';
+    if (cat.id === 'quick_memo') {
+      const tabLabel = mainTabs.find((t) => t.id === 'explorer')?.label || 'ME';
+      return `${tabLabel} > 퀵메모`;
+    }
+    const scope = cat.scope || activeMainTab || 'explorer';
+    const tabLabel = mainTabs.find((t) => t.id === scope)?.label || scope;
+
+    const group = cat.groupId ? categoryGroups.find((g) => g.id === cat.groupId) : null;
+    const groupName = group ? group.name : null;
+
+    const segments = [cat.name];
+    let curr = cat;
+    const visited = new Set([cat.id]);
+    while (curr && curr.parentId) {
+      const parent = categories.find((c) => c.id === curr.parentId);
+      if (!parent || visited.has(parent.id)) break;
+      visited.add(parent.id);
+      segments.unshift(parent.name);
+      curr = parent;
+    }
+
+    const parts = [tabLabel];
+    if (groupName) parts.push(groupName);
+    parts.push(...segments);
+    return parts.join(' > ');
+  };
+
+  // Helper to compute item (memo) full path
+  const getItemFullPath = (it) => {
+    if (!it) return '';
+    const cat = it.categoryId === 'quick_memo'
+      ? { id: 'quick_memo', name: '퀵메모', scope: 'explorer' }
+      : categories.find((c) => c.id === it.categoryId);
+    const catPath = getCategoryFullPath(cat) || '기타';
+    return `${catPath} > ${it.title || '제목 없음'}`;
+  };
+
+  // General Clipboard Copy Helper with Toast
+  const copyTextToClipboard = async (text, toastMsg) => {
+    if (!text) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopyToastText(toastMsg || '✓ 복사되었습니다.');
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => {
+        setCopyToastText('');
+      }, 2000);
+    } catch (err) {
+      console.error('클립보드 복사 실패:', err);
+    }
+  };
+
   // Handle Category Right-Click Context Menu
   const handleCategoryContextMenu = (e, cat) => {
     e.preventDefault();
@@ -1493,7 +1562,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const clickX = e.clientX;
     const clickY = e.clientY;
     const menuWidth = 180;
-    const menuHeight = 50;
+    const menuHeight = 85;
     const adjustedX = (clickX + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : clickX;
     const adjustedY = (clickY + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : clickY;
 
@@ -1502,6 +1571,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       y: adjustedY,
       category: cat
     });
+  };
+
+  // Copy Category Hierarchical Path
+  const handleCopyCategoryPath = async (cat) => {
+    if (!cat) return;
+    setCategoryContextMenu(null);
+    const pathStr = getCategoryFullPath(cat);
+    await copyTextToClipboard(pathStr, `✓ '${pathStr}' 경로가 복사되었습니다.`);
   };
 
   // Copy Category Deep Link Bookmark [CategoryName](URL)
@@ -1516,29 +1593,46 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const linkUrl = `${origin}#tab=${encodeURIComponent(scope)}&cat=${encodeURIComponent(catId)}`;
     const markdownLink = `[${catName}](${linkUrl})`;
 
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(markdownLink);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = markdownLink;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        textarea.style.top = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      setCopyToastText(`✓ '${catName}' 목록 주소가 복사되었습니다.`);
-      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
-      copyToastTimerRef.current = setTimeout(() => {
-        setCopyToastText('');
-      }, 1800);
-    } catch (err) {
-      console.error('목록 주소 복사 실패:', err);
-    }
+    await copyTextToClipboard(markdownLink, `✓ '${catName}' 목록 주소가 복사되었습니다.`);
+  };
+
+  // Handle Item (Memo) Right-Click Context Menu
+  const handleItemContextMenu = (e, it) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const menuWidth = 190;
+    const menuHeight = 85;
+    const adjustedX = (clickX + menuWidth > window.innerWidth) ? Math.max(10, window.innerWidth - menuWidth - 10) : clickX;
+    const adjustedY = (clickY + menuHeight > window.innerHeight) ? Math.max(10, window.innerHeight - menuHeight - 10) : clickY;
+
+    setItemContextMenu({
+      x: adjustedX,
+      y: adjustedY,
+      item: it
+    });
+  };
+
+  // Copy Item Hierarchical Path
+  const handleCopyItemPath = async (it) => {
+    if (!it) return;
+    setItemContextMenu(null);
+    const pathStr = getItemFullPath(it);
+    await copyTextToClipboard(pathStr, `✓ '${pathStr}' 경로가 복사되었습니다.`);
+  };
+
+  // Copy Item Deep Link Bookmark [ItemTitle](URL)
+  const handleCopyItemLink = async (it) => {
+    if (!it) return;
+    setItemContextMenu(null);
+    const title = it.title || '메모';
+    const origin = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '';
+    const scope = it.scope || activeMainTab || 'explorer';
+    const linkUrl = `${origin}#tab=${encodeURIComponent(scope)}&cat=${encodeURIComponent(it.categoryId || 'quick_memo')}&item=${encodeURIComponent(it.id)}`;
+    const markdownLink = `[${title}](${linkUrl})`;
+
+    await copyTextToClipboard(markdownLink, `✓ '${title}' 메모 주소가 복사되었습니다.`);
   };
 
   // Return to previous work location (Bookmark Back)
@@ -1631,17 +1725,20 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     };
   }, []);
 
-  // Close category context menu on global click
+  // Close category & item context menus on global click
   useEffect(() => {
-    if (!categoryContextMenu) return;
-    const handleCloseContextMenu = () => setCategoryContextMenu(null);
+    if (!categoryContextMenu && !itemContextMenu) return;
+    const handleCloseContextMenu = () => {
+      setCategoryContextMenu(null);
+      setItemContextMenu(null);
+    };
     window.addEventListener('click', handleCloseContextMenu);
     window.addEventListener('contextmenu', handleCloseContextMenu);
     return () => {
       window.removeEventListener('click', handleCloseContextMenu);
       window.removeEventListener('contextmenu', handleCloseContextMenu);
     };
-  }, [categoryContextMenu]);
+  }, [categoryContextMenu, itemContextMenu]);
 
   // Resize listener for mobile responsive layout
   useEffect(() => {
@@ -6309,6 +6406,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         }
                       }}
                       onClick={() => navigateToItems(QUICK_MEMO_CATEGORY.id)}
+                      onContextMenu={(e) => handleCategoryContextMenu(e, QUICK_MEMO_CATEGORY)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -6982,6 +7080,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       setEditingCategoryId(cat.id);
                                       setEditingCategoryName(cat.name);
                                     }}
+                                    onContextMenu={(e) => handleCategoryContextMenu(e, cat)}
                                     style={{
                                       padding: isMobile ? '7px 8px' : '8px 10px',
                                       backgroundColor: isDropTarget
@@ -8181,6 +8280,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         setEditingItemId(item.id);
                                         setEditingItemTitle(item.title || '');
                                       }}
+                                      onContextMenu={(e) => handleItemContextMenu(e, item)}
                                       style={{
                                         padding: isMobile ? '7px 8px' : '8px 12px',
                                         backgroundColor: isItemDragOver
@@ -10587,6 +10687,29 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             <h1 style={{ ...styles.readTitle, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {highlightText(activeItem.title, searchQuery)}
                             </h1>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyItemPath(activeItem)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: isMobile ? '3px 6px' : '3px 8px',
+                                backgroundColor: '#F0FDF4',
+                                border: '1px solid #86EFAC',
+                                borderRadius: '5px',
+                                fontSize: isMobile ? '10.5px' : '11px',
+                                color: '#15803D',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={`경로 복사 (클릭): ${getItemFullPath(activeItem)}`}
+                            >
+                              <Copy size={12} color="#16A34A" />
+                              <span>경로 복사</span>
+                            </button>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
@@ -12878,10 +13001,34 @@ onClick={() => {
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
               border: '1px solid #CBD5E1',
               padding: '4px',
-              minWidth: '150px'
+              minWidth: '160px'
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={() => handleCopyCategoryPath(categoryContextMenu.category)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1E293B',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={15} color="#10B981" />
+              <span>경로 복사</span>
+            </button>
             <button
               type="button"
               onClick={() => handleCopyCategoryLink(categoryContextMenu.category)}
@@ -12905,6 +13052,92 @@ onClick={() => {
             >
               <Copy size={15} color="#2563EB" />
               <span>목록 주소 복사</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Item (Memo) Right-Click Context Menu Popup */}
+      {itemContextMenu && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99998,
+              backgroundColor: 'transparent'
+            }}
+            onClick={() => setItemContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setItemContextMenu(null);
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: itemContextMenu.y,
+              left: itemContextMenu.x,
+              zIndex: 99999,
+              backgroundColor: '#FFFFFF',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #CBD5E1',
+              padding: '4px',
+              minWidth: '160px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => handleCopyItemPath(itemContextMenu.item)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1E293B',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F0FDF4'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={15} color="#10B981" />
+              <span>경로 복사</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCopyItemLink(itemContextMenu.item)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1E293B',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={15} color="#2563EB" />
+              <span>메모 주소 복사</span>
             </button>
           </div>
         </>
