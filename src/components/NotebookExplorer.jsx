@@ -701,6 +701,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     });
   };
 
+  // 체크리스트 항목의 하위 블록 추출 헬퍼 (일정 만들기에 연동)
+  const getCheckItemDetailBlocks = (checkItem) => {
+    if (!checkItem) return [];
+    if (checkItem.id === selectedChecklistId && checklistDetailBlocks && checklistDetailBlocks.length > 0) {
+      return checklistDetailBlocks;
+    }
+    const rawText = checkItem.detail || '';
+    const rawBlocks = checkItem.detailBlocks;
+    return parseDetailBlocks(rawText, rawBlocks);
+  };
+
   // Load cloud backup info when settings modal opens
   const refreshCloudBackupInfo = async () => {
     try {
@@ -10258,6 +10269,39 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             <div
                                               key={checkItem.id}
                                               draggable={canDrag}
+                                              onContextMenu={(e) => {
+                                                if (isEditing) return;
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const subBlocks = getCheckItemDetailBlocks(checkItem);
+                                                handleOpenCreateEventFromBlock({
+                                                  title: checkItem.text || '',
+                                                  blocks: subBlocks
+                                                });
+                                              }}
+                                              onTouchStart={() => {
+                                                if (isEditing) return;
+                                                checkItemTouchTimerRef.current = setTimeout(() => {
+                                                  const subBlocks = getCheckItemDetailBlocks(checkItem);
+                                                  handleOpenCreateEventFromBlock({
+                                                    title: checkItem.text || '',
+                                                    blocks: subBlocks
+                                                  });
+                                                }, 500);
+                                              }}
+                                              onTouchEnd={() => {
+                                                if (checkItemTouchTimerRef.current) {
+                                                  clearTimeout(checkItemTouchTimerRef.current);
+                                                  checkItemTouchTimerRef.current = null;
+                                                }
+                                              }}
+                                              onTouchMove={() => {
+                                                if (checkItemTouchTimerRef.current) {
+                                                  clearTimeout(checkItemTouchTimerRef.current);
+                                                  checkItemTouchTimerRef.current = null;
+                                                }
+                                              }}
+                                              title="더블클릭: 수정 / 우클릭 및 길게 누름: 일정 만들기"
                                               onDragStart={(e) => {
                                                 if (!canDrag) return;
                                                 setDraggedNoteChecklistId(checkItem.id);
@@ -10482,6 +10526,23 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                           }}
                                                           onClick={(e) => e.stopPropagation()}
                                                         >
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                              setOpenChecklistMenuId(null);
+                                                              const subBlocks = getCheckItemDetailBlocks(checkItem);
+                                                              handleOpenCreateEventFromBlock({
+                                                                title: checkItem.text || '',
+                                                                blocks: subBlocks
+                                                              });
+                                                            }}
+                                                            style={styles.checklistDropdownItem}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                          >
+                                                            <CalendarIcon size={14} color="#2563EB" />
+                                                            <span style={{ color: "#2563EB", fontWeight: 600 }}>일정 만들기</span>
+                                                          </button>
                                                           <button
                                                             type="button"
                                                             onClick={() => {
@@ -11756,6 +11817,39 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           <div
                                             key={checkItem.id}
                                             draggable={canDrag}
+                                            onContextMenu={(e) => {
+                                              if (isEditing) return;
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              const subBlocks = getCheckItemDetailBlocks(checkItem);
+                                              handleOpenCreateEventFromBlock({
+                                                title: checkItem.text || '',
+                                                blocks: subBlocks
+                                              });
+                                            }}
+                                            onTouchStart={() => {
+                                              if (isEditing) return;
+                                              checkItemTouchTimerRef.current = setTimeout(() => {
+                                                const subBlocks = getCheckItemDetailBlocks(checkItem);
+                                                handleOpenCreateEventFromBlock({
+                                                  title: checkItem.text || '',
+                                                  blocks: subBlocks
+                                                });
+                                              }, 500);
+                                            }}
+                                            onTouchEnd={() => {
+                                              if (checkItemTouchTimerRef.current) {
+                                                clearTimeout(checkItemTouchTimerRef.current);
+                                                checkItemTouchTimerRef.current = null;
+                                              }
+                                            }}
+                                            onTouchMove={() => {
+                                              if (checkItemTouchTimerRef.current) {
+                                                clearTimeout(checkItemTouchTimerRef.current);
+                                                checkItemTouchTimerRef.current = null;
+                                              }
+                                            }}
+                                            title="더블클릭: 수정 / 우클릭 및 길게 누름: 일정 만들기"
                                             onDragStart={(e) => {
                                               if (!canDrag) return;
                                               setDraggedNoteChecklistId(checkItem.id);
