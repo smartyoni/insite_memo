@@ -65,6 +65,9 @@ import {
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 import { DetailBlocksManager, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
+import CalendarCategoryList from './CalendarCategoryList';
+import CalendarView from './CalendarView';
+import CreateEventModal from './CreateEventModal';
 import {
   getLatestCloudBackupInfo,
   saveCloudBackup,
@@ -511,8 +514,192 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [isRestoreLoading, setIsRestoreLoading] = useState(false);
   const [restoreProgress, setRestoreProgress] = useState(0);
   const [backupStatusMessage, setBackupStatusMessage] = useState(null); // { type: 'success'|'error', text: '' }
-  const [hasPreRestoreSafeguard, setHasPreRestoreSafeguard] = useState(false);
   const backupFileInputRef = useRef(null);
+  const checkItemTouchTimerRef = useRef(null);
+
+  // ---------------- 캘린더 기능 상태 및 핸들러 ----------------
+  const DEFAULT_CAL_CATEGORIES = React.useMemo(() => [
+    { id: 'cat_todo', name: '할일', color: '#3B82F6', isDefault: true, order: 0 }
+  ], []);
+
+  const [isCalendarMode, setIsCalendarMode] = useState(false);
+  const [calendarCategories, setCalendarCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem('insite_calendar_categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      { id: 'cat_todo', name: '할일', color: '#3B82F6', isDefault: true, order: 0 }
+    ];
+  });
+  const [selectedCalendarCategoryId, setSelectedCalendarCategoryId] = useState('all');
+  const [calendarEvents, setCalendarEvents] = useState(() => {
+    try {
+      const saved = localStorage.getItem('insite_calendar_events');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [selectedCalendarEventId, setSelectedCalendarEventId] = useState(null);
+  const [createEventModalState, setCreateEventModalState] = useState({
+    isOpen: false,
+    initialTitle: '',
+    initialBlocks: [],
+    date: ''
+  });
+
+  // Firestore 캘린더 범주 실시간 동기화
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const q = query(collection(db, 'calendar_categories'), orderBy('order', 'asc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((c) => !c.isDeleted);
+          if (list.length > 0) {
+            setCalendarCategories(list);
+            localStorage.setItem('insite_calendar_categories', JSON.stringify(list));
+          }
+        }
+      }, (err) => console.warn('calendar_categories onSnapshot error:', err));
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [currentUser]);
+
+  // Firestore 캘린더 일정 실시간 동기화
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const q = query(collection(db, 'calendar_events'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const list = snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((e) => !e.isDeleted);
+        setCalendarEvents(list);
+        localStorage.setItem('insite_calendar_events', JSON.stringify(list));
+      }, (err) => console.warn('calendar_events onSnapshot error:', err));
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [currentUser]);
+
+  // 범주 추가
+  const handleAddCalendarCategory = async (newCat) => {
+    const next = [...calendarCategories, newCat];
+    setCalendarCategories(next);
+    localStorage.setItem('insite_calendar_categories', JSON.stringify(next));
+    if (currentUser) {
+      try {
+        await setDoc(doc(db, 'calendar_categories', newCat.id), newCat);
+      } catch (err) {
+        console.error('Save calendar category failed:', err);
+      }
+    }
+  };
+
+  // 범주 수정
+  const handleUpdateCalendarCategory = async (catId, updates) => {
+    const next = calendarCategories.map((c) => (c.id === catId ? { ...c, ...updates } : c));
+    setCalendarCategories(next);
+    localStorage.setItem('insite_calendar_categories', JSON.stringify(next));
+    if (currentUser) {
+      try {
+        await updateDoc(doc(db, 'calendar_categories', catId), updates);
+      } catch (err) {
+        console.error('Update calendar category failed:', err);
+      }
+    }
+  };
+
+  // 범주 삭제 (소프트 삭제 지침 준수)
+  const handleDeleteCalendarCategory = async (catId) => {
+    const next = calendarCategories.map((c) => (c.id === catId ? { ...c, isDeleted: true } : c));
+    setCalendarCategories(next);
+    localStorage.setItem('insite_calendar_categories', JSON.stringify(next));
+    if (selectedCalendarCategoryId === catId) {
+      setSelectedCalendarCategoryId('all');
+    }
+    if (currentUser) {
+      try {
+        await updateDoc(doc(db, 'calendar_categories', catId), { isDeleted: true, deletedAt: serverTimestamp() });
+      } catch (err) {
+        console.error('Delete calendar category failed:', err);
+      }
+    }
+  };
+
+  // 일정 저장 / 수정
+  const handleSaveCalendarEvent = async (eventData) => {
+    const exists = calendarEvents.some((e) => e.id === eventData.id);
+    let next;
+    if (exists) {
+      next = calendarEvents.map((e) => (e.id === eventData.id ? eventData : e));
+    } else {
+      next = [eventData, ...calendarEvents];
+    }
+    setCalendarEvents(next);
+    localStorage.setItem('insite_calendar_events', JSON.stringify(next));
+    setSelectedCalendarEventId(eventData.id);
+    if (currentUser) {
+      try {
+        await setDoc(doc(db, 'calendar_events', eventData.id), eventData);
+      } catch (err) {
+        console.error('Save calendar event failed:', err);
+      }
+    }
+  };
+
+  // 일정 하위 블록 수정 (3열 우측 패널 연동)
+  const handleSaveCalendarEventBlocks = async (eventId, newBlocks) => {
+    const next = calendarEvents.map((e) => (e.id === eventId ? { ...e, blocks: newBlocks } : e));
+    setCalendarEvents(next);
+    localStorage.setItem('insite_calendar_events', JSON.stringify(next));
+    if (currentUser) {
+      try {
+        await updateDoc(doc(db, 'calendar_events', eventId), { blocks: newBlocks });
+      } catch (err) {
+        console.error('Update calendar event blocks failed:', err);
+      }
+    }
+  };
+
+  // 일정 삭제 (소프트 삭제 지침 준수)
+  const handleDeleteCalendarEvent = async (eventId) => {
+    const next = calendarEvents.map((e) => (e.id === eventId ? { ...e, isDeleted: true } : e));
+    setCalendarEvents(next);
+    localStorage.setItem('insite_calendar_events', JSON.stringify(next));
+    if (selectedCalendarEventId === eventId) {
+      setSelectedCalendarEventId(null);
+    }
+    if (currentUser) {
+      try {
+        await updateDoc(doc(db, 'calendar_events', eventId), { isDeleted: true, deletedAt: serverTimestamp() });
+      } catch (err) {
+        console.error('Delete calendar event failed:', err);
+      }
+    }
+  };
+
+  // 상세화면 좌측 블록/체크리스트에서 우클릭/롱프레스 시 모달 오픈
+  const handleOpenCreateEventFromBlock = (data) => {
+    setCreateEventModalState({
+      isOpen: true,
+      initialTitle: data?.title || '',
+      initialBlocks: Array.isArray(data?.blocks) ? data.blocks : [],
+      date: data?.date || ''
+    });
+  };
 
   // Load cloud backup info when settings modal opens
   const refreshCloudBackupInfo = async () => {
@@ -5939,6 +6126,38 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         >
           <span>퀵메모</span>
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setIsCalendarMode((prev) => {
+              const next = !prev;
+              if (next && isMobile) {
+                setMobileView('items');
+              }
+              return next;
+            });
+          }}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px 2px',
+            backgroundColor: isCalendarMode ? '#DBEAFE' : '#EFF6FF',
+            border: `1px solid ${isCalendarMode ? '#2563EB' : '#BFDBFE'}`,
+            borderRadius: '6px',
+            color: isCalendarMode ? '#1D4ED8' : '#2563EB',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: isCalendarMode ? '0 1px 3px rgba(37, 99, 235, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+          title="캘린더 모드 열기 / 닫기"
+        >
+          <span>📅 캘린더</span>
+        </button>
       </div>
     </div>
   );
@@ -7275,8 +7494,40 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               width: isMobile ? '100%' : '308px',
               minWidth: isMobile ? '100%' : '308px'
             }}>
-              {/* Standard Note Items List for Pane 2 */}
-              <>
+              {/* Standard Note Items List for Pane 2 OR Calendar Category List */}
+              {isCalendarMode ? (
+                <>
+                  <CalendarCategoryList
+                    categories={calendarCategories}
+                    selectedCategoryId={selectedCalendarCategoryId}
+                    onSelectCategory={(catId) => {
+                      setSelectedCalendarCategoryId(catId);
+                      if (isMobile) setMobileView('detail');
+                    }}
+                    onAddCategory={handleAddCalendarCategory}
+                    onUpdateCategory={handleUpdateCalendarCategory}
+                    onDeleteCategory={handleDeleteCalendarCategory}
+                    events={calendarEvents}
+                  />
+                  {isMobile && renderMobileFooter(
+                    <div style={{ padding: '8px 12px', backgroundColor: '#F8FAFC', borderTop: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <button
+                        onClick={() => setMobileView('categories')}
+                        style={styles.mobileBackBtn}
+                      >
+                        <ArrowLeft size={16} /> 메뉴
+                      </button>
+                      <button
+                        onClick={() => setMobileView('detail')}
+                        style={{ ...styles.mobileBackBtn, color: '#2563EB', fontWeight: 700 }}
+                      >
+                        캘린더 보기 <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
                 {!isMobile ? (
                   <div style={{
                     ...styles.pane2Header,
@@ -8468,6 +8719,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 {/* Mobile Footer for Pane 2 */}
                 {isMobile && renderMobileFooter(null)}
               </>
+              )}
             </div>
           )}
 
@@ -9131,6 +9383,164 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       )}
                     </div>
                   </div>
+                </div>
+              ) : isCalendarMode ? (
+                /* Dedicated Calendar View for Pane 3 */
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', width: '100%', overflow: 'hidden' }}>
+                  {/* Left Pane: Calendar (Month / 3-Days / Day) */}
+                  <div style={{ flex: 1, minWidth: 0, height: '100%', borderRight: isMobile ? 'none' : '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+                    <CalendarView
+                      events={calendarEvents}
+                      categories={calendarCategories}
+                      selectedCategoryId={selectedCalendarCategoryId}
+                      selectedEventId={selectedCalendarEventId}
+                      onSelectEvent={(event) => setSelectedCalendarEventId(event.id)}
+                      onOpenCreateModal={(date) => {
+                        setCreateEventModalState({
+                          isOpen: true,
+                          initialTitle: '',
+                          initialBlocks: [],
+                          date: date || ''
+                        });
+                      }}
+                      onDeleteEvent={handleDeleteCalendarEvent}
+                    />
+                  </div>
+
+                  {/* Right Pane: Selected Event's Sub-items / Checklist (Matching Existing Workspace Structure) */}
+                  <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFFFF' }}>
+                    {(() => {
+                      const selectedEvent = calendarEvents.find((e) => e.id === selectedCalendarEventId && !e.isDeleted);
+                      if (!selectedEvent) {
+                        return (
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', color: '#94A3B8', textAlign: 'center' }}>
+                            <CalendarIcon size={44} color="#CBD5E1" style={{ marginBottom: '14px' }} />
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#64748B', marginBottom: '6px' }}>
+                              선택된 일정이 없습니다
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#94A3B8', maxWidth: '280px' }}>
+                              좌측 캘린더에서 일정을 클릭하면 해당 일정의 하위 내용(체크리스트)이 이곳에 표시됩니다.
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const cat = calendarCategories.find((c) => c.id === selectedEvent.categoryId);
+                      const catColor = cat?.color || '#3B82F6';
+                      const catName = cat?.name || '할일';
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                          {/* Selected Event Header */}
+                          <div
+                            style={{
+                              padding: '12px 16px',
+                              borderBottom: '1px solid #E2E8F0',
+                              backgroundColor: '#F8FAFC',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '8px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  color: '#FFFFFF',
+                                  backgroundColor: catColor,
+                                  padding: '2px 8px',
+                                  borderRadius: '5px',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {catName}
+                              </span>
+                              <h3
+                                style={{
+                                  margin: 0,
+                                  fontSize: '15px',
+                                  fontWeight: 700,
+                                  color: '#1E293B',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {selectedEvent.title}
+                              </h3>
+                              <span style={{ fontSize: '12px', color: '#64748B', flexShrink: 0 }}>
+                                ({selectedEvent.isAllDay ? '종일' : `${selectedEvent.startTime} ~ ${selectedEvent.endTime}`})
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`'${selectedEvent.title}' 일정을 삭제하시겠습니까?`)) {
+                                    handleDeleteCalendarEvent(selectedEvent.id);
+                                  }
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #FCA5A5',
+                                  backgroundColor: '#FEF2F2',
+                                  color: '#DC2626',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                <Trash2 size={12} />
+                                <span>일정 삭제</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Event Sub-blocks Manager (Using DetailBlocksManager identically) */}
+                          <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                            <DetailBlocksManager
+                              blocks={Array.isArray(selectedEvent.blocks) ? selectedEvent.blocks : []}
+                              onChangeAndSave={(newBlocks) => handleSaveCalendarEventBlocks(selectedEvent.id, newBlocks)}
+                              searchQuery=""
+                              editingBlockId={editingBlockId}
+                              setEditingBlockId={setEditingBlockId}
+                              openDeleteModal={openDeleteModal}
+                              onOpenMoveModal={handleOpenMoveBlockModal}
+                              onCopyBlock={handleCopyBlockToClipboard}
+                              onCopyBlockAsText={handleCopyBlockAsPlainText}
+                              onCopyItem={handleCopyItemToClipboard}
+                              detailClipboard={detailClipboard}
+                              onPasteItemToChecklist={handlePasteItemFromClipboard}
+                              collapsedBlockIds={detailCollapsedBlockIds}
+                              setCollapsedBlockIds={updateDetailCollapsedBlockIds}
+                              isMobile={isMobile}
+                              onCreateEvent={handleOpenCreateEventFromBlock}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Mobile Back to Items Button */}
+                  {isMobile && renderMobileFooter(
+                    <div style={{ padding: '8px 12px', backgroundColor: '#F8FAFC', borderTop: '1px solid #CBD5E1', display: 'flex', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setMobileView('items')}
+                        style={styles.mobileBackBtn}
+                      >
+                        <ArrowLeft size={16} /> 범주 목록으로
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : activeItem ? (
                 <>
@@ -9959,14 +10369,46 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   </div>
                                                 </div>
                                               ) : (
-                                                <div style={{
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'space-between',
-                                                  width: '100%',
-                                                  gap: isMobile ? '4px' : '8px',
-                                                  minHeight: isMobile ? '22px' : '26px'
-                                                }}>
+                                                <div
+                                                  onContextMenu={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleOpenCreateEventFromBlock({
+                                                      title: checkItem.text || '',
+                                                      blocks: checkItem.detailBlocks || []
+                                                    });
+                                                  }}
+                                                  onTouchStart={() => {
+                                                    checkItemTouchTimerRef.current = setTimeout(() => {
+                                                      handleOpenCreateEventFromBlock({
+                                                        title: checkItem.text || '',
+                                                        blocks: checkItem.detailBlocks || []
+                                                      });
+                                                    }, 500);
+                                                  }}
+                                                  onTouchEnd={() => {
+                                                    if (checkItemTouchTimerRef.current) {
+                                                      clearTimeout(checkItemTouchTimerRef.current);
+                                                      checkItemTouchTimerRef.current = null;
+                                                    }
+                                                  }}
+                                                  onTouchMove={() => {
+                                                    if (checkItemTouchTimerRef.current) {
+                                                      clearTimeout(checkItemTouchTimerRef.current);
+                                                      checkItemTouchTimerRef.current = null;
+                                                    }
+                                                  }}
+                                                  style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    width: '100%',
+                                                    gap: isMobile ? '4px' : '8px',
+                                                    minHeight: isMobile ? '22px' : '26px',
+                                                    cursor: 'pointer'
+                                                  }}
+                                                  title="우클릭 또는 길게 눌러 일정 만들기"
+                                                >
                                                   <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
                                                     <span
                                                       onDoubleClick={(e) => {
@@ -10260,6 +10702,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   collapsedBlockIds={detailCollapsedBlockIds}
                                   setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                   isMobile={isMobile}
+                                  onCreateEvent={handleOpenCreateEventFromBlock}
                                 />
                               </div>
                             ) : (
@@ -10641,6 +11084,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     collapsedBlockIds={detailCollapsedBlockIds}
                                     setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                     isMobile={isMobile}
+                                    onCreateEvent={handleOpenCreateEventFromBlock}
                                   />
                                 </div>
                               );
@@ -12024,6 +12468,7 @@ onClick={() => {
                                     collapsedBlockIds={detailCollapsedBlockIds}
                                     setCollapsedBlockIds={updateDetailCollapsedBlockIds}
                                     isMobile={isMobile}
+                                    onCreateEvent={handleOpenCreateEventFromBlock}
                                   />
                               </>
                             );
@@ -14321,6 +14766,16 @@ onClick={() => {
           </div>
         </div>
       )}
+
+      {/* Create Calendar Event Modal */}
+      <CreateEventModal
+        isOpen={createEventModalState.isOpen}
+        onClose={() => setCreateEventModalState((prev) => ({ ...prev, isOpen: false }))}
+        initialTitle={createEventModalState.initialTitle}
+        initialBlocks={createEventModalState.initialBlocks}
+        categories={calendarCategories}
+        onSaveEvent={handleSaveCalendarEvent}
+      />
     </div>
   );
 }

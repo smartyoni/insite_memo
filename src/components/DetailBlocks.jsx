@@ -185,10 +185,40 @@ function DetailChecklistItemRow({
   onDrop,
   onDragEnd,
   otherChecklistBlocks = [],
-  onMoveToBlock
+  onMoveToBlock,
+  onCreateEvent
 }) {
   const [draftText, setDraftText] = useState(item.text || '');
   const textareaRef = useRef(null);
+  const itemLongPressTimerRef = useRef(null);
+
+  const handleTouchStart = () => {
+    if (!onCreateEvent || isEditing) return;
+    itemLongPressTimerRef.current = setTimeout(() => {
+      onCreateEvent({
+        title: item.text || '',
+        blocks: []
+      });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (itemLongPressTimerRef.current) {
+      clearTimeout(itemLongPressTimerRef.current);
+      itemLongPressTimerRef.current = null;
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    if (onCreateEvent && !isEditing) {
+      e.preventDefault();
+      e.stopPropagation();
+      onCreateEvent({
+        title: item.text || '',
+        blocks: []
+      });
+    }
+  };
 
   useEffect(() => {
     if (isEditing) {
@@ -235,6 +265,10 @@ function DetailChecklistItemRow({
       onDragOver={(e) => onDragOver(e, blockId, item.id)}
       onDrop={(e) => onDrop(e, blockId, item.id)}
       onDragEnd={onDragEnd}
+      onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
       onKeyDown={(e) => {
         if (e.nativeEvent && e.nativeEvent.isComposing) return;
         if (e.key === 'Enter' && e.shiftKey) {
@@ -605,7 +639,8 @@ export const DetailBlocksManager = ({
   onPasteItemToChecklist,
   collapsedBlockIds: externalCollapsedBlockIds,
   setCollapsedBlockIds: externalSetCollapsedBlockIds,
-  isMobile = false
+  isMobile = false,
+  onCreateEvent
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -623,6 +658,35 @@ export const DetailBlocksManager = ({
   const [dragOverItemKey, setDragOverItemKey] = useState(null);
   const titleInputRef = useRef(null);
   const textareaRef = useRef(null);
+  const blockLongPressTimerRef = useRef(null);
+
+  const handleBlockTouchStart = (block) => {
+    if (!onCreateEvent) return;
+    blockLongPressTimerRef.current = setTimeout(() => {
+      onCreateEvent({
+        title: block.title || (block.type === 'checklist' ? '체크리스트' : '메모 블록'),
+        blocks: block.items || []
+      });
+    }, 500);
+  };
+
+  const handleBlockTouchEnd = () => {
+    if (blockLongPressTimerRef.current) {
+      clearTimeout(blockLongPressTimerRef.current);
+      blockLongPressTimerRef.current = null;
+    }
+  };
+
+  const handleBlockContextMenu = (e, block) => {
+    if (onCreateEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      onCreateEvent({
+        title: block.title || (block.type === 'checklist' ? '체크리스트' : '메모 블록'),
+        blocks: block.items || []
+      });
+    }
+  };
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -1378,8 +1442,14 @@ export const DetailBlocksManager = ({
                       alignItems: 'center',
                       gap: '4px',
                       flex: 1,
-                      minWidth: 0
+                      minWidth: 0,
+                      cursor: 'pointer'
                     }}
+                    onContextMenu={(e) => handleBlockContextMenu(e, block)}
+                    onTouchStart={() => handleBlockTouchStart(block)}
+                    onTouchEnd={handleBlockTouchEnd}
+                    onTouchMove={handleBlockTouchEnd}
+                    title="우클릭 또는 길게 눌러 일정 만들기"
                   >
                     <span
                       style={{ display: 'flex', alignItems: 'center', color: '#065F46' }}
@@ -1402,7 +1472,7 @@ export const DetailBlocksManager = ({
                         setEditingChecklistTitleId(block.id);
                         setDraftChecklistTitle(block.title || '');
                       }}
-                      title="더블클릭하여 이름 수정"
+                      title="더블클릭: 이름 수정 / 우클릭 및 길게누름: 일정 만들기"
                     >
                       {block.title && block.title.trim() ? block.title : '체크리스트'}
                     </span>
@@ -1581,6 +1651,7 @@ export const DetailBlocksManager = ({
                       onDragEnd={handleItemDragEnd}
                       otherChecklistBlocks={blocks.filter((b) => b.type === 'checklist' && b.id !== block.id)}
                       onMoveToBlock={handleMoveItemToBlock}
+                      onCreateEvent={onCreateEvent}
                     />
                   ))}
 
@@ -1713,8 +1784,14 @@ export const DetailBlocksManager = ({
                     alignItems: 'center',
                     gap: '4px',
                     flex: 1,
-                    minWidth: 0
+                    minWidth: 0,
+                    cursor: 'pointer'
                   }}
+                  onContextMenu={(e) => handleBlockContextMenu(e, block)}
+                  onTouchStart={() => handleBlockTouchStart(block)}
+                  onTouchEnd={handleBlockTouchEnd}
+                  onTouchMove={handleBlockTouchEnd}
+                  title="우클릭 또는 길게 눌러 일정 만들기"
                 >
                   <span
                     style={{ display: 'flex', alignItems: 'center', color: '#4C1D95' }}
@@ -1736,7 +1813,7 @@ export const DetailBlocksManager = ({
                       setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
                       handleStartEdit(block);
                     }}
-                    title="더블클릭하여 이름 및 내용 수정"
+                    title="더블클릭: 이름 수정 / 우클릭 및 길게누름: 일정 만들기"
                   >
                     {block.title && block.title.trim() ? block.title : '텍스트'}
                   </span>
