@@ -77,6 +77,11 @@ export default function CalendarView({
 
   // 타이틀 텍스트 생성
   const getHeaderTitle = () => {
+    if (viewMode === 'all') {
+      const catName = selectedCategoryId === 'all' ? '전체 일정' : `${getCategoryName(selectedCategoryId)} 범주`;
+      return `${catName} 목록 (${filteredEvents.length})`;
+    }
+
     const yyyy = currentDate.getFullYear();
     const mm = currentDate.getMonth() + 1;
     const dd = currentDate.getDate();
@@ -91,6 +96,117 @@ export default function CalendarView({
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       return `${yyyy}년 ${mm}월 ${dd}일 (${dayNames[currentDate.getDay()]})`;
     }
+  };
+
+  // 0. 전체 일정 목록 뷰 생성 로직
+  const renderAllView = () => {
+    // 날짜 최신순 정렬
+    const sortedEvents = [...filteredEvents].sort((a, b) => {
+      const dateA = a.startDate || '';
+      const dateB = b.startDate || '';
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      const timeA = a.isAllDay ? '00:00' : (a.startTime || '00:00');
+      const timeB = b.isAllDay ? '00:00' : (b.startTime || '00:00');
+      return timeB.localeCompare(timeA);
+    });
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#FFFFFF' }}>
+        {/* 상단 액션 바 */}
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
+            총 {sortedEvents.length}개의 등록된 일정
+          </span>
+          <button
+            type="button"
+            onClick={() => onOpenCreateModal && onOpenCreateModal(formatDateKey(new Date()))}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Plus size={13} />
+            <span>새 일정 추가</span>
+          </button>
+        </div>
+
+        {/* 전체 일정 리스트 */}
+        <div style={{ flex: 1, padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {sortedEvents.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '50px' }}>
+              등록된 일정이 없습니다. 우측 상단 [+ 새 일정 추가] 버튼을 눌러 일정을 추가해 보세요.
+            </div>
+          ) : (
+            sortedEvents.map((event) => {
+              const isSelected = selectedEventId === event.id;
+              const catColor = getCategoryColor(event.categoryId);
+              const catName = getCategoryName(event.categoryId);
+
+              return (
+                <div
+                  key={event.id}
+                  onClick={() => onSelectEvent(event)}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${isSelected ? '#2563EB' : '#E2E8F0'}`,
+                    backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                    boxShadow: isSelected ? '0 4px 12px rgba(37, 99, 235, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#FFFFFF',
+                          backgroundColor: catColor,
+                          padding: '2px 8px',
+                          borderRadius: '5px'
+                        }}
+                      >
+                        {catName}
+                      </span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
+                        {event.startDate}
+                      </span>
+                    </div>
+
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={12} color="#64748B" />
+                      {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', marginBottom: '4px' }}>
+                    {event.title}
+                  </div>
+
+                  {Array.isArray(event.blocks) && event.blocks.length > 0 && (
+                    <div style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                      <ListTodo size={13} />
+                      <span>하위 내용(체크리스트 등) {event.blocks.length}개 포함됨</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
   };
 
   // 1. 월간 뷰 달력 생성 로직
@@ -513,65 +629,69 @@ export default function CalendarView({
       >
         {/* 네비게이션 & 제목 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            type="button"
-            onClick={handlePrev}
-            style={{
-              padding: '5px',
-              borderRadius: '6px',
-              border: '1px solid #CBD5E1',
-              backgroundColor: '#FFFFFF',
-              color: '#475569',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title="이전"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={handleToday}
-            style={{
-              padding: '4px 10px',
-              borderRadius: '6px',
-              border: '1px solid #CBD5E1',
-              backgroundColor: '#FFFFFF',
-              color: '#334155',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            오늘
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            style={{
-              padding: '5px',
-              borderRadius: '6px',
-              border: '1px solid #CBD5E1',
-              backgroundColor: '#FFFFFF',
-              color: '#475569',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title="다음"
-          >
-            <ChevronRight size={16} />
-          </button>
+          {viewMode !== 'all' && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                style={{
+                  padding: '5px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="이전"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={handleToday}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                오늘
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  padding: '5px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="다음"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
 
           <h2 style={{ margin: '0 0 0 8px', fontSize: '15px', fontWeight: 800, color: '#1E293B' }}>
             {getHeaderTitle()}
           </h2>
         </div>
 
-        {/* 뷰 모드 전환 버튼 그룹 (일간 | 3일 | 월간) */}
+        {/* 뷰 모드 전환 버튼 그룹 (전체 | 일간 | 3일 | 월간) */}
         <div
           style={{
             display: 'flex',
@@ -583,6 +703,7 @@ export default function CalendarView({
           }}
         >
           {[
+            { key: 'all', label: '전체' },
             { key: 'day', label: '일간' },
             { key: '3days', label: '3일' },
             { key: 'month', label: '월간' }
@@ -612,6 +733,7 @@ export default function CalendarView({
 
       {/* 캘린더 메인 컨텐츠 */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
+        {viewMode === 'all' && renderAllView()}
         {viewMode === 'month' && renderMonthView()}
         {viewMode === '3days' && render3DaysView()}
         {viewMode === 'day' && renderDayView()}
