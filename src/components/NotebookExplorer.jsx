@@ -1320,18 +1320,48 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   const handleCreateGroupFromModal = async () => {
     if (!activeItem || !newGroupNameInput.trim()) return;
+    recordWorkLocation();
+    const sectionName = newGroupNameInput.trim();
+    const newSectionId = 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6);
     const newSection = {
-      id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      id: newSectionId,
       isSection: true,
       type: 'section',
-      text: newGroupNameInput.trim()
+      text: sectionName
     };
-    const updated = [...baseChecklists, newSection];
+    const firstItemId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6);
+    const firstItem = {
+      id: firstItemId,
+      text: '',
+      completed: false,
+      detail: '',
+      detailBlocks: []
+    };
+    const updated = [...baseChecklists, newSection, firstItem];
     setShowAddGroupModal(false);
     setNewGroupNameInput('');
+
+    if (typeof updateCollapsedSections === 'function') {
+      updateCollapsedSections((prev) => ({ ...prev, [newSectionId]: false }));
+    }
+
     if (isEditMode) {
       setDraftChecklists(updated);
     }
+    setSelectedChecklistId(firstItemId);
+    setChecklistDetailDraft('');
+    setChecklistDetailBlocks([]);
+    setEditingCheckId(firstItemId);
+    setEditingCheckText('');
+    setEditingCheckTag('');
+    setCustomTagInput('');
+    if (isMobile) {
+      setMobileSubTab('main');
+    }
+
+    // 로컬 낙관적 업데이트
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
+
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -2406,6 +2436,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setSelectedChecklistId(newItem.id);
     setChecklistDetailDraft('');
     setChecklistDetailBlocks([]);
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -2430,6 +2464,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     if (isEditMode) {
       setDraftChecklists(updated);
     }
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
@@ -2480,6 +2515,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setEditingCheckText('');
     setEditingCheckTag('');
     setCustomTagInput('');
+
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
 
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
@@ -7649,7 +7686,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                     </div>
                   )}
 
-                  {displayedItems.length === 0 && !isAddingItem ? (
+                  {displayedItems.length === 0 && !isAddingItem && (!activeCategory?.itemGroups || activeCategory.itemGroups.length === 0) ? (
                     <div style={styles.emptyStateText}>
                       {isSearchActive ? '검색 결과와 일치하는 메모가 없습니다.' : '등록된 메모가 없습니다.'}
                     </div>
@@ -9365,6 +9402,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         onClick={() => {
                                           if (!isSecEditing) {
                                             toggleSectionCollapse(group.section.id);
+                                            if (group.sortedItems && group.sortedItems.length > 0) {
+                                              setSelectedChecklistId(group.sortedItems[0].id);
+                                              if (isMobile) setMobileSubTab('sub');
+                                            } else {
+                                              handleAddChecklistToGroup(group.section.id);
+                                            }
                                           }
                                         }}
                                       >
@@ -10798,6 +10841,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       onClick={() => {
                                         if (!isSecEditing) {
                                           toggleSectionCollapse(group.section.id);
+                                          if (group.sortedItems && group.sortedItems.length > 0) {
+                                            setSelectedChecklistId(group.sortedItems[0].id);
+                                            if (isMobile) setMobileSubTab('sub');
+                                          } else {
+                                            handleAddChecklistToGroup(group.section.id);
+                                          }
                                         }
                                       }}
                                     >
