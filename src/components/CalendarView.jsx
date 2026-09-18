@@ -19,7 +19,7 @@ export default function CalendarView({
   onDeleteEvent
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('month'); // 'day' | '3days' | 'month'
+  const [viewMode, setViewMode] = useState('day'); // 'day' | '3days' | 'month'
 
   // 날짜 유틸 함수들
   const formatDateKey = (d) => {
