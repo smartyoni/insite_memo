@@ -6300,17 +6300,68 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         <ChevronsUp size={14} />
                       </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setIsAddingCategory(true);
-                        setAddingParentId(null);
-                        setNewCategoryName('');
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '6px',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        overflow: 'hidden',
+                        height: '28px'
                       }}
-                      style={styles.iconBtnDark}
-                      title="최상위 카테고리 추가"
                     >
-                      <Plus size={18} />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategoryGroup((prev) => !prev);
+                          setNewCategoryGroupName('');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 8px',
+                          height: '100%',
+                          border: 'none',
+                          borderRight: '1px solid #E2E8F0',
+                          backgroundColor: isAddingCategoryGroup ? '#DCFCE7' : 'transparent',
+                          color: isAddingCategoryGroup ? '#059669' : '#334155',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                        title="새 카테고리 그룹 추가"
+                      >
+                        그룹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategory(true);
+                          setAddingCategoryGroupId(null);
+                          setAddingParentId(null);
+                          setNewCategoryName('');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 9px',
+                          height: '100%',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#059669',
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="최상위 카테고리 추가"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : null}
