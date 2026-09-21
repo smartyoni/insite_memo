@@ -756,7 +756,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         if (Array.isArray(i.checklists)) {
           const matchCheck = i.checklists.find((c) => {
             const checkText = (c.text || '').trim();
-            return checkText.length >= 3 && (checkText.includes(cleanEventTitle) || cleanEventTitle.includes(checkText));
+            return checkText.length >= 3 && (checkText === cleanEventTitle || checkText.includes(cleanEventTitle) || cleanEventTitle.includes(checkText));
           });
           if (matchCheck) {
             targetChecklistId = matchCheck.id;
@@ -769,23 +769,28 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           const matchBlock = i.blocks.find((b) => {
             const bTitle = (b.title || '').trim();
             const bVal = (b.value || '').trim();
-            return (bTitle.length >= 3 && (bTitle.includes(cleanEventTitle) || cleanEventTitle.includes(bTitle))) ||
-                   (bVal.length >= 3 && (bVal.includes(cleanEventTitle) || cleanEventTitle.includes(bVal)));
+            return (bTitle.length >= 3 && (bTitle === cleanEventTitle || bTitle.includes(cleanEventTitle) || cleanEventTitle.includes(bTitle))) ||
+                   (bVal.length >= 3 && (bVal === cleanEventTitle || bVal.includes(cleanEventTitle) || cleanEventTitle.includes(bVal)));
           });
           if (matchBlock) return true;
         }
+
+        // 메모 본문 일치
+        if (i.body && i.body.trim().includes(cleanEventTitle)) return true;
+        if (i.subBody && i.subBody.trim().includes(cleanEventTitle)) return true;
 
         return false;
       });
     }
 
-    // 4. 메모 제목 부분 일치 (itemTitle과 cleanEventTitle 모두 최소 3자 이상일 때만 비교하여 빈 문자열 오탐색 원천 차단)
+    // 4. 메모 제목 일치 (비율 40% 이상 및 최소 4자 이상 비교로 짧은 단어 오탐색 방지)
     if (!targetItem && cleanEventTitle.length >= 3) {
       targetItem = items.find((i) => {
         if (i.isDeleted) return false;
         const itemTitle = (i.title || '').trim();
-        if (itemTitle.length >= 3 && (itemTitle.includes(cleanEventTitle) || cleanEventTitle.includes(itemTitle))) {
-          return true;
+        if (itemTitle.length >= 3 && (cleanEventTitle.includes(itemTitle) || itemTitle.includes(cleanEventTitle))) {
+          const ratio = Math.min(itemTitle.length, cleanEventTitle.length) / Math.max(itemTitle.length, cleanEventTitle.length);
+          if (ratio >= 0.4 || itemTitle.length >= 5) return true;
         }
         return false;
       });
@@ -800,12 +805,28 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     // 복귀를 위해 현재 캘린더 화면 상태를 기억
     setCalendarReturnContext({
       categoryId: selectedCalendarCategoryId,
-      eventId: event.id
+      eventId: event.id,
+      prevMainTab: activeMainTab
     });
 
-    // 캘린더 모드 종료하고 원본 메모 위치로 전환
+    // 해당 메모가 속한 카테고리 및 탭(Scope) 찾기
+    const targetCat = categories.find((c) => c.id === targetItem.categoryId);
+    const targetScope = targetCat?.scope || 'explorer';
+    const matchedTab = (mainTabs || []).find((t) => getScopeForTab(t.id) === targetScope);
+    const destTab = matchedTab ? matchedTab.id : (targetScope === 'explorer' ? 'explorer' : targetScope);
+
+    // 해당 카테고리 그룹이 접혀있다면 펼치기
+    if (targetCat?.groupId) {
+      setCollapsedCategoryGroups((prev) => ({ ...prev, [targetCat.groupId]: false }));
+    }
+    // 해당 아이템 그룹이 접혀있다면 펼치기
+    if (targetItem.groupId) {
+      setCollapsedItemGroups((prev) => ({ ...prev, [targetItem.groupId]: false }));
+    }
+
+    // 캘린더 모드 종료하고 정확한 탭과 카테고리, 메모 위치로 전환
     setIsCalendarMode(false);
-    setActiveMainTab('explorer');
+    setActiveMainTab(destTab);
     setSelectedCategoryId(targetItem.categoryId);
     setSelectedItemId(targetItem.id);
 
