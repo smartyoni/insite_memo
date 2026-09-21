@@ -20,7 +20,7 @@ export default function CalendarView({
   onDeleteEvent
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('day'); // 'day' | '3days' | 'month'
+  const [viewMode, setViewMode] = useState('all'); // 'all' | 'day' | '3days' | 'month'
   const [eventContextMenu, setEventContextMenu] = useState(null); // { x, y, event }
   const touchTimerRef = useRef(null);
 
