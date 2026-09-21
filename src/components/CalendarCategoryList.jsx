@@ -143,11 +143,17 @@ export default function CalendarCategoryList({
           </span>
         </div>
 
-        {/* 개별 범주 리스트 */}
-        {categories.filter(c => !c.isDeleted).map((cat) => {
-          const isSelected = selectedCategoryId === cat.id;
-          const isEditing = editingCatId === cat.id;
-          const count = getEventCount(cat.id);
+        {/* 개별 범주 리스트: 전체 일정 바로 아래에 [할일] 범주 고정 */}
+        {(() => {
+          const validCats = categories.filter((c) => !c.isDeleted);
+          const todoCat = validCats.find((c) => c.id === 'cat_todo') || { id: 'cat_todo', name: '할일', color: '#3B82F6', isDefault: true, order: 0 };
+          const otherCats = validCats.filter((c) => c.id !== 'cat_todo');
+          const orderedCategories = [todoCat, ...otherCats];
+
+          return orderedCategories.map((cat) => {
+            const isSelected = selectedCategoryId === cat.id;
+            const isEditing = editingCatId === cat.id;
+            const count = getEventCount(cat.id);
 
           return (
             <div
@@ -284,7 +290,8 @@ export default function CalendarCategoryList({
               </div>
             </div>
           );
-        })}
+        });
+        })()}
 
         {/* 새 범주 추가 입력창 */}
         {isAdding && (

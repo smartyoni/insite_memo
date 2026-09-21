@@ -523,17 +523,25 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   ], []);
 
   const [isCalendarMode, setIsCalendarMode] = useState(false);
+  const DEFAULT_CALENDAR_CATEGORY = { id: 'cat_todo', name: '할일', color: '#3B82F6', isDefault: true, order: 0 };
   const [calendarCategories, setCalendarCategories] = useState(() => {
     try {
       const saved = localStorage.getItem('insite_calendar_categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasTodo = parsed.some((c) => c.id === 'cat_todo' && !c.isDeleted);
+          if (hasTodo) {
+            const todo = parsed.find((c) => c.id === 'cat_todo');
+            const others = parsed.filter((c) => c.id !== 'cat_todo' && !c.isDeleted);
+            return [{ ...DEFAULT_CALENDAR_CATEGORY, ...todo, isDefault: true }, ...others];
+          } else {
+            return [DEFAULT_CALENDAR_CATEGORY, ...parsed.filter((c) => !c.isDeleted)];
+          }
+        }
       }
     } catch {}
-    return [
-      { id: 'cat_todo', name: '할일', color: '#3B82F6', isDefault: true, order: 0 }
-    ];
+    return [DEFAULT_CALENDAR_CATEGORY];
   });
   const [selectedCalendarCategoryId, setSelectedCalendarCategoryId] = useState('all');
   const [calendarEvents, setCalendarEvents] = useState(() => {
@@ -562,15 +570,26 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     try {
       const q = query(collection(db, 'calendar_categories'), orderBy('order', 'asc'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
+        let list = [];
         if (!snapshot.empty) {
-          const list = snapshot.docs
+          list = snapshot.docs
             .map((d) => ({ id: d.id, ...d.data() }))
             .filter((c) => !c.isDeleted);
-          if (list.length > 0) {
-            setCalendarCategories(list);
-            localStorage.setItem('insite_calendar_categories', JSON.stringify(list));
-          }
         }
+        // 전체일정 바로 아래에 '할일' 고정 보장
+        const hasDefault = list.some((c) => c.id === 'cat_todo');
+        let finalList;
+        if (hasDefault) {
+          const todo = list.find((c) => c.id === 'cat_todo');
+          const others = list.filter((c) => c.id !== 'cat_todo');
+          finalList = [{ ...DEFAULT_CALENDAR_CATEGORY, ...todo, isDefault: true }, ...others];
+        } else {
+          finalList = [DEFAULT_CALENDAR_CATEGORY, ...list];
+          // Firestore에 'cat_todo' 기본 문서 자동 생성 보존
+          setDoc(doc(db, 'calendar_categories', 'cat_todo'), DEFAULT_CALENDAR_CATEGORY).catch(() => {});
+        }
+        setCalendarCategories(finalList);
+        localStorage.setItem('insite_calendar_categories', JSON.stringify(finalList));
       }, (err) => console.warn('calendar_categories onSnapshot error:', err));
       return () => unsubscribe();
     } catch (e) {
@@ -700,54 +719,81 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     let targetItem = null;
     let targetChecklistId = null;
 
-    // 1. sourceMemo 필드가 있는 경우 우선 매칭
+    // 1. sourceMemo 필드가 있는 경우 우선 매칭 (1순위 정확 매칭)
     if (event.sourceMemo?.itemId) {
       targetItem = items.find((i) => i.id === event.sourceMemo.itemId && !i.isDeleted);
       targetChecklistId = event.sourceMemo.checklistId || null;
     }
 
-    // 2. sourceMemo가 없거나 못 찾은 경우 스마트 탐색 (제목/체크리스트 정확 일치)
-    if (!targetItem && event.title) {
-      const cleanEventTitle = event.title.trim();
+    const cleanEventTitle = (event.title || '').trim();
+
+    // 2. 제목 완전 일치 or 체크리스트 텍스트 완전 일치
+    if (!targetItem && cleanEventTitle.length > 0) {
       targetItem = items.find((i) => {
         if (i.isDeleted) return false;
-        if (i.title && i.title.trim() === cleanEventTitle) return true;
-        if (Array.isArray(i.checklists) && i.checklists.some((c) => c.text && c.text.trim() === cleanEventTitle)) {
+        const itemTitle = (i.title || '').trim();
+        if (itemTitle.length > 0 && itemTitle === cleanEventTitle) return true;
+        if (Array.isArray(i.checklists) && i.checklists.some((c) => (c.text || '').trim() === cleanEventTitle)) {
           return true;
         }
         return false;
       });
 
       if (targetItem && Array.isArray(targetItem.checklists)) {
-        const matched = targetItem.checklists.find((c) => c.text && c.text.trim() === cleanEventTitle);
+        const matched = targetItem.checklists.find((c) => (c.text || '').trim() === cleanEventTitle);
         if (matched) {
           targetChecklistId = matched.id;
         }
       }
     }
 
-    // 3. 부분 일치 탐색 (이벤트 제목에 메모 제목이 포함되거나 반대인 경우)
-    if (!targetItem && event.title) {
-      const cleanEventTitle = event.title.trim();
+    // 3. 체크리스트 또는 블록 내용 일치 탐색 (최소 3자 이상 검증)
+    if (!targetItem && cleanEventTitle.length >= 3) {
       targetItem = items.find((i) => {
         if (i.isDeleted) return false;
-        if (i.title && (i.title.trim().includes(cleanEventTitle) || cleanEventTitle.includes(i.title.trim()))) return true;
-        if (Array.isArray(i.checklists) && i.checklists.some((c) => c.text && (c.text.trim().includes(cleanEventTitle) || cleanEventTitle.includes(c.text.trim())))) {
+
+        // 체크리스트 부분/포함 일치
+        if (Array.isArray(i.checklists)) {
+          const matchCheck = i.checklists.find((c) => {
+            const checkText = (c.text || '').trim();
+            return checkText.length >= 3 && (checkText.includes(cleanEventTitle) || cleanEventTitle.includes(checkText));
+          });
+          if (matchCheck) {
+            targetChecklistId = matchCheck.id;
+            return true;
+          }
+        }
+
+        // 디테일 블록 텍스트 일치
+        if (Array.isArray(i.blocks)) {
+          const matchBlock = i.blocks.find((b) => {
+            const bTitle = (b.title || '').trim();
+            const bVal = (b.value || '').trim();
+            return (bTitle.length >= 3 && (bTitle.includes(cleanEventTitle) || cleanEventTitle.includes(bTitle))) ||
+                   (bVal.length >= 3 && (bVal.includes(cleanEventTitle) || cleanEventTitle.includes(bVal)));
+          });
+          if (matchBlock) return true;
+        }
+
+        return false;
+      });
+    }
+
+    // 4. 메모 제목 부분 일치 (itemTitle과 cleanEventTitle 모두 최소 3자 이상일 때만 비교하여 빈 문자열 오탐색 원천 차단)
+    if (!targetItem && cleanEventTitle.length >= 3) {
+      targetItem = items.find((i) => {
+        if (i.isDeleted) return false;
+        const itemTitle = (i.title || '').trim();
+        if (itemTitle.length >= 3 && (itemTitle.includes(cleanEventTitle) || cleanEventTitle.includes(itemTitle))) {
           return true;
         }
         return false;
       });
-
-      if (targetItem && Array.isArray(targetItem.checklists)) {
-        const matched = targetItem.checklists.find((c) => c.text && (c.text.trim().includes(cleanEventTitle) || cleanEventTitle.includes(c.text.trim())));
-        if (matched) {
-          targetChecklistId = matched.id;
-        }
-      }
     }
 
+    // 원본 메모를 찾지 못한 경우: 퀵메모로 잘못 이동하지 않고 정확한 안내 제공
     if (!targetItem) {
-      alert(`해당 일정('${event.title}')과 연결된 실제 원본 메모를 찾을 수 없습니다.`);
+      alert(`'${cleanEventTitle || '선택한 일정'}'은(는) 캘린더에서 직접 생성되었거나, 연결된 원본 메모를 찾을 수 없습니다.`);
       return;
     }
 
