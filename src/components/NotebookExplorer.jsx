@@ -6165,7 +6165,113 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     );
   };
 
-  const renderMainModeBar = (showUserBar = true) => (
+  const renderMainModeBar = (showUserBar = true) => {
+    // 모바일 캘린더 모드일 때는 화면 공간 확보를 위해 3줄 메인탭과 프로필 바를 숨기고 1줄 슬림 네비게이션만 표시
+    if (isMobile && (isCalendarMode || activeMainTab === 'calendar')) {
+      return (
+        <div style={{
+          ...styles.mainModeBar,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          borderBottom: 'none',
+          borderTop: '1px solid #CBD5E1',
+          backgroundColor: '#F8FAFC',
+          padding: '6px 8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCalendarMode(false);
+                if (activeMainTab === 'calendar') {
+                  setActiveMainTab('explorer');
+                }
+                setMobileView('items');
+              }}
+              style={{
+                flex: 1.2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                padding: '7px 4px',
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #93C5FD',
+                borderRadius: '6px',
+                color: '#1D4ED8',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(37, 99, 235, 0.1)',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+              title="메모장 화면으로 돌아가기"
+            >
+              <ArrowLeft size={14} />
+              <span>메모장</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenQuickMemo}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7px 4px',
+                backgroundColor: '#FEF3C7',
+                border: '1px solid #FDE047',
+                borderRadius: '6px',
+                color: '#B45309',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+              title="퀵메모 작성 모달 열기 (단축키: Alt+Q)"
+            >
+              <span>퀵메모</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCalendarMode(false);
+                if (activeMainTab === 'calendar') {
+                  setActiveMainTab('explorer');
+                }
+                setMobileView('items');
+              }}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7px 4px',
+                backgroundColor: '#DBEAFE',
+                border: '1px solid #2563EB',
+                borderRadius: '6px',
+                color: '#1D4ED8',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+              title="캘린더 모드 닫기 (메모장으로 복귀)"
+            >
+              <span>📅 캘린더</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
     <div style={isMobile ? {
       ...styles.mainModeBar,
       display: 'flex',
@@ -6512,6 +6618,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       </div>
     </div>
   );
+};
 
   const renderMobileFooter = (screenHeader, showUserBar = true) => (
     <div style={styles.mobileFooterContainer}>
