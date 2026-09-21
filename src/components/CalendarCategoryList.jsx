@@ -1,6 +1,67 @@
 import React, { useState } from 'react';
 import { Plus, Check, Edit2, Trash2, Tag, Calendar, Layers } from 'lucide-react';
 
+// 범주별 전용 테마(불렛, 폰트, 배경/테두리 색상) 정의
+export const getCategoryTheme = (cat) => {
+  const name = cat?.name?.trim() || '';
+  if (name === '계약') {
+    return {
+      bulletColor: '#16A34A', // 녹색
+      fontColor: '#15803D',   // 짙은 녹색 폰트
+      selectedBg: '#F0FDF4',
+      selectedBorder: '#86EFAC',
+      selectedFont: '#15803D',
+      countBg: '#DCFCE7',
+      countColor: '#166534'
+    };
+  }
+  if (name === '잔금') {
+    return {
+      bulletColor: '#DC2626', // 빨간색
+      fontColor: '#DC2626',   // 빨간색 폰트
+      selectedBg: '#FEF2F2',
+      selectedBorder: '#FCA5A5',
+      selectedFont: '#B91C1C',
+      countBg: '#FEE2E2',
+      countColor: '#991B1B'
+    };
+  }
+  if (name === '고객') {
+    return {
+      bulletColor: '#7C3AED', // 보라색
+      fontColor: '#7C3AED',   // 보라색 폰트
+      selectedBg: '#F5F3FF',
+      selectedBorder: '#C4B5FD',
+      selectedFont: '#6D28D9',
+      countBg: '#EDE9FE',
+      countColor: '#5B21B6'
+    };
+  }
+  if (name === '할일' || cat?.id === 'cat_todo') {
+    return {
+      bulletColor: '#3B82F6',
+      fontColor: '#1D4ED8',
+      selectedBg: '#EFF6FF',
+      selectedBorder: '#93C5FD',
+      selectedFont: '#1D4ED8',
+      countBg: '#DBEAFE',
+      countColor: '#1E40AF'
+    };
+  }
+
+  // 기타 사용자 정의 범주
+  const baseColor = cat?.color || '#3B82F6';
+  return {
+    bulletColor: baseColor,
+    fontColor: '#334155',
+    selectedBg: '#EFF6FF',
+    selectedBorder: '#93C5FD',
+    selectedFont: '#1D4ED8',
+    countBg: '#F1F5F9',
+    countColor: '#64748B'
+  };
+};
+
 export default function CalendarCategoryList({
   categories = [],
   selectedCategoryId = 'all',
@@ -25,17 +86,26 @@ export default function CalendarCategoryList({
 
   const handleCreateCategory = (e) => {
     e.preventDefault();
-    if (!newCatName.trim()) {
+    const trimmed = newCatName.trim();
+    if (!trimmed) {
       setIsAdding(false);
       return;
     }
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    let assignedColor = null;
+    if (trimmed === '계약') assignedColor = '#16A34A';
+    else if (trimmed === '잔금') assignedColor = '#DC2626';
+    else if (trimmed === '고객') assignedColor = '#7C3AED';
+    else if (trimmed === '할일') assignedColor = '#3B82F6';
+    else {
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1'];
+      assignedColor = colors[Math.floor(Math.random() * colors.length)];
+    }
     
     const newCategory = {
       id: 'cat_' + Date.now(),
-      name: newCatName.trim(),
-      color: randomColor,
+      name: trimmed,
+      color: assignedColor,
       isDefault: false,
       isDeleted: false,
       order: categories.length
@@ -54,8 +124,14 @@ export default function CalendarCategoryList({
 
   const handleSaveEdit = (catId, e) => {
     e.stopPropagation();
-    if (editingCatName.trim()) {
-      onUpdateCategory(catId, { name: editingCatName.trim() });
+    const trimmed = editingCatName.trim();
+    if (trimmed) {
+      const updates = { name: trimmed };
+      if (trimmed === '계약') updates.color = '#16A34A';
+      else if (trimmed === '잔금') updates.color = '#DC2626';
+      else if (trimmed === '고객') updates.color = '#7C3AED';
+      else if (trimmed === '할일') updates.color = '#3B82F6';
+      onUpdateCategory(catId, updates);
     }
     setEditingCatId(null);
   };
@@ -154,6 +230,7 @@ export default function CalendarCategoryList({
             const isSelected = selectedCategoryId === cat.id;
             const isEditing = editingCatId === cat.id;
             const count = getEventCount(cat.id);
+            const theme = getCategoryTheme(cat);
 
           return (
             <div
@@ -167,10 +244,10 @@ export default function CalendarCategoryList({
                 borderRadius: '8px',
                 marginBottom: '4px',
                 cursor: isEditing ? 'default' : 'pointer',
-                backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                border: `1px solid ${isSelected ? '#93C5FD' : '#E2E8F0'}`,
-                color: isSelected ? '#1D4ED8' : '#334155',
-                fontWeight: isSelected ? 700 : 500,
+                backgroundColor: isSelected ? theme.selectedBg : '#FFFFFF',
+                border: `1px solid ${isSelected ? theme.selectedBorder : '#E2E8F0'}`,
+                color: isSelected ? theme.selectedFont : theme.fontColor,
+                fontWeight: isSelected ? 700 : 600,
                 fontSize: '13px',
                 transition: 'all 0.15s'
               }}
@@ -187,7 +264,7 @@ export default function CalendarCategoryList({
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: cat.color || '#3B82F6',
+                    backgroundColor: theme.bulletColor,
                     flexShrink: 0
                   }}
                 />
@@ -206,13 +283,20 @@ export default function CalendarCategoryList({
                       padding: '2px 6px',
                       fontSize: '12px',
                       borderRadius: '4px',
-                      border: '1px solid #3B82F6',
+                      border: `1px solid ${theme.bulletColor}`,
                       outline: 'none'
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: isSelected ? theme.selectedFont : theme.fontColor
+                    }}
+                  >
                     {cat.name}
                   </span>
                 )}
@@ -241,9 +325,10 @@ export default function CalendarCategoryList({
                         fontSize: '11px',
                         padding: '1px 6px',
                         borderRadius: '10px',
-                        backgroundColor: isSelected ? '#DBEAFE' : '#F1F5F9',
-                        color: isSelected ? '#1E40AF' : '#64748B',
-                        marginRight: '2px'
+                        backgroundColor: isSelected ? theme.countBg : '#F1F5F9',
+                        color: isSelected ? theme.countColor : '#64748B',
+                        marginRight: '2px',
+                        fontWeight: 600
                       }}
                     >
                       {count}

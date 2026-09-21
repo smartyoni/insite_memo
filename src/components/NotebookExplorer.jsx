@@ -531,13 +531,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const hasTodo = parsed.some((c) => c.id === 'cat_todo' && !c.isDeleted);
+          let rawList;
           if (hasTodo) {
             const todo = parsed.find((c) => c.id === 'cat_todo');
             const others = parsed.filter((c) => c.id !== 'cat_todo' && !c.isDeleted);
-            return [{ ...DEFAULT_CALENDAR_CATEGORY, ...todo, isDefault: true }, ...others];
+            rawList = [{ ...DEFAULT_CALENDAR_CATEGORY, ...todo, isDefault: true }, ...others];
           } else {
-            return [DEFAULT_CALENDAR_CATEGORY, ...parsed.filter((c) => !c.isDeleted)];
+            rawList = [DEFAULT_CALENDAR_CATEGORY, ...parsed.filter((c) => !c.isDeleted)];
           }
+          return rawList.map((c) => {
+            if (c.name === '계약') return { ...c, color: '#16A34A' };
+            if (c.name === '잔금') return { ...c, color: '#DC2626' };
+            if (c.name === '고객') return { ...c, color: '#7C3AED' };
+            if (c.name === '할일') return { ...c, color: '#3B82F6' };
+            return c;
+          });
         }
       }
     } catch {}
@@ -588,6 +596,24 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           // Firestore에 'cat_todo' 기본 문서 자동 생성 보존
           setDoc(doc(db, 'calendar_categories', 'cat_todo'), DEFAULT_CALENDAR_CATEGORY).catch(() => {});
         }
+
+        // '계약'(#16A34A), '잔금'(#DC2626), '고객'(#7C3AED) 색상 자동 마이그레이션
+        finalList = finalList.map((c) => {
+          let expectedColor = null;
+          if (c.name === '계약') expectedColor = '#16A34A';
+          else if (c.name === '잔금') expectedColor = '#DC2626';
+          else if (c.name === '고객') expectedColor = '#7C3AED';
+          else if (c.name === '할일') expectedColor = '#3B82F6';
+
+          if (expectedColor && c.color !== expectedColor) {
+            if (c.id && !c.id.startsWith('temp_')) {
+              updateDoc(doc(db, 'calendar_categories', c.id), { color: expectedColor }).catch(() => {});
+            }
+            return { ...c, color: expectedColor };
+          }
+          return c;
+        });
+
         setCalendarCategories(finalList);
         localStorage.setItem('insite_calendar_categories', JSON.stringify(finalList));
       }, (err) => console.warn('calendar_categories onSnapshot error:', err));
@@ -603,9 +629,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     try {
       const q = query(collection(db, 'calendar_events'), orderBy('createdAt', 'desc'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const list = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((e) => !e.isDeleted);
+        let list = [];
+        if (!snapshot.empty) {
+          list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        }
         setCalendarEvents(list);
         localStorage.setItem('insite_calendar_events', JSON.stringify(list));
       }, (err) => console.warn('calendar_events onSnapshot error:', err));
@@ -617,12 +644,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   // 범주 추가
   const handleAddCalendarCategory = async (newCat) => {
-    const next = [...calendarCategories, newCat];
+    let catToSave = { ...newCat };
+    if (catToSave.name === '계약') catToSave.color = '#16A34A';
+    else if (catToSave.name === '잔금') catToSave.color = '#DC2626';
+    else if (catToSave.name === '고객') catToSave.color = '#7C3AED';
+    else if (catToSave.name === '할일') catToSave.color = '#3B82F6';
+
+    const next = [...calendarCategories, catToSave];
     setCalendarCategories(next);
     localStorage.setItem('insite_calendar_categories', JSON.stringify(next));
     if (currentUser) {
       try {
-        await setDoc(doc(db, 'calendar_categories', newCat.id), newCat);
+        await setDoc(doc(db, 'calendar_categories', catToSave.id), catToSave);
       } catch (err) {
         console.error('Save calendar category failed:', err);
       }
@@ -631,12 +664,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   // 범주 수정
   const handleUpdateCalendarCategory = async (catId, updates) => {
-    const next = calendarCategories.map((c) => (c.id === catId ? { ...c, ...updates } : c));
+    const finalUpdates = { ...updates };
+    if (finalUpdates.name === '계약') finalUpdates.color = '#16A34A';
+    else if (finalUpdates.name === '잔금') finalUpdates.color = '#DC2626';
+    else if (finalUpdates.name === '고객') finalUpdates.color = '#7C3AED';
+    else if (finalUpdates.name === '할일') finalUpdates.color = '#3B82F6';
+
+    const next = calendarCategories.map((c) => (c.id === catId ? { ...c, ...finalUpdates } : c));
     setCalendarCategories(next);
     localStorage.setItem('insite_calendar_categories', JSON.stringify(next));
     if (currentUser) {
       try {
-        await updateDoc(doc(db, 'calendar_categories', catId), updates);
+        await updateDoc(doc(db, 'calendar_categories', catId), finalUpdates);
       } catch (err) {
         console.error('Update calendar category failed:', err);
       }

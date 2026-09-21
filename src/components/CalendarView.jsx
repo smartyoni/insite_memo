@@ -90,6 +90,10 @@ export default function CalendarView({
 
   const getCategoryColor = (catId) => {
     const cat = categories.find(c => c.id === catId);
+    if (cat?.name === '계약') return '#16A34A';
+    if (cat?.name === '잔금') return '#DC2626';
+    if (cat?.name === '고객') return '#7C3AED';
+    if (cat?.name === '할일') return '#3B82F6';
     return cat?.color || '#3B82F6';
   };
 
