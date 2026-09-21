@@ -856,6 +856,76 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  // 원본 메모/체크리스트 내용 수정 시 연동된 캘린더 일정명 실시간 동기화
+  const syncCalendarEventTitle = async ({ itemId, checklistId = null, oldText = '', newText = '' }) => {
+    if (!newText || !newText.trim()) return;
+    const trimmedNew = newText.trim();
+    const trimmedOld = (oldText || '').trim();
+
+    // 동기화 대상 일정 탐색
+    const targetEvents = calendarEvents.filter((e) => {
+      if (e.isDeleted) return false;
+
+      // 1. sourceMemo 기반 매칭 (가장 정확)
+      if (e.sourceMemo?.itemId === itemId) {
+        if (checklistId) {
+          if (e.sourceMemo?.checklistId === checklistId) return true;
+        } else {
+          // 메모 제목인 경우 checklistId가 없는 일정 매칭
+          if (!e.sourceMemo?.checklistId) return true;
+        }
+      }
+
+      // 2. 과거 일정 매칭: 이전 텍스트와 일정 제목이 완전 일치하는 경우
+      if (trimmedOld && e.title && e.title.trim() === trimmedOld) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (targetEvents.length === 0) return;
+
+    const targetEventIds = new Set(targetEvents.map((e) => e.id));
+    const nextEvents = calendarEvents.map((e) => {
+      if (targetEventIds.has(e.id)) {
+        return {
+          ...e,
+          title: trimmedNew,
+          sourceMemo: e.sourceMemo || {
+            itemId,
+            checklistId: checklistId || null
+          }
+        };
+      }
+      return e;
+    });
+
+    setCalendarEvents(nextEvents);
+    localStorage.setItem('insite_calendar_events', JSON.stringify(nextEvents));
+
+    // Firestore 일괄 업데이트
+    if (currentUser) {
+      try {
+        const batch = writeBatch(db);
+        targetEvents.forEach((e) => {
+          const docRef = doc(db, 'calendar_events', e.id);
+          batch.update(docRef, {
+            title: trimmedNew,
+            sourceMemo: e.sourceMemo || {
+              itemId,
+              checklistId: checklistId || null
+            },
+            updatedAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error('Error syncing calendar event title:', err);
+      }
+    }
+  };
+
   // 상세화면 좌측 블록/체크리스트에서 우클릭/롱프레스 시 모달 오픈
   const handleOpenCreateEventFromBlock = (data) => {
     setCreateEventModalState({
@@ -3040,6 +3110,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         checklists: updated,
         updatedAt: serverTimestamp()
       });
+      if (currentIdx !== -1 && currentText !== undefined) {
+        const oldText = baseChecklists[currentIdx]?.text || '';
+        const newText = currentText.trim();
+        if (oldText && newText && oldText !== newText) {
+          syncCalendarEventTitle({
+            itemId: activeItem.id,
+            checklistId: currentItemId,
+            oldText,
+            newText
+          });
+        }
+      }
     } catch (err) {
       console.error('Error adding next checklist in group:', err);
     }
@@ -3356,12 +3438,15 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       setEditingCheckText('');
       return;
     }
+    const oldItem = baseChecklists.find((c) => c.id === checkId);
+    const oldText = oldItem?.text || '';
+    const newText = editingCheckText.trim();
     const finalTag = editingCheckTag === 'custom' ? customTagInput.trim() : editingCheckTag;
     const updated = baseChecklists.map((c) =>
       c.id === checkId
         ? {
             ...c,
-            text: editingCheckText.trim(),
+            text: newText,
             tag: finalTag || null
           }
         : c
@@ -3375,6 +3460,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         checklists: updated,
         updatedAt: serverTimestamp()
       });
+      if (oldText && newText && oldText !== newText) {
+        syncCalendarEventTitle({
+          itemId: activeItem.id,
+          checklistId: checkId,
+          oldText,
+          newText
+        });
+      }
     } catch (err) {
       console.error('Error updating checklist:', err);
     }
@@ -5033,6 +5126,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       return;
     }
     const currentItem = items.find((it) => it.id === itemId);
+    const oldTitle = currentItem?.title || '';
     if (currentItem && currentItem.title === trimmed) {
       setEditingItemId(null);
       return;
@@ -5043,6 +5137,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         updatedAt: serverTimestamp()
       });
       setEditingItemId(null);
+      if (oldTitle && trimmed && oldTitle !== trimmed) {
+        syncCalendarEventTitle({
+          itemId,
+          checklistId: null,
+          oldText: oldTitle,
+          newText: trimmed
+        });
+      }
     } catch (err) {
       console.error('Error updating item title:', err);
     }
@@ -5830,6 +5932,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       const blocksPlainText = blocksToPlainText(checklistDetailBlocks);
       const finalBody = draftTemplateId ? buildTemplateCombinedBody(draftTemplateId, draftTemplateValues) : (blocksPlainText || draftBody);
 
+      const oldTitle = activeItem?.title || '';
       const finalTitle = draftTitle.trim() || activeItem?.title || '새 메모';
       const finalCategoryId = draftCategoryId || activeItem?.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories);
       const updatePayload = {
@@ -5851,6 +5954,34 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       }
 
       await updateDoc(doc(db, 'items', selectedItemId), updatePayload);
+
+      // 메모 제목 변경 시 연동된 캘린더 일정명 동기화
+      if (oldTitle && finalTitle && oldTitle !== finalTitle) {
+        syncCalendarEventTitle({
+          itemId: selectedItemId,
+          checklistId: null,
+          oldText: oldTitle,
+          newText: finalTitle
+        });
+      }
+
+      // 체크리스트 변경 시 연동된 캘린더 일정명 동기화
+      if (draftChecklists !== null && Array.isArray(activeItem?.checklists)) {
+        draftChecklists.forEach((dc) => {
+          if (!dc.isSection && dc.id && dc.text) {
+            const oldCheck = activeItem.checklists.find((ac) => ac.id === dc.id);
+            if (oldCheck && oldCheck.text && oldCheck.text.trim() !== dc.text.trim()) {
+              syncCalendarEventTitle({
+                itemId: selectedItemId,
+                checklistId: dc.id,
+                oldText: oldCheck.text,
+                newText: dc.text.trim()
+              });
+            }
+          }
+        });
+      }
+
       if (draftCategoryId !== selectedCategoryId) {
         setSelectedCategoryId(draftCategoryId);
       }
