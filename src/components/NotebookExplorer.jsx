@@ -551,8 +551,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     isOpen: false,
     initialTitle: '',
     initialBlocks: [],
-    date: ''
+    date: '',
+    sourceMemo: null
   });
+  const [calendarReturnContext, setCalendarReturnContext] = useState(null); // { categoryId, eventId }
 
   // Firestore 캘린더 범주 실시간 동기화
   useEffect(() => {
@@ -691,13 +693,114 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  // 캘린더 일정에서 실제 원본 메모 위치로 이동
+  const handleNavigateToEventSource = (event) => {
+    if (!event) return;
+
+    let targetItem = null;
+    let targetChecklistId = null;
+
+    // 1. sourceMemo 필드가 있는 경우 우선 매칭
+    if (event.sourceMemo?.itemId) {
+      targetItem = items.find((i) => i.id === event.sourceMemo.itemId && !i.isDeleted);
+      targetChecklistId = event.sourceMemo.checklistId || null;
+    }
+
+    // 2. sourceMemo가 없거나 못 찾은 경우 스마트 탐색 (제목/체크리스트 정확 일치)
+    if (!targetItem && event.title) {
+      const cleanEventTitle = event.title.trim();
+      targetItem = items.find((i) => {
+        if (i.isDeleted) return false;
+        if (i.title && i.title.trim() === cleanEventTitle) return true;
+        if (Array.isArray(i.checklists) && i.checklists.some((c) => c.text && c.text.trim() === cleanEventTitle)) {
+          return true;
+        }
+        return false;
+      });
+
+      if (targetItem && Array.isArray(targetItem.checklists)) {
+        const matched = targetItem.checklists.find((c) => c.text && c.text.trim() === cleanEventTitle);
+        if (matched) {
+          targetChecklistId = matched.id;
+        }
+      }
+    }
+
+    // 3. 부분 일치 탐색 (이벤트 제목에 메모 제목이 포함되거나 반대인 경우)
+    if (!targetItem && event.title) {
+      const cleanEventTitle = event.title.trim();
+      targetItem = items.find((i) => {
+        if (i.isDeleted) return false;
+        if (i.title && (i.title.trim().includes(cleanEventTitle) || cleanEventTitle.includes(i.title.trim()))) return true;
+        if (Array.isArray(i.checklists) && i.checklists.some((c) => c.text && (c.text.trim().includes(cleanEventTitle) || cleanEventTitle.includes(c.text.trim())))) {
+          return true;
+        }
+        return false;
+      });
+
+      if (targetItem && Array.isArray(targetItem.checklists)) {
+        const matched = targetItem.checklists.find((c) => c.text && (c.text.trim().includes(cleanEventTitle) || cleanEventTitle.includes(c.text.trim())));
+        if (matched) {
+          targetChecklistId = matched.id;
+        }
+      }
+    }
+
+    if (!targetItem) {
+      alert(`해당 일정('${event.title}')과 연결된 실제 원본 메모를 찾을 수 없습니다.`);
+      return;
+    }
+
+    // 복귀를 위해 현재 캘린더 화면 상태를 기억
+    setCalendarReturnContext({
+      categoryId: selectedCalendarCategoryId,
+      eventId: event.id
+    });
+
+    // 캘린더 모드 종료하고 원본 메모 위치로 전환
+    setIsCalendarMode(false);
+    setActiveMainTab('explorer');
+    setSelectedCategoryId(targetItem.categoryId);
+    setSelectedItemId(targetItem.id);
+
+    if (targetChecklistId) {
+      setSelectedChecklistId(targetChecklistId);
+      if (isMobile) {
+        setMobileSubTab('sub');
+      }
+    }
+
+    if (isMobile) {
+      setMobileView('detail');
+    }
+  };
+
+  // 실제 원본 메모 화면에서 다시 캘린더로 복귀
+  const handleReturnToCalendar = () => {
+    setIsCalendarMode(true);
+    if (calendarReturnContext?.categoryId) {
+      setSelectedCalendarCategoryId(calendarReturnContext.categoryId);
+    }
+    if (calendarReturnContext?.eventId) {
+      setSelectedCalendarEventId(calendarReturnContext.eventId);
+    }
+    if (isMobile) {
+      setMobileView('detail');
+    }
+  };
+
   // 상세화면 좌측 블록/체크리스트에서 우클릭/롱프레스 시 모달 오픈
   const handleOpenCreateEventFromBlock = (data) => {
     setCreateEventModalState({
       isOpen: true,
       initialTitle: data?.title || '',
       initialBlocks: Array.isArray(data?.blocks) ? data.blocks : [],
-      date: data?.date || ''
+      date: data?.date || '',
+      sourceMemo: data?.sourceMemo || (selectedItemId ? {
+        itemId: selectedItemId,
+        categoryId: selectedCategoryId,
+        checklistId: selectedChecklistId || null
+      } : null)
     });
   };
 
@@ -7532,6 +7635,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 }
               }}
               openDeleteModal={openDeleteModal}
+              onNavigateToSource={handleNavigateToEventSource}
             />
           </div>
           {isMobile && renderMobileFooter(
@@ -9462,10 +9566,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           isOpen: true,
                           initialTitle: '',
                           initialBlocks: [],
-                          date: date || ''
+                          date: date || '',
+                          sourceMemo: null
                         });
                       }}
                       onDeleteEvent={handleDeleteCalendarEvent}
+                      onNavigateToSource={handleNavigateToEventSource}
                     />
                   </div>
 
@@ -11238,6 +11344,31 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               >
                                 <ArrowLeft size={16} />
                                 <span>목록</span>
+                              </button>
+                            )}
+                            {calendarReturnContext && (
+                              <button
+                                type="button"
+                                onClick={handleReturnToCalendar}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: isMobile ? '3px 8px' : '4px 10px',
+                                  backgroundColor: '#EFF6FF',
+                                  border: '1.5px solid #3B82F6',
+                                  borderRadius: '6px',
+                                  color: '#1D4ED8',
+                                  fontSize: isMobile ? '11px' : '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 3px rgba(37, 99, 235, 0.2)',
+                                  flexShrink: 0
+                                }}
+                                title="이전에 보던 캘린더 화면으로 복귀"
+                              >
+                                <CalendarIcon size={isMobile ? 12 : 14} color="#2563EB" />
+                                <span>캘린더</span>
                               </button>
                             )}
                             <h1 style={{ ...styles.readTitle, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -14919,6 +15050,7 @@ onClick={() => {
         initialTitle={createEventModalState.initialTitle}
         initialBlocks={createEventModalState.initialBlocks}
         categories={calendarCategories}
+        sourceMemo={createEventModalState.sourceMemo}
         onSaveEvent={handleSaveCalendarEvent}
       />
     </div>

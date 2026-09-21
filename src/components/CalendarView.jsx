@@ -7,7 +7,8 @@ import {
   Clock,
   CheckCircle2,
   Trash2,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 export default function CalendarView({
@@ -17,7 +18,8 @@ export default function CalendarView({
   selectedEventId = null,
   onSelectEvent,
   onOpenCreateModal,
-  onDeleteEvent
+  onDeleteEvent,
+  onNavigateToSource
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('all'); // 'all' | 'day' | '3days' | 'month'
@@ -252,8 +254,45 @@ export default function CalendarView({
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>
-                    {event.title}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '2px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
+                      {event.title}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigateToSource) onNavigateToSource(event);
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '5px',
+                        color: '#2563EB',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        flexShrink: 0,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        e.currentTarget.style.borderColor = '#93C5FD';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        e.currentTarget.style.borderColor = '#CBD5E1';
+                      }}
+                      title="실제 원본 메모 위치로 이동"
+                    >
+                      <span>이동</span>
+                      <ExternalLink size={12} />
+                    </button>
                   </div>
                 </div>
               );
@@ -555,8 +594,35 @@ export default function CalendarView({
                             {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
                           </span>
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', wordBreak: 'break-word' }}>
-                          {event.title}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '2px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
+                            {event.title}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onNavigateToSource) onNavigateToSource(event);
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              backgroundColor: '#F8FAFC',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '4px',
+                              color: '#2563EB',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              flexShrink: 0
+                            }}
+                            title="실제 원본 메모 위치로 이동"
+                          >
+                            <span>이동</span>
+                            <ExternalLink size={11} />
+                          </button>
                         </div>
                       </div>
                     );
@@ -656,8 +722,45 @@ export default function CalendarView({
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>
-                    {event.title}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '2px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
+                      {event.title}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigateToSource) onNavigateToSource(event);
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '5px',
+                        color: '#2563EB',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        flexShrink: 0,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        e.currentTarget.style.borderColor = '#93C5FD';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        e.currentTarget.style.borderColor = '#CBD5E1';
+                      }}
+                      title="실제 원본 메모 위치로 이동"
+                    >
+                      <span>이동</span>
+                      <ExternalLink size={12} />
+                    </button>
                   </div>
                 </div>
               );
