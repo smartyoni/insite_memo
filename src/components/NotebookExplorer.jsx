@@ -11761,29 +11761,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             <h1 style={{ ...styles.readTitle, margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {highlightText(activeItem.title, searchQuery)}
                             </h1>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyItemPath(activeItem)}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: isMobile ? '3px 6px' : '3px 8px',
-                                backgroundColor: '#F0FDF4',
-                                border: '1px solid #86EFAC',
-                                borderRadius: '5px',
-                                fontSize: isMobile ? '10.5px' : '11px',
-                                color: '#15803D',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                                transition: 'all 0.15s ease'
-                              }}
-                              title={`경로 복사 (클릭): ${getItemFullPath(activeItem)}`}
-                            >
-                              <Copy size={12} color="#16A34A" />
-                              <span>경로 복사</span>
-                            </button>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
