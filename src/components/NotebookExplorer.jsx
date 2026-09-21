@@ -11216,7 +11216,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   title="우클릭 또는 길게 눌러 일정 만들기"
                                                 >
-                                                  <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                                  <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
+                                                    <span
+                                                      style={{
+                                                        width: '4.5px',
+                                                        height: '4.5px',
+                                                        borderRadius: '50%',
+                                                        backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
+                                                        marginTop: isMobile ? '6px' : '7px',
+                                                        flexShrink: 0
+                                                      }}
+                                                      aria-hidden="true"
+                                                    />
                                                     <span
                                                       onDoubleClick={(e) => {
                                                         if (checkItem.id !== '__main__') {
@@ -12704,7 +12715,18 @@ onClick={() => {
                                                 gap: isMobile ? '4px' : '8px',
                                                 minHeight: isMobile ? '22px' : '26px'
                                               }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
+                                                  <span
+                                                    style={{
+                                                      width: '4.5px',
+                                                      height: '4.5px',
+                                                      borderRadius: '50%',
+                                                      backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
+                                                      marginTop: isMobile ? '6px' : '7px',
+                                                      flexShrink: 0
+                                                    }}
+                                                    aria-hidden="true"
+                                                  />
                                                   <span
                                                     onDoubleClick={(e) => {
                                                       if (checkItem.id !== '__main__') {
