@@ -11219,11 +11219,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
                                                     <span
                                                       style={{
-                                                        width: '4.5px',
-                                                        height: '4.5px',
+                                                        width: '7px',
+                                                        height: '7px',
                                                         borderRadius: '50%',
                                                         backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
-                                                        marginTop: isMobile ? '6px' : '7px',
+                                                        marginTop: isMobile ? '5px' : '5.5px',
                                                         flexShrink: 0
                                                       }}
                                                       aria-hidden="true"
@@ -12718,11 +12718,11 @@ onClick={() => {
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
                                                   <span
                                                     style={{
-                                                      width: '4.5px',
-                                                      height: '4.5px',
+                                                      width: '7px',
+                                                      height: '7px',
                                                       borderRadius: '50%',
                                                       backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
-                                                      marginTop: isMobile ? '6px' : '7px',
+                                                      marginTop: isMobile ? '5px' : '5.5px',
                                                       flexShrink: 0
                                                     }}
                                                     aria-hidden="true"
