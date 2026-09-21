@@ -1771,6 +1771,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [openCategoryGroupMenuPos, setOpenCategoryGroupMenuPos] = useState({ top: 0, right: 0 });
   const [openItemGroupMenuId, setOpenItemGroupMenuId] = useState(null);
   const [openItemGroupMenuPos, setOpenItemGroupMenuPos] = useState({ top: 0, right: 0 });
+  const [openNoteMenuId, setOpenNoteMenuId] = useState(null);
+  const [openNoteMenuPos, setOpenNoteMenuPos] = useState({ top: 0, right: 0 });
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
@@ -3620,6 +3622,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  const handleOpenNoteMenu = (e, itemId) => {
+    e.stopPropagation();
+    if (openNoteMenuId === itemId) {
+      setOpenNoteMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 160;
+      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
+      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const right = Math.max(10, window.innerWidth - rect.right);
+      setOpenNoteMenuPos({ top, right });
+      setOpenNoteMenuId(itemId);
+    }
+  };
+
   const handleSaveChecklistDetail = async (checkId, blocksToSave) => {
     recordWorkLocation();
     const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
@@ -4166,6 +4183,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           setOpenItemGroupMenuId(null);
         } else if (openCatMenuId) {
           setOpenCatMenuId(null);
+        } else if (openNoteMenuId) {
+          setOpenNoteMenuId(null);
         } else if (openChecklistMenuId) {
           setOpenChecklistMenuId(null);
         } else if (isEditingChecklistDetail) {
@@ -4189,15 +4208,16 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
+  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, openNoteMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
 
   useEffect(() => {
-    if (!openChecklistMenuId && !openCatMenuId && !openCategoryGroupMenuId && !openItemGroupMenuId) return;
+    if (!openChecklistMenuId && !openCatMenuId && !openCategoryGroupMenuId && !openItemGroupMenuId && !openNoteMenuId) return;
     const handleCloseMenu = () => {
       setOpenChecklistMenuId(null);
       setOpenCatMenuId(null);
       setOpenCategoryGroupMenuId(null);
       setOpenItemGroupMenuId(null);
+      setOpenNoteMenuId(null);
     };
     window.addEventListener('resize', handleCloseMenu);
     window.addEventListener('scroll', handleCloseMenu, true);
@@ -4205,7 +4225,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       window.removeEventListener('resize', handleCloseMenu);
       window.removeEventListener('scroll', handleCloseMenu, true);
     };
-  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId]);
+  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, openNoteMenuId]);
 
   // ---------------- Category Group Handlers ----------------
   const toggleCategoryGroupCollapse = (groupId) => {
@@ -9229,40 +9249,142 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           ) : (
                                             <>
                                               <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const curCat = categories.find((c) => c.id === item.categoryId);
-                                                    let initialTab = activeMainTab;
-                                                    if (item.categoryId === 'quick_memo') {
-                                                      initialTab = 'explorer';
-                                                    } else if (curCat && curCat.scope) {
-                                                      const matchedTab = mainTabs.find((t) => getScopeForTab(t.id) === curCat.scope);
-                                                      if (matchedTab) initialTab = matchedTab.id;
-                                                    }
-                                                    setTargetMoveItemTab(initialTab);
-                                                    setTargetMoveCategoryGroupId(curCat ? (curCat.groupId || '') : '');
-                                                    setTargetMoveItemCategoryId(item.categoryId || '');
-                                                    setTargetMoveItemGroupId(item.groupId || '');
-                                                    setMovingItem(item);
-                                                  }}
-                                                  style={styles.actionBtnLight}
-                                                  title="다른 카테고리/그룹으로 이동">
-                                                <FolderInput size={13} color="#2563EB" />
-                                              </button>
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openDeleteModal(
-                                                    '휴지통으로 이동',
-                                                    `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
-                                                    () => handleMoveToTrash(item.id)
-                                                  );
+                                                type="button"
+                                                onClick={(e) => handleOpenNoteMenu(e, item.id)}
+                                                style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: isMobile ? '22px' : '20px',
+                                                  height: isMobile ? '22px' : '20px',
+                                                  border: 'none',
+                                                  backgroundColor: openNoteMenuId === item.id ? '#DCFCE7' : 'transparent',
+                                                  color: openNoteMenuId === item.id ? '#059669' : '#64748B',
+                                                  borderRadius: '4px',
+                                                  cursor: 'pointer',
+                                                  padding: 0,
+                                                  transition: 'all 0.15s ease'
                                                 }}
-                                                style={styles.actionBtnLight}
-                                                title="휴지통으로 이동"
+                                                onMouseEnter={(e) => {
+                                                  if (openNoteMenuId !== item.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  if (openNoteMenuId !== item.id) e.currentTarget.style.backgroundColor = 'transparent';
+                                                }}
+                                                title="메모 메뉴"
                                               >
-                                                <Trash2 size={13} />
+                                                <MoreVertical size={13} strokeWidth={2.2} />
                                               </button>
+
+                                              {/* 3점 드롭다운 팝업 메뉴 (수정, 메뉴이동, 삭제, 취소) */}
+                                              {openNoteMenuId === item.id && (
+                                                <>
+                                                  <div
+                                                    style={{
+                                                      position: 'fixed',
+                                                      top: 0,
+                                                      left: 0,
+                                                      right: 0,
+                                                      bottom: 0,
+                                                      zIndex: 9999,
+                                                      backgroundColor: 'transparent'
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenNoteMenuId(null);
+                                                    }}
+                                                  />
+                                                  <div
+                                                    style={{
+                                                      ...styles.checklistDropdownMenu,
+                                                      top: openNoteMenuPos?.top ?? 0,
+                                                      right: openNoteMenuPos?.right ?? 0,
+                                                      minWidth: '130px',
+                                                      padding: '4px',
+                                                      zIndex: 10000
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  >
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenNoteMenuId(null);
+                                                        setEditingItemId(item.id);
+                                                        setEditingItemInput(item.title || '');
+                                                      }}
+                                                      style={styles.checklistDropdownItem}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Edit2 size={13} color="#475569" />
+                                                      <span>수정</span>
+                                                    </button>
+
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenNoteMenuId(null);
+                                                        const curCat = categories.find((c) => c.id === item.categoryId);
+                                                        let initialTab = activeMainTab;
+                                                        if (item.categoryId === 'quick_memo') {
+                                                          initialTab = 'explorer';
+                                                        } else if (curCat && curCat.scope) {
+                                                          const matchedTab = mainTabs.find((t) => getScopeForTab(t.id) === curCat.scope);
+                                                          if (matchedTab) initialTab = matchedTab.id;
+                                                        }
+                                                        setTargetMoveItemTab(initialTab);
+                                                        setTargetMoveCategoryGroupId(curCat ? (curCat.groupId || '') : '');
+                                                        setTargetMoveItemCategoryId(item.categoryId || '');
+                                                        setTargetMoveItemGroupId(item.groupId || '');
+                                                        setMovingItem(item);
+                                                      }}
+                                                      style={styles.checklistDropdownItem}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <FolderInput size={13} color="#2563EB" />
+                                                      <span>메뉴 이동</span>
+                                                    </button>
+
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenNoteMenuId(null);
+                                                        openDeleteModal(
+                                                          '휴지통으로 이동',
+                                                          `'${item.title || '제목 없음'}' 메모를 휴지통으로 이동하시겠습니까?`,
+                                                          () => handleMoveToTrash(item.id)
+                                                        );
+                                                      }}
+                                                      style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Trash2 size={13} color="#DC2626" />
+                                                      <span>삭제</span>
+                                                    </button>
+
+                                                    <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '3px 0' }} />
+
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenNoteMenuId(null);
+                                                      }}
+                                                      style={{ ...styles.checklistDropdownItem, color: '#64748B' }}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <X size={13} color="#94A3B8" />
+                                                      <span>취소</span>
+                                                    </button>
+                                                  </div>
+                                                </>
+                                              )}
                                             </>
                                           )}
                                         </div>
