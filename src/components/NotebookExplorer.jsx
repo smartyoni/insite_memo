@@ -7867,7 +7867,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       )}
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                                       <span style={{
                                         fontSize: '11px',
                                         color: isSelected ? '#059669' : '#94A3B8',
@@ -7876,17 +7876,114 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         ({count})
                                       </span>
                                       {!ALL_FIXED_CATEGORY_IDS.includes(cat.id) && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openDeleteCategoryModal(cat);
-                                          }}
-                                          style={styles.actionBtnLight}
-                                          title="카테고리 삭제"
-                                        >
-                                          <Trash2 size={13} color="#DC2626" />
-                                        </button>
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleOpenCatMenu(e, cat.id)}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              width: isMobile ? '22px' : '20px',
+                                              height: isMobile ? '22px' : '20px',
+                                              border: 'none',
+                                              backgroundColor: openCatMenuId === cat.id ? '#DCFCE7' : 'transparent',
+                                              color: openCatMenuId === cat.id ? '#059669' : '#64748B',
+                                              borderRadius: '4px',
+                                              cursor: 'pointer',
+                                              padding: 0,
+                                              transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (openCatMenuId !== cat.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (openCatMenuId !== cat.id) e.currentTarget.style.backgroundColor = 'transparent';
+                                            }}
+                                            title="카테고리 메뉴"
+                                          >
+                                            <MoreVertical size={13} strokeWidth={2.2} />
+                                          </button>
+
+                                          {/* 3점 드롭다운 팝업 메뉴 (수정, 삭제, 취소) */}
+                                          {openCatMenuId === cat.id && (
+                                            <>
+                                              <div
+                                                style={{
+                                                  position: 'fixed',
+                                                  top: 0,
+                                                  left: 0,
+                                                  right: 0,
+                                                  bottom: 0,
+                                                  zIndex: 9999,
+                                                  backgroundColor: 'transparent'
+                                                }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setOpenCatMenuId(null);
+                                                }}
+                                              />
+                                              <div
+                                                style={{
+                                                  ...styles.checklistDropdownMenu,
+                                                  top: openCatMenuPos?.top ?? 0,
+                                                  right: openCatMenuPos?.right ?? 0,
+                                                  minWidth: '130px',
+                                                  padding: '4px',
+                                                  zIndex: 10000
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenCatMenuId(null);
+                                                    setEditingCategoryId(cat.id);
+                                                    setEditingCategoryInput(cat.name);
+                                                  }}
+                                                  style={styles.checklistDropdownItem}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <Edit2 size={13} color="#475569" />
+                                                  <span>수정</span>
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenCatMenuId(null);
+                                                    openDeleteCategoryModal(cat);
+                                                  }}
+                                                  style={{ ...styles.checklistDropdownItem, color: '#DC2626' }}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <Trash2 size={13} color="#DC2626" />
+                                                  <span>삭제</span>
+                                                </button>
+
+                                                <div style={{ height: '1px', backgroundColor: '#F1F5F9', margin: '3px 0' }} />
+
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenCatMenuId(null);
+                                                  }}
+                                                  style={{ ...styles.checklistDropdownItem, color: '#64748B' }}
+                                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                  <X size={13} color="#94A3B8" />
+                                                  <span>취소</span>
+                                                </button>
+                                              </div>
+                                            </>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>
