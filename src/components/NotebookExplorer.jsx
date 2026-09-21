@@ -11323,36 +11323,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                             type="button"
                                                             onClick={() => {
                                                               setOpenChecklistMenuId(null);
-                                                              handleMoveChecklistItem(checkItem.id, 'up');
-                                                            }}
-                                                            style={styles.checklistDropdownItem}
-                                                          >
-                                                            <ArrowUp size={14} color="#475569" />
-                                                            <span>위로 이동</span>
-                                                          </button>
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                              setOpenChecklistMenuId(null);
-                                                              handleMoveChecklistItem(checkItem.id, 'down');
-                                                            }}
-                                                            style={styles.checklistDropdownItem}
-                                                          >
-                                                            <ArrowDown size={14} color="#475569" />
-                                                            <span>아래로 이동</span>
-                                                          </button>
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => handleCopyChecklist(checkItem)}
-                                                            style={styles.checklistDropdownItem}
-                                                          >
-                                                            <Copy size={14} color="#475569" />
-                                                            <span>복사</span>
-                                                          </button>
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                              setOpenChecklistMenuId(null);
                                                               const preview = checkItem.text.length > 35 ? checkItem.text.slice(0, 35) + '...' : checkItem.text;
                                                               openDeleteModal(
                                                                 '체크리스트 항목 삭제',
@@ -12820,36 +12790,6 @@ onClick={() => {
                                                           <Edit2 size={14} color="#475569" />
                                                           <span>수정</span>
                                                         </button>
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => {
-                                                            setOpenChecklistMenuId(null);
-                                                            handleMoveChecklistItem(checkItem.id, 'up');
-                                                          }}
-                                                          style={styles.checklistDropdownItem}
-                                                        >
-                                                          <ArrowUp size={14} color="#475569" />
-                                                          <span>위로 이동</span>
-                                                        </button>
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => {
-                                                            setOpenChecklistMenuId(null);
-                                                            handleMoveChecklistItem(checkItem.id, 'down');
-                                                          }}
-                                                          style={styles.checklistDropdownItem}
-                                                        >
-                                                          <ArrowDown size={14} color="#475569" />
-                                                          <span>아래로 이동</span>
-                                                        </button>
-<button
-  type="button"
-  onClick={() => handleCopyChecklist(checkItem)}
-  style={styles.checklistDropdownItem}
->
-  <Copy size={14} color="#475569" />
-  <span>복사</span>
-</button>
                                                         <button
                                                           type="button"
                                                           onClick={() => {
