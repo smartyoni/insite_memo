@@ -87,6 +87,8 @@ import { useTemplateActions } from './notebook/hooks/useTemplateActions';
 import { useChecklistActions } from './notebook/hooks/useChecklistActions';
 import { useDetailBlockActions } from './notebook/hooks/useDetailBlockActions';
 import { useNoteDetailEdit } from './notebook/hooks/useNoteDetailEdit';
+import { useWorkLocationHistory } from './notebook/hooks/useWorkLocationHistory';
+import { useQuickMemoActions } from './notebook/hooks/useQuickMemoActions';
 import {
   extractAllStrings,
   getCategoryPath as getCategoryPathFn,
@@ -2192,230 +2194,50 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     displayedCategoryGrouped
   });
 
-  // ---------------- Global Work History Tracker (실제 작업 위치 추적) ----------------
-  const recordWorkLocation = (overrideLoc = null) => {
-    const tab = overrideLoc?.tab || activeMainTab;
-    const catId = overrideLoc?.catId || selectedCategoryId;
-    const itemId = overrideLoc?.itemId || selectedItemId;
-    const targetItem = items.find(i => i.id === itemId) || activeItem;
-    const itemTitle = overrideLoc?.itemTitle || targetItem?.title || (catId === 'quick_memo' ? '퀵메모' : '작업 메모');
-    const mobView = isMobile ? (overrideLoc?.mobileView || mobileView || 'detail') : null;
+  const {
+    recordWorkLocation,
+    previousWorkTarget,
+    handleReturnPrevious
+  } = useWorkLocationHistory({
+    activeMainTab,
+    setActiveMainTab,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    selectedItemId,
+    setSelectedItemId,
+    activeItem,
+    items,
+    isMobile,
+    mobileView,
+    setMobileView,
+    navHistory,
+    setNavHistory,
+    isNavigatingBackRef
+  });
 
-    if (!catId && !itemId) return;
-
-    const newLoc = {
-      tab,
-      catId,
-      itemId,
-      itemTitle,
-      mobileView: mobView,
-      timestamp: Date.now()
-    };
-
-    setNavHistory((prevStack) => {
-      if (prevStack.length > 0) {
-        const last = prevStack[prevStack.length - 1];
-        if (last.tab === newLoc.tab && last.catId === newLoc.catId && last.itemId === newLoc.itemId) {
-          const updated = [...prevStack];
-          updated[updated.length - 1] = newLoc;
-          return updated;
-        }
-      }
-      const nextStack = [...prevStack, newLoc];
-      return nextStack.length > 30 ? nextStack.slice(nextStack.length - 30) : nextStack;
-    });
-  };
-
-  const previousWorkTarget = React.useMemo(() => {
-    if (navHistory.length === 0) return null;
-    const last = navHistory[navHistory.length - 1];
-    const isCurrent =
-      last.tab === activeMainTab &&
-      last.catId === selectedCategoryId &&
-      last.itemId === selectedItemId;
-
-    if (isCurrent) {
-      return navHistory.length > 1 ? navHistory[navHistory.length - 2] : null;
-    }
-    return last;
-  }, [navHistory, activeMainTab, selectedCategoryId, selectedItemId]);
-
-  const handleReturnPrevious = () => {
-    if (!previousWorkTarget) return;
-
-    setNavHistory((prevStack) => {
-      if (prevStack.length === 0) return prevStack;
-
-      let nextStack = [...prevStack];
-      let targetLoc = nextStack[nextStack.length - 1];
-
-      const isCurrent =
-        targetLoc.tab === activeMainTab &&
-        targetLoc.catId === selectedCategoryId &&
-        targetLoc.itemId === selectedItemId;
-
-      if (isCurrent) {
-        nextStack.pop(); // 현재 작업 위치 제거
-        if (nextStack.length === 0) return [];
-        targetLoc = nextStack[nextStack.length - 1];
-      }
-
-      nextStack.pop(); // 복귀할 대상 위치 제거
-
-      isNavigatingBackRef.current = true;
-      if (targetLoc.tab && targetLoc.tab !== activeMainTab) {
-        setActiveMainTab(targetLoc.tab);
-      }
-      if (targetLoc.catId) {
-        setSelectedCategoryId(targetLoc.catId);
-      }
-      setSelectedItemId(targetLoc.itemId || null);
-
-      if (isMobile) {
-        if (targetLoc.mobileView) {
-          setMobileView(targetLoc.mobileView);
-        } else if (targetLoc.itemId) {
-          setMobileView('detail');
-        } else {
-          setMobileView('items');
-        }
-      }
-
-      return nextStack;
-    });
-  };
-
-  // ---------------- Global Quick Memo (Modal & Append to Today's Daily Note) ----------------
-  const handleNavigateToQuickMemo = () => {
-    if (activeMainTab !== 'explorer') {
-      setActiveMainTab('explorer');
-    }
-    navigateToItems(QUICK_MEMO_CATEGORY.id);
-  };
-
-  const handleOpenQuickMemo = () => {
-    setQuickMemoText('');
-    setIsQuickMemoOpen(true);
-    setTimeout(() => {
-      if (quickMemoTextareaRef.current) {
-        quickMemoTextareaRef.current.focus();
-      }
-    }, 60);
-  };
-
-  const handleCloseQuickMemo = () => {
-    setIsQuickMemoOpen(false);
-    setQuickMemoText('');
-  };
-
-  const handleSaveQuickMemo = async () => {
-    const text = quickMemoText.trim();
-    if (!text || isSavingQuickMemo) return;
-
-    setIsSavingQuickMemo(true);
-    try {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${year}-${month}-${day}`;
-
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const timeStr = `${hours}:${minutes}`;
-
-      // 2줄 요약 (체크리스트 표시용)
-      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-      const summaryLines = lines.slice(0, 2).join(' ');
-      const summaryText = summaryLines.length > 70 ? `${summaryLines.slice(0, 70)}...` : summaryLines;
-      const checkItemTitle = `[${timeStr}] ${summaryText}`;
-
-      // 세부 원문
-      const fullMemoBody = text;
-
-      const newChecklistId = `chk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const newChecklistItem = {
-        id: newChecklistId,
-        text: checkItemTitle,
-        completed: false,
-        detail: fullMemoBody,
-        detailBlocks: [
-          {
-            id: `b_${Date.now()}`,
-            type: 'text',
-            title: '',
-            content: fullMemoBody
-          }
-        ],
-        createdAt: Date.now()
-      };
-
-      // 오늘 날짜 퀵메모 노트 찾기
-      const existingTodayNote = items.find(
-        (item) => item.categoryId === 'quick_memo' && item.title === todayStr && !item.isDeleted
-      );
-
-      if (existingTodayNote) {
-        // 기존 노트의 체크리스트 맨 아래에 추가(Append)
-        const updatedChecklists = [...(existingTodayNote.checklists || []), newChecklistItem];
-        await updateDoc(doc(db, 'items', existingTodayNote.id), {
-          checklists: updatedChecklists,
-          updatedAt: serverTimestamp()
-        });
-        recordWorkLocation({
-          tab: 'explorer',
-          catId: 'quick_memo',
-          itemId: existingTodayNote.id,
-          itemTitle: `퀵메모 (${todayStr})`
-        });
-      } else {
-        // 오늘 첫 퀵메모 노트 신규 생성
-        const newRef = doc(collection(db, 'items'));
-        await setDoc(newRef, {
-          categoryId: 'quick_memo',
-          title: todayStr,
-          scope: 'explorer',
-          body: '',
-          subBody: '',
-          checklists: [newChecklistItem],
-          detailBlocks: [],
-          order: -Date.now(),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        recordWorkLocation({
-          tab: 'explorer',
-          catId: 'quick_memo',
-          itemId: newRef.id,
-          itemTitle: `퀵메모 (${todayStr})`
-        });
-      }
-
-      setIsQuickMemoOpen(false);
-      setQuickMemoText('');
-      setQuickMemoToast(true);
-      if (quickMemoToastTimerRef.current) clearTimeout(quickMemoToastTimerRef.current);
-      quickMemoToastTimerRef.current = setTimeout(() => setQuickMemoToast(false), 2200);
-    } catch (err) {
-      console.error('Error saving quick memo:', err);
-      alert('퀵메모 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSavingQuickMemo(false);
-    }
-  };
-
-  // Alt + Q Global Hotkey Listener
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Alt + Q (또는 한글 ㅂ 자판)
-      if (e.altKey && (e.key === 'q' || e.key === 'Q' || e.key === 'ㅂ' || e.code === 'KeyQ')) {
-        e.preventDefault();
-        handleOpenQuickMemo();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeMainTab, activeCategory, activeItem]);
+  const {
+    handleNavigateToQuickMemo,
+    handleOpenQuickMemo,
+    handleCloseQuickMemo,
+    handleSaveQuickMemo
+  } = useQuickMemoActions({
+    db,
+    activeMainTab,
+    setActiveMainTab,
+    activeCategory,
+    activeItem,
+    items,
+    navigateToItems,
+    quickMemoText,
+    setQuickMemoText,
+    setIsQuickMemoOpen,
+    quickMemoTextareaRef,
+    isSavingQuickMemo,
+    setIsSavingQuickMemo,
+    recordWorkLocation,
+    setQuickMemoToast,
+    quickMemoToastTimerRef
+  });
 
   const {
     handleQuickAddNote,
