@@ -771,70 +771,125 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   // 일정 하위 블록 수정 (3열 우측 패널 연동 + 원본 체크리스트/메모 본문 블록 실시간 동기화)
   const handleSaveCalendarEventBlocks = async (eventId, newBlocks) => {
-    const targetEvent = calendarEvents.find((e) => e.id === eventId);
+    let targetEvent = calendarEvents.find((e) => e.id === eventId);
+    if (!targetEvent) return;
+
+    // 1. 캘린더 이벤트 상태 및 로컬 스토리지 즉시 업데이트
     const next = calendarEvents.map((e) => (e.id === eventId ? { ...e, blocks: newBlocks } : e));
     setCalendarEvents(next);
     localStorage.setItem('insite_calendar_events', JSON.stringify(next));
 
-    // 원본 메모/체크리스트 하위 블록 내용 실시간 동기화
-    if (targetEvent?.sourceMemo?.itemId) {
-      const { itemId, checklistId } = targetEvent.sourceMemo;
-      const targetItem = items.find((i) => i.id === itemId);
+    // 2. 원본 메모 및 체크리스트 대상 찾기 (1순위: sourceMemo, 2순위: 제목/체크리스트 매칭)
+    let targetItem = null;
+    let targetChecklistId = null;
+
+    // 2-1. sourceMemo로 먼저 조회
+    if (targetEvent.sourceMemo?.itemId) {
+      targetItem = items.find((i) => i.id === targetEvent.sourceMemo.itemId && !i.isDeleted) || null;
+      targetChecklistId = targetEvent.sourceMemo.checklistId || null;
+    }
+
+    // 2-2. sourceMemo가 없거나 매칭되지 않은 경우 (과거 등록된 일정 등) -> 텍스트 매칭으로 원본 추적
+    const cleanTitle = (targetEvent.title || '').trim();
+    if (!targetItem && cleanTitle.length > 0) {
+      // 체크리스트 항목 텍스트와 일치하는지 먼저 탐색
+      for (const it of items) {
+        if (it.isDeleted) continue;
+        const matchedCheck = (it.checklists || []).find((c) => (c.text || '').trim() === cleanTitle);
+        if (matchedCheck) {
+          targetItem = it;
+          targetChecklistId = matchedCheck.id;
+          break;
+        }
+      }
+
+      // 체크리스트에 없으면 메모 제목과 일치하는지 탐색
+      if (!targetItem) {
+        targetItem = items.find((it) => !it.isDeleted && (it.title || '').trim() === cleanTitle) || null;
+      }
+
+      // 추적된 원본 정보를 해당 일정에 영구 저장 (앞으로 즉시 매칭)
       if (targetItem) {
-        const plainText = blocksToPlainText(newBlocks);
-        if (checklistId) {
-          // 1. 체크리스트 하위 블록 동기화
-          const updatedChecklists = (targetItem.checklists || []).map((c) =>
-            c.id === checklistId ? { ...c, detail: plainText, detailBlocks: newBlocks } : c
-          );
-          setItems((prev) =>
-            prev.map((i) => (i.id === itemId ? { ...i, checklists: updatedChecklists } : i))
-          );
-          if (activeItem?.id === itemId) {
-            setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
-            if (selectedChecklistId === checklistId) {
-              setChecklistDetailBlocks(newBlocks);
-              setChecklistDetailDraft(plainText);
-            }
-          }
-          if (currentUser) {
-            try {
-              await updateDoc(doc(db, 'items', itemId), {
-                checklists: updatedChecklists,
-                updatedAt: serverTimestamp()
-              });
-            } catch (err) {
-              console.error('Sync to source checklist detailBlocks failed:', err);
-            }
-          }
-        } else {
-          // 2. 메모 본문 블록 동기화
-          setItems((prev) =>
-            prev.map((i) => (i.id === itemId ? { ...i, body: plainText, detailBlocks: newBlocks } : i))
-          );
-          if (activeItem?.id === itemId) {
-            setActiveItem((prev) => ({ ...prev, body: plainText, detailBlocks: newBlocks }));
+        const autoSourceMemo = {
+          itemId: targetItem.id,
+          categoryId: targetItem.categoryId || null,
+          checklistId: targetChecklistId || null
+        };
+        targetEvent = { ...targetEvent, sourceMemo: autoSourceMemo, blocks: newBlocks };
+        setCalendarEvents((prev) => prev.map((e) => (e.id === eventId ? targetEvent : e)));
+        localStorage.setItem(
+          'insite_calendar_events',
+          JSON.stringify(calendarEvents.map((e) => (e.id === eventId ? targetEvent : e)))
+        );
+      }
+    }
+
+    // 3. 원본(체크리스트 또는 메모 본문)에 실시간 양방향 반영
+    if (targetItem) {
+      const plainText = blocksToPlainText(newBlocks);
+
+      if (targetChecklistId) {
+        // [A. 체크리스트 항목의 하위 블록 동기화]
+        const updatedChecklists = (targetItem.checklists || []).map((c) =>
+          c.id === targetChecklistId ? { ...c, detail: plainText, detailBlocks: newBlocks } : c
+        );
+
+        setItems((prev) =>
+          prev.map((i) => (i.id === targetItem.id ? { ...i, checklists: updatedChecklists } : i))
+        );
+
+        if (activeItem?.id === targetItem.id) {
+          setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
+          if (selectedChecklistId === targetChecklistId) {
             setChecklistDetailBlocks(newBlocks);
             setChecklistDetailDraft(plainText);
           }
-          if (currentUser) {
-            try {
-              await updateDoc(doc(db, 'items', itemId), {
-                body: plainText,
-                detailBlocks: newBlocks,
-                updatedAt: serverTimestamp()
-              });
-            } catch (err) {
-              console.error('Sync to source memo body/detailBlocks failed:', err);
-            }
+        }
+
+        if (currentUser) {
+          try {
+            await updateDoc(doc(db, 'items', targetItem.id), {
+              checklists: updatedChecklists,
+              updatedAt: serverTimestamp()
+            });
+          } catch (err) {
+            console.error('Sync to source checklist detailBlocks failed:', err);
+          }
+        }
+      } else {
+        // [B. 메모 본문 블록 동기화]
+        setItems((prev) =>
+          prev.map((i) => (i.id === targetItem.id ? { ...i, body: plainText, detailBlocks: newBlocks } : i))
+        );
+
+        if (activeItem?.id === targetItem.id) {
+          setActiveItem((prev) => ({ ...prev, body: plainText, detailBlocks: newBlocks }));
+          setChecklistDetailBlocks(newBlocks);
+          setChecklistDetailDraft(plainText);
+        }
+
+        if (currentUser) {
+          try {
+            await updateDoc(doc(db, 'items', targetItem.id), {
+              body: plainText,
+              detailBlocks: newBlocks,
+              updatedAt: serverTimestamp()
+            });
+          } catch (err) {
+            console.error('Sync to source memo body/detailBlocks failed:', err);
           }
         }
       }
     }
 
+    // 4. Firestore 캘린더 이벤트 문서 업데이트
     if (currentUser) {
       try {
-        await updateDoc(doc(db, 'calendar_events', eventId), { blocks: newBlocks });
+        const updatePayload = { blocks: newBlocks };
+        if (targetEvent?.sourceMemo) {
+          updatePayload.sourceMemo = targetEvent.sourceMemo;
+        }
+        await updateDoc(doc(db, 'calendar_events', eventId), updatePayload);
       } catch (err) {
         console.error('Update calendar event blocks failed:', err);
       }
@@ -10373,27 +10428,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       <button
                                         type="button"
-                                        onClick={() => handleOpenEditEventModal(selectedEvent)}
-                                        style={{
-                                          padding: '4px 8px',
-                                          borderRadius: '6px',
-                                          border: '1px solid #CBD5E1',
-                                          backgroundColor: '#FFFFFF',
-                                          color: '#334155',
-                                          fontSize: '11px',
-                                          fontWeight: 600,
-                                          cursor: 'pointer',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '3px'
-                                        }}
-                                        title="일정 정보(제목, 날짜, 시간, 범주) 수정"
-                                      >
-                                        <Edit2 size={12} color="#2563EB" />
-                                        <span>일정 수정</span>
-                                      </button>
-                                      <button
-                                        type="button"
                                         onClick={() => {
                                           if (window.confirm(`'${selectedEvent.title}' 일정을 일정에서 해제하시겠습니까?`)) {
                                             handleDeleteCalendarEvent(selectedEvent.id);
@@ -11184,7 +11218,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 const subBlocks = getCheckItemDetailBlocks(checkItem);
                                                 handleOpenCreateEventFromBlock({
                                                   title: checkItem.text || '',
-                                                  blocks: subBlocks
+                                                  blocks: subBlocks,
+                                                  sourceMemo: {
+                                                    itemId: activeItem.id,
+                                                    categoryId: activeItem.categoryId || selectedCategoryId,
+                                                    checklistId: checkItem.id
+                                                  },
                                                 });
                                               }}
                                               onTouchStart={() => {
@@ -11193,7 +11232,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   const subBlocks = getCheckItemDetailBlocks(checkItem);
                                                   handleOpenCreateEventFromBlock({
                                                     title: checkItem.text || '',
-                                                    blocks: subBlocks
+                                                    blocks: subBlocks,
+                                                    sourceMemo: {
+                                                      itemId: activeItem.id,
+                                                      categoryId: activeItem.categoryId || selectedCategoryId,
+                                                      checklistId: checkItem.id
+                                                    }
                                                   });
                                                 }, 500);
                                               }}
@@ -11327,14 +11371,24 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     e.stopPropagation();
                                                     handleOpenCreateEventFromBlock({
                                                       title: checkItem.text || '',
-                                                      blocks: checkItem.detailBlocks || []
+                                                      blocks: checkItem.detailBlocks || [],
+                                                      sourceMemo: {
+                                                        itemId: activeItem.id,
+                                                        categoryId: activeItem.categoryId || selectedCategoryId,
+                                                        checklistId: checkItem.id
+                                                      },
                                                     });
                                                   }}
                                                   onTouchStart={() => {
                                                     checkItemTouchTimerRef.current = setTimeout(() => {
                                                       handleOpenCreateEventFromBlock({
                                                         title: checkItem.text || '',
-                                                        blocks: checkItem.detailBlocks || []
+                                                        blocks: checkItem.detailBlocks || [],
+                                                        sourceMemo: {
+                                                          itemId: activeItem.id,
+                                                          categoryId: activeItem.categoryId || selectedCategoryId,
+                                                          checklistId: checkItem.id
+                                                        },
                                                       });
                                                     }, 500);
                                                   }}
@@ -11452,7 +11506,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                               const subBlocks = getCheckItemDetailBlocks(checkItem);
                                                               handleOpenCreateEventFromBlock({
                                                                 title: checkItem.text || '',
-                                                                blocks: subBlocks
+                                                                blocks: subBlocks,
+                                                                sourceMemo: {
+                                                                  itemId: activeItem.id,
+                                                                  categoryId: activeItem.categoryId || selectedCategoryId,
+                                                                  checklistId: checkItem.id
+                                                                },
                                                               });
                                                             }}
                                                             style={styles.checklistDropdownItem}
@@ -12738,7 +12797,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               const subBlocks = getCheckItemDetailBlocks(checkItem);
                                               handleOpenCreateEventFromBlock({
                                                 title: checkItem.text || '',
-                                                blocks: subBlocks
+                                                blocks: subBlocks,
+                                                sourceMemo: {
+                                                  itemId: activeItem.id,
+                                                  categoryId: activeItem.categoryId || selectedCategoryId,
+                                                  checklistId: checkItem.id
+                                                },
                                               });
                                             }}
                                             onTouchStart={() => {
@@ -12747,7 +12811,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 const subBlocks = getCheckItemDetailBlocks(checkItem);
                                                 handleOpenCreateEventFromBlock({
                                                   title: checkItem.text || '',
-                                                  blocks: subBlocks
+                                                  blocks: subBlocks,
+                                                  sourceMemo: {
+                                                    itemId: activeItem.id,
+                                                    categoryId: activeItem.categoryId || selectedCategoryId,
+                                                    checklistId: checkItem.id
+                                                  },
                                                 });
                                               }, 500);
                                             }}
