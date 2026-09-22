@@ -70,6 +70,9 @@ import CalendarView from './CalendarView';
 import CreateEventModal from './CreateEventModal';
 import Template2Modal from './notebook/modals/Template2Modal';
 import SettingsBackupModal from './notebook/modals/SettingsBackupModal';
+import MoveBlockModal from './notebook/modals/MoveBlockModal';
+import CategoryMoveModal from './notebook/modals/CategoryMoveModal';
+import MoveItemModal from './notebook/modals/MoveItemModal';
 import { MainModeBar, UserBar } from './notebook/MainModeBar';
 import {
   getLatestCloudBackupInfo,
@@ -12971,540 +12974,108 @@ onClick={() => {
       )}
 
       {/* Detail Block Move Modal */}
-      {moveBlockModalState.isOpen && (
-        <div style={styles.modalOverlay} onClick={handleCloseMoveBlockModal}>
-          <div
-            style={{
-              ...styles.modalContent,
-              maxWidth: '440px',
-              width: isMobile ? '92%' : '420px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <FolderInput size={18} color="#2563EB" />
-                </div>
-                <h3 style={styles.modalTitle}>블록 소속 이동</h3>
-              </div>
-              <button onClick={handleCloseMoveBlockModal} style={styles.modalCloseBtn} title="닫기">
-                <X size={18} />
-              </button>
-            </div>
+      <MoveBlockModal
+        isOpen={moveBlockModalState.isOpen}
+        modalState={moveBlockModalState}
+        onClose={handleCloseMoveBlockModal}
+        onSelectTarget={(targetCheckId) => setMoveBlockModalState(prev => ({ ...prev, targetCheckId }))}
+        onExecute={handleExecuteMoveBlock}
+        rawChecklists={rawChecklists}
+        checklistGroups={checklistGroups}
+        isMobile={isMobile}
+      />
 
-            <div style={styles.modalBody}>
-              {/* 이동 대상 블록 미리보기 카드 */}
-              <div style={{
-                padding: '10px 12px',
-                backgroundColor: '#F8FAFC',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                marginBottom: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700 }}>
-                  {moveBlockModalState.block?.type === 'checklist' ? (
-                    <span style={{ color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
-                      ☑️ 체크리스트 블록
-                    </span>
-                  ) : (
-                    <span style={{ color: '#1D4ED8', backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px' }}>
-                      📝 텍스트 블록
-                    </span>
-                  )}
-                </div>
-                <div style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#1E293B',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {moveBlockModalState.block?.title || (
-                    moveBlockModalState.block?.type === 'checklist'
-                      ? (moveBlockModalState.block?.items?.[0]?.text || '체크리스트')
-                      : (moveBlockModalState.block?.content?.split('\n')[0] || '(내용 없음)')
-                  )}
-                </div>
-              </div>
-
-              <p style={{ ...styles.modalMessage, marginBottom: '8px', fontWeight: 600, color: '#334155' }}>
-                이동할 대상 체크리스트를 선택하세요:
-              </p>
-
-              {(() => {
-                const candidates = rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId);
-                if (candidates.length === 0) {
-                  return (
-                    <div style={{ padding: '14px', textAlign: 'center', color: '#94A3B8', fontSize: '13px', backgroundColor: '#F8FAFC', borderRadius: '8px' }}>
-                      이동할 수 있는 다른 체크리스트가 없습니다. 먼저 좌측에서 새 체크리스트를 추가해 주세요.
-                    </div>
-                  );
-                }
-
-                return (
-                  <select
-                    value={moveBlockModalState.targetCheckId || ''}
-                    onChange={(e) => setMoveBlockModalState(prev => ({ ...prev, targetCheckId: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1.5px solid #2563EB',
-                      backgroundColor: '#FFFFFF',
-                      fontSize: '13px',
-                      color: '#0F172A',
-                      outline: 'none',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {/* 기본 내용 (현재 소속이 아닐 때) */}
-                    {moveBlockModalState.sourceCheckId !== '__main__' && (
-                      <option value="__main__">📝 [기본 내용]</option>
-                    )}
-
-                    {/* 체크리스트 그룹별 항목들 */}
-                    {checklistGroups.map((grp, gIdx) => {
-                      const validItems = grp.items.filter((it) => it.id !== '__main__' && !it.isSection && it.id !== moveBlockModalState.sourceCheckId);
-                      if (validItems.length === 0) return null;
-
-                      if (grp.section && grp.section.text) {
-                        return (
-                          <optgroup key={`opt_grp_${gIdx}`} label={`📁 ${grp.section.text}`}>
-                            {validItems.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.completed ? '✓ ' : '□ '} {c.text}
-                              </option>
-                            ))}
-                          </optgroup>
-                        );
-                      }
-
-                      return (
-                        <optgroup key={`opt_ungrp_${gIdx}`} label="일반 체크리스트">
-                          {validItems.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.completed ? '✓ ' : '□ '} {c.text}
-                            </option>
-                          ))}
-                        </optgroup>
-                      );
-                    })}
-                  </select>
-                );
-              })()}
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button type="button" onClick={handleCloseMoveBlockModal} style={styles.btnModalCancel}>
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteMoveBlock}
-                disabled={!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0}
-                style={{
-                  ...styles.btnPrimary,
-                  padding: '7px 16px',
-                  backgroundColor: (!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0) ? '#94A3B8' : '#2563EB',
-                  cursor: (!moveBlockModalState.targetCheckId || rawChecklists.filter((c) => !c.isSection && c.id !== moveBlockModalState.sourceCheckId).length === 0) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                이동하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Move Modal (Mobile & Desktop) */}
-      {movingCategory && (
-        <div
-          style={{
-            ...styles.modalOverlay,
-            display: 'block'
-          }}
-          onClick={() => setMovingCategory(null)}
-        >
-          <div
-            style={{
-              ...styles.modalContent,
-              position: 'absolute',
-              top: '33.33%',
-              left: isMobile ? '50%' : `${sidebarRef.current?.getBoundingClientRect().right || 280}px`,
-              transform: isMobile ? 'translate(-50%, -50%)' : 'translateY(-50%)',
-              width: isMobile ? '90%' : '380px',
-              maxWidth: '400px',
-              border: '1px solid #E2E8F0',
-              margin: 0
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <FolderInput size={18} color="#2563EB" />
-                </div>
-                <h3 style={styles.modalTitle}>폴더 이동</h3>
-              </div>
-              <button onClick={() => setMovingCategory(null)} style={styles.modalCloseBtn} title="닫기">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <p style={{ ...styles.modalMessage, marginBottom: '14px' }}>
-                <strong>'{movingCategory.name}'</strong> 폴더의 상위(부모) 폴더를 선택하세요:
-              </p>
-              <select
-                value={targetMoveParentId}
-                onChange={(e) => setTargetMoveParentId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13.5px',
-                  color: '#1E293B',
-                  outline: 'none',
-                  backgroundColor: '#F8FAFC'
-                }}
-              >
-                <option value="">[ 최상위(루트) 폴더 ]</option>
-                {getHierarchicalCategoryOptions(currentScope, movingCategory.id)
-                  .filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.displayName || c.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button onClick={() => setMovingCategory(null)} style={styles.btnModalCancel}>
-                취소
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const newPid = targetMoveParentId.trim() || null;
-                    await updateDoc(doc(db, 'categories', movingCategory.id), {
-                      parentId: newPid
-                    });
-                    if (newPid) {
-                      setExpandedFolders((prev) => ({ ...prev, [newPid]: true }));
-                    }
-                    setMovingCategory(null);
-                  } catch (err) {
-                    console.error('Error moving category:', err);
-                  }
-                }}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                이동
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Category Move Modal */}
+      <CategoryMoveModal
+        movingCategory={movingCategory}
+        onClose={() => setMovingCategory(null)}
+        targetMoveParentId={targetMoveParentId}
+        setTargetMoveParentId={setTargetMoveParentId}
+        onConfirm={async (newPid) => {
+          try {
+            const pid = newPid ? newPid.trim() : null;
+            await updateDoc(doc(db, 'categories', movingCategory.id), { parentId: pid });
+            if (pid) {
+              setExpandedFolders((prev) => ({ ...prev, [pid]: true }));
+            }
+            setMovingCategory(null);
+          } catch (err) {
+            console.error('Error moving category:', err);
+          }
+        }}
+        categoryOptions={movingCategory ? getHierarchicalCategoryOptions(currentScope, movingCategory.id).filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id)) : []}
+        isMobile={isMobile}
+        sidebarRight={sidebarRef.current?.getBoundingClientRect().right || 280}
+      />
 
       {/* Move Item Modal */}
       {movingItem && (() => {
         const targetScope = getScopeForTab(targetMoveItemTab);
-        const targetScopeGroups = categoryGroups.filter(
-          (g) => (g.scope || 'explorer') === targetScope
-        );
-
-        const categoryOptions = getHierarchicalCategoryOptions(
-          targetScope,
-          null,
-          targetMoveCategoryGroupId
-        ).filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id));
-
+        const targetScopeGroups = categoryGroups.filter((g) => (g.scope || 'explorer') === targetScope);
+        const categoryOptions = getHierarchicalCategoryOptions(targetScope, null, targetMoveCategoryGroupId).filter((c) => !ALL_FIXED_CATEGORY_IDS.includes(c.id));
         const targetCat = categories.find((c) => c.id === targetMoveItemCategoryId);
         const targetGroups = targetCat && Array.isArray(targetCat.itemGroups) ? targetCat.itemGroups : [];
 
         return (
-          <div
-            style={{
-              ...styles.modalOverlay,
-              backgroundColor: 'rgba(15, 23, 42, 0.45)',
-              backdropFilter: 'blur(2px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999
+          <MoveItemModal
+            movingItem={movingItem}
+            onClose={() => setMovingItem(null)}
+            targetMoveItemTab={targetMoveItemTab}
+            setTargetMoveItemTab={setTargetMoveItemTab}
+            targetMoveCategoryGroupId={targetMoveCategoryGroupId}
+            setTargetMoveCategoryGroupId={setTargetMoveCategoryGroupId}
+            targetMoveItemCategoryId={targetMoveItemCategoryId}
+            setTargetMoveItemCategoryId={setTargetMoveItemCategoryId}
+            targetMoveItemGroupId={targetMoveItemGroupId}
+            setTargetMoveItemGroupId={setTargetMoveItemGroupId}
+            onConfirm={async () => {
+              if (!targetMoveItemCategoryId) {
+                alert('이동할 카테고리를 선택해 주세요.');
+                return;
+              }
+              try {
+                await updateDoc(doc(db, 'items', movingItem.id), {
+                  categoryId: targetMoveItemCategoryId,
+                  groupId: targetMoveItemGroupId || null,
+                  updatedAt: serverTimestamp()
+                });
+                if (targetMoveItemCategoryId !== 'quick_memo') {
+                  const targetCatObj = categories.find((c) => c.id === targetMoveItemCategoryId);
+                  const targetScope = targetCatObj ? targetCatObj.scope || 'explorer' : 'explorer';
+                  const scopeToTabMap = {
+                    explorer: 'explorer',
+                    blog: 'blog',
+                    clipboard: 'clipboard',
+                    balance: 'balance',
+                    clip: 'clip',
+                    office: 'office',
+                    ad: 'ad',
+                    template2: 'template2',
+                    experience: 'experience',
+                    custom1: 'custom1',
+                    custom2: 'custom2',
+                    custom3: 'custom3',
+                    custom4: 'custom4',
+                    custom5: 'custom5',
+                    custom6: 'custom6'
+                  };
+                  if (scopeToTabMap[targetScope]) {
+                    setActiveMainTab(scopeToTabMap[targetScope]);
+                  }
+                  setSelectedCategoryId(targetMoveItemCategoryId);
+                  setSelectedItemId(movingItem.id);
+                }
+                setMovingItem(null);
+              } catch (err) {
+                console.error('Error moving item:', err);
+              }
             }}
-            onClick={() => setMovingItem(null)}
-          >
-            <div
-              style={{
-                ...styles.modalContent,
-                width: isMobile ? '92%' : '410px',
-                maxWidth: '430px',
-                border: '1px solid #E2E8F0',
-                margin: 0
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={styles.modalHeader}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <FolderInput size={18} color="#2563EB" />
-                  </div>
-                  <h3 style={styles.modalTitle}>메모 이동</h3>
-                </div>
-                <button onClick={() => setMovingItem(null)} style={styles.modalCloseBtn} title="닫기">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div style={styles.modalBody}>
-                <div style={{
-                  padding: '9px 12px',
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: '6px',
-                  border: '1px solid #E2E8F0',
-                  marginBottom: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <FileText size={15} color="#2563EB" style={{ flexShrink: 0 }} />
-                  <span style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: '#1E293B',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {movingItem.title || '제목 없음'}
-                  </span>
-                </div>
-
-                {/* 1단계: 이동할 탭 선택 */}
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>
-                    1. 이동할 탭 (필수):
-                  </label>
-                  <select
-                    value={targetMoveItemTab}
-                    onChange={(e) => {
-                      const nextTab = e.target.value;
-                      setTargetMoveItemTab(nextTab);
-                      setTargetMoveCategoryGroupId('');
-                      setTargetMoveItemCategoryId('');
-                      setTargetMoveItemGroupId('');
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '13.5px',
-                      color: '#1E293B',
-                      outline: 'none',
-                      backgroundColor: '#FFFFFF',
-                      fontWeight: 600
-                    }}
-                  >
-                    {mainTabs.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        📌 {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 2단계: 카테고리 그룹(대분류) 선택 */}
-                {targetScopeGroups.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>
-                      2. 카테고리 그룹 (선택사항):
-                    </label>
-                    <select
-                      value={targetMoveCategoryGroupId}
-                      onChange={(e) => {
-                        setTargetMoveCategoryGroupId(e.target.value);
-                        setTargetMoveItemCategoryId('');
-                        setTargetMoveItemGroupId('');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '13.5px',
-                        color: '#1E293B',
-                        outline: 'none',
-                        backgroundColor: '#FFFFFF'
-                      }}
-                    >
-                      <option value="">[ 전체 카테고리 ]</option>
-                      <option value="__ungrouped__">[ 미분류 그룹 ]</option>
-                      {targetScopeGroups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          📁 {g.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* 3단계: 카테고리 선택 */}
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>
-                    {targetScopeGroups.length > 0 ? '3. 이동할 카테고리 (필수):' : '2. 이동할 카테고리 (필수):'}
-                  </label>
-                  <select
-                    value={targetMoveItemCategoryId}
-                    onChange={(e) => {
-                      setTargetMoveItemCategoryId(e.target.value);
-                      setTargetMoveItemGroupId('');
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '13.5px',
-                      color: '#1E293B',
-                      outline: 'none',
-                      backgroundColor: '#FFFFFF'
-                    }}
-                  >
-                    <option value="">[ 카테고리를 선택하세요 ]</option>
-                    {targetMoveItemTab === 'explorer' && (
-                      <option value="quick_memo">⚡ 퀵메모</option>
-                    )}
-                    {categoryOptions.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.displayName || c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 4단계: 메모 소그룹 (선택사항) */}
-                {targetGroups.length > 0 && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>
-                      {targetScopeGroups.length > 0 ? '4. 메모 소그룹 (선택사항):' : '3. 메모 소그룹 (선택사항):'}
-                    </label>
-                    <select
-                      value={targetMoveItemGroupId || ''}
-                      onChange={(e) => setTargetMoveItemGroupId(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '13.5px',
-                        color: '#1E293B',
-                        outline: 'none',
-                        backgroundColor: '#FFFFFF'
-                      }}
-                    >
-                      <option value="">미분류 (기본)</option>
-                      {targetGroups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          📁 {g.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div style={styles.modalFooter}>
-                <button onClick={() => setMovingItem(null)} style={styles.btnModalCancel}>
-                  취소
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!targetMoveItemCategoryId) {
-                      alert('이동할 카테고리를 선택해 주세요.');
-                      return;
-                    }
-                    try {
-                      await updateDoc(doc(db, 'items', movingItem.id), {
-                        categoryId: targetMoveItemCategoryId,
-                        groupId: targetMoveItemGroupId || null,
-                        updatedAt: serverTimestamp()
-                      });
-                      if (targetMoveItemCategoryId !== 'quick_memo') {
-                        setExpandedFolders((prev) => ({ ...prev, [targetMoveItemCategoryId]: true }));
-                      }
-                      const destTabObj = mainTabs.find((t) => t.id === targetMoveItemTab);
-                      const destCatObj = categories.find((c) => c.id === targetMoveItemCategoryId);
-                      const destLabel = destCatObj ? (destCatObj.name || '') : (targetMoveItemCategoryId === 'quick_memo' ? '퀵메모' : '');
-                      setCopyToastText(`✓ '${movingItem.title || '메모'}' 항목을 [${destTabObj?.label || targetMoveItemTab} > ${destLabel}]으로 이동했습니다.`);
-                      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
-                      copyToastTimerRef.current = setTimeout(() => setCopyToastText(''), 2500);
-
-                      setMovingItem(null);
-                    } catch (err) {
-                      console.error('Error moving item:', err);
-                      alert('메모 이동 중 오류가 발생했습니다: ' + err.message);
-                    }
-                  }}
-                  disabled={!targetMoveItemCategoryId}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: targetMoveItemCategoryId ? '#2563EB' : '#94A3B8',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: targetMoveItemCategoryId ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  이동
-                </button>
-              </div>
-            </div>
-          </div>
+            mainTabs={mainTabs}
+            targetScopeGroups={targetScopeGroups}
+            categoryOptions={categoryOptions}
+            targetGroups={targetGroups}
+            isMobile={isMobile}
+          />
         );
       })()}
 
