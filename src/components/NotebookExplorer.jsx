@@ -11049,7 +11049,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       borderLeft: 'none',
                                       borderRight: 'none',
                                       boxShadow: 'none',
-                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                      marginTop: 0,
                                       marginLeft: 0,
                                       marginRight: 0,
                                       overflow: 'hidden'
@@ -11064,7 +11064,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       borderLeft: 'none',
                                       borderRight: 'none',
                                       boxShadow: 'none',
-                                      marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                      marginTop: 0,
                                       marginLeft: 0,
                                       marginRight: 0,
                                       overflow: 'hidden'
@@ -12626,7 +12626,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     borderLeft: 'none',
                                     borderRight: 'none',
                                     boxShadow: 'none',
-                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                    marginTop: 0,
                                     marginLeft: 0,
                                     marginRight: 0,
                                     overflow: 'hidden'
@@ -12641,7 +12641,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     borderLeft: 'none',
                                     borderRight: 'none',
                                     boxShadow: 'none',
-                                    marginTop: groupIdx === 0 ? '0' : (isMobile ? '2px' : '3px'),
+                                    marginTop: 0,
                                     marginLeft: 0,
                                     marginRight: 0,
                                     overflow: 'hidden'
@@ -16885,7 +16885,7 @@ const styles = {
   checklistListContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
     overflowY: 'auto',
     flex: 1,
     padding: '4px 0 8px 0'
