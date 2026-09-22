@@ -11963,23 +11963,28 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             </h1>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} className="no-print">
-                            {/* 체크리스트 그룹 전체 펼치기 / 전체 접기 컴팩트 기호 버튼 */}
-                            {!isItemInTrash && hasChecklistSections && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} className="no-print">
+                            {showSavedToast && (
+                              <span style={styles.toastBadge}>
+                                ✓ 저장됨
+                              </span>
+                            )}
+
+                            {!isItemInTrash && (
                               <div
                                 style={{
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  backgroundColor: '#F8FAFC',
-                                  borderRadius: '6px',
+                                  backgroundColor: '#FFFFFF',
                                   border: '1px solid #CBD5E1',
-                                  padding: '1px 2px',
-                                  gap: '1px',
+                                  borderRadius: '6px',
+                                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                                  overflow: 'hidden',
                                   height: isMobile ? '28px' : '30px'
                                 }}
                                 className="no-print"
-                                title="체크리스트 그룹 전체 펼치기 / 전체 접기"
                               >
+                                {/* 그룹 펼치기 */}
                                 <button
                                   type="button"
                                   onClick={handleExpandAllSections}
@@ -11987,9 +11992,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: isMobile ? '22px' : '24px',
+                                    width: isMobile ? '24px' : '28px',
                                     height: '100%',
-                                    borderRadius: '4px',
                                     border: 'none',
                                     backgroundColor: 'transparent',
                                     color: '#475569',
@@ -11998,7 +12002,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     transition: 'all 0.15s ease'
                                   }}
                                   onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                    e.currentTarget.style.backgroundColor = '#F1F5F9';
                                     e.currentTarget.style.color = '#2563EB';
                                   }}
                                   onMouseLeave={(e) => {
@@ -12009,7 +12013,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 >
                                   <ChevronsDown size={14} />
                                 </button>
+
                                 <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+
+                                {/* 그룹 접기 */}
                                 <button
                                   type="button"
                                   onClick={handleCollapseAllSections}
@@ -12017,9 +12024,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: isMobile ? '22px' : '24px',
+                                    width: isMobile ? '24px' : '28px',
                                     height: '100%',
-                                    borderRadius: '4px',
                                     border: 'none',
                                     backgroundColor: 'transparent',
                                     color: '#475569',
@@ -12028,7 +12034,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     transition: 'all 0.15s ease'
                                   }}
                                   onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                                    e.currentTarget.style.backgroundColor = '#F1F5F9';
                                     e.currentTarget.style.color = '#2563EB';
                                   }}
                                   onMouseLeave={(e) => {
@@ -12039,45 +12045,72 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 >
                                   <ChevronsUp size={14} />
                                 </button>
-                              </div>
-                            )}
 
-                            {!isItemInTrash && (
-                              <button
-                                type="button"
-                                onClick={handleOpenAddGroupModal}
-                                style={{
-                                  ...styles.btnSecondary,
-                                  color: '#1D4ED8',
-                                  backgroundColor: '#EFF6FF',
-                                  borderColor: '#BFDBFE'
-                                }}
-                                className="no-print"
-                                title="새 그룹 추가"
-                              >
-                                <FolderPlus size={13} />
-                                <span>그룹</span>
-                              </button>
-                            )}
-                            {showSavedToast && (
-                              <span style={styles.toastBadge}>
-                                ✓ 저장됨
-                              </span>
-                            )}
-                            {!isItemInTrash && (
-                              <button
-                                onClick={() => setShowTemplate2Modal(true)}
-                                style={{
-                                  ...styles.btnSecondary,
-                                  borderColor: '#C4B5FD',
-                                  backgroundColor: '#F5F3FF',
-                                  color: '#7C3AED',
-                                  fontWeight: 600
-                                }}
-                                title="상세화면 구조 템플릿 적용"
-                              >
-                                📑 템플릿
-                              </button>
+                                <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+
+                                {/* 새 그룹 추가 */}
+                                <button
+                                  type="button"
+                                  onClick={handleOpenAddGroupModal}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    padding: isMobile ? '0 8px' : '0 10px',
+                                    height: '100%',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: '#1D4ED8',
+                                    fontSize: isMobile ? '11px' : '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }}
+                                  title="새 그룹 추가"
+                                >
+                                  <FolderPlus size={13} color="#2563EB" />
+                                  <span>그룹</span>
+                                </button>
+
+                                <div style={{ width: '1px', height: '14px', backgroundColor: '#CBD5E1' }} />
+
+                                {/* 템플릿 적용 */}
+                                <button
+                                  type="button"
+                                  onClick={() => setShowTemplate2Modal(true)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    padding: isMobile ? '0 8px' : '0 10px',
+                                    height: '100%',
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: '#7C3AED',
+                                    fontSize: isMobile ? '11px' : '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#F5F3FF';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }}
+                                  title="상세화면 구조 템플릿 적용"
+                                >
+                                  <span>📑 템플릿</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
