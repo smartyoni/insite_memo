@@ -235,20 +235,86 @@ export default function CalendarView({
                   }}
                   title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span
+                      {/* 배지 + 수정 + 이동 세그먼트 탭 */}
+                      <div
                         style={{
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#FFFFFF',
-                          backgroundColor: catColor,
-                          padding: '2px 7px',
-                          borderRadius: '4px'
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          borderRadius: '4px',
+                          border: '1px solid #CBD5E1',
+                          overflow: 'hidden',
+                          backgroundColor: '#FFFFFF',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          flexShrink: 0
                         }}
                       >
-                        {catName}
-                      </span>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            backgroundColor: catColor,
+                            padding: '2px 7px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {catName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onEditEvent) onEditEvent(event);
+                          }}
+                          style={{
+                            padding: '2px 7px',
+                            backgroundColor: '#FFFFFF',
+                            border: 'none',
+                            borderLeft: '1px solid #CBD5E1',
+                            color: '#475569',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            lineHeight: 1.2,
+                            transition: 'background-color 0.12s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          title="일정 수정하기"
+                        >
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onNavigateToSource) onNavigateToSource(event);
+                          }}
+                          style={{
+                            padding: '2px 7px',
+                            backgroundColor: '#FFFFFF',
+                            border: 'none',
+                            borderLeft: '1px solid #CBD5E1',
+                            color: '#2563EB',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            lineHeight: 1.2,
+                            transition: 'background-color 0.12s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#EFF6FF'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                          title="실제 원본 메모 위치로 이동"
+                        >
+                          이동
+                        </button>
+                      </div>
+
                       <span style={{ fontSize: '11px', fontWeight: 700, color: '#1E40AF', backgroundColor: '#DBEAFE', padding: '1px 6px', borderRadius: '4px' }}>
                         {event.startDate}
                       </span>
@@ -260,72 +326,8 @@ export default function CalendarView({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '2px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
-                      {event.title}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onEditEvent) onEditEvent(event);
-                        }}
-                        style={{
-                          padding: '3px 7px',
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '5px',
-                          color: '#475569',
-                          fontSize: '11.5px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                          transition: 'all 0.15s ease'
-                        }}
-                        title="일정 수정하기"
-                      >
-                        <Edit2 size={11} />
-                        <span>수정</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onNavigateToSource) onNavigateToSource(event);
-                        }}
-                        style={{
-                          padding: '3px 8px',
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '5px',
-                          color: '#2563EB',
-                          fontSize: '11.5px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#EFF6FF';
-                          e.currentTarget.style.borderColor = '#93C5FD';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#F8FAFC';
-                          e.currentTarget.style.borderColor = '#CBD5E1';
-                        }}
-                        title="실제 원본 메모 위치로 이동"
-                      >
-                        <span>이동</span>
-                        <ExternalLink size={12} />
-                      </button>
-                    </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                    {event.title}
                   </div>
                 </div>
               );
@@ -609,29 +611,36 @@ export default function CalendarView({
                         }}
                         title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                       >
-                        {/* 상단 라인: [범주 배지] [시간] 및 우측 [수정] [이동] 버튼 */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden' }}>
+                        {/* 상단 라인: [범주 배지 | 수정 | 이동] 세그먼트 탭 & 우측 [시간] */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '5px' }}>
+                          {/* 배지 + 수정 + 이동 통합 세그먼트 탭 */}
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              borderRadius: '4px',
+                              border: '1px solid #CBD5E1',
+                              overflow: 'hidden',
+                              backgroundColor: '#FFFFFF',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                              flexShrink: 0
+                            }}
+                          >
                             <span
                               style={{
                                 fontSize: '10px',
                                 fontWeight: 700,
                                 color: '#FFFFFF',
                                 backgroundColor: catColor,
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                flexShrink: 0
+                                padding: '2px 6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: 1.2
                               }}
                             >
                               {catName}
                             </span>
-                            <span style={{ fontSize: '10.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
-                              <Clock size={10} />
-                              {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -639,22 +648,22 @@ export default function CalendarView({
                                 if (onEditEvent) onEditEvent(event);
                               }}
                               style={{
-                                padding: '2px 5px',
-                                backgroundColor: '#F8FAFC',
-                                border: '1px solid #CBD5E1',
-                                borderRadius: '4px',
+                                padding: '2px 6px',
+                                backgroundColor: '#FFFFFF',
+                                border: 'none',
+                                borderLeft: '1px solid #CBD5E1',
                                 color: '#475569',
-                                fontSize: '11px',
+                                fontSize: '10.5px',
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '2px'
+                                lineHeight: 1.2,
+                                transition: 'background-color 0.12s'
                               }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                               title="일정 수정하기"
                             >
-                              <Edit2 size={10} />
-                              <span>수정</span>
+                              수정
                             </button>
                             <button
                               type="button"
@@ -664,23 +673,29 @@ export default function CalendarView({
                               }}
                               style={{
                                 padding: '2px 6px',
-                                backgroundColor: '#F8FAFC',
-                                border: '1px solid #CBD5E1',
-                                borderRadius: '4px',
+                                backgroundColor: '#FFFFFF',
+                                border: 'none',
+                                borderLeft: '1px solid #CBD5E1',
                                 color: '#2563EB',
-                                fontSize: '11px',
+                                fontSize: '10.5px',
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '2px'
+                                lineHeight: 1.2,
+                                transition: 'background-color 0.12s'
                               }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#EFF6FF'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                               title="실제 원본 메모 위치로 이동"
                             >
-                              <span>이동</span>
-                              <ExternalLink size={11} />
+                              이동
                             </button>
                           </div>
+
+                          {/* 우측 시간 표기 */}
+                          <span style={{ fontSize: '10.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                            <Clock size={10} />
+                            {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
+                          </span>
                         </div>
 
                         {/* 하단 라인: 일정 제목 (가로 전체 폭 활용) */}
@@ -764,8 +779,20 @@ export default function CalendarView({
                   }}
                   title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* 상단 라인: [범주 배지 | 수정 | 이동] 세그먼트 탭 & 우측 [시간] */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        border: '1px solid #CBD5E1',
+                        overflow: 'hidden',
+                        backgroundColor: '#FFFFFF',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                        flexShrink: 0
+                      }}
+                    >
                       <span
                         style={{
                           fontSize: '11px',
@@ -773,23 +800,14 @@ export default function CalendarView({
                           color: '#FFFFFF',
                           backgroundColor: catColor,
                           padding: '2px 7px',
-                          borderRadius: '4px'
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: 1.2
                         }}
                       >
                         {catName}
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={11} color="#64748B" />
-                        {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '2px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
-                      {event.title}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -797,24 +815,22 @@ export default function CalendarView({
                           if (onEditEvent) onEditEvent(event);
                         }}
                         style={{
-                          padding: '3px 7px',
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '5px',
+                          padding: '2px 7px',
+                          backgroundColor: '#FFFFFF',
+                          border: 'none',
+                          borderLeft: '1px solid #CBD5E1',
                           color: '#475569',
-                          fontSize: '11.5px',
+                          fontSize: '11px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                          transition: 'all 0.15s ease'
+                          lineHeight: 1.2,
+                          transition: 'background-color 0.12s'
                         }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                         title="일정 수정하기"
                       >
-                        <Edit2 size={11} />
-                        <span>수정</span>
+                        수정
                       </button>
                       <button
                         type="button"
@@ -823,34 +839,34 @@ export default function CalendarView({
                           if (onNavigateToSource) onNavigateToSource(event);
                         }}
                         style={{
-                          padding: '3px 8px',
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '5px',
+                          padding: '2px 7px',
+                          backgroundColor: '#FFFFFF',
+                          border: 'none',
+                          borderLeft: '1px solid #CBD5E1',
                           color: '#2563EB',
-                          fontSize: '11.5px',
+                          fontSize: '11px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                          transition: 'all 0.15s ease'
+                          lineHeight: 1.2,
+                          transition: 'background-color 0.12s'
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#EFF6FF';
-                          e.currentTarget.style.borderColor = '#93C5FD';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#F8FAFC';
-                          e.currentTarget.style.borderColor = '#CBD5E1';
-                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#EFF6FF'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
                         title="실제 원본 메모 위치로 이동"
                       >
-                        <span>이동</span>
-                        <ExternalLink size={12} />
+                        이동
                       </button>
                     </div>
+
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                      <Clock size={11} color="#64748B" />
+                      {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
+                    </span>
+                  </div>
+
+                  {/* 하단 라인: 일정 제목 */}
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                    {event.title}
                   </div>
                 </div>
               );
