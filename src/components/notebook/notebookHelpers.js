@@ -1,4 +1,4 @@
-import { LEGACY_INBOX_IDS } from './notebookConstants';
+import { LEGACY_INBOX_IDS, ALL_FIXED_CATEGORY_IDS } from './notebookConstants';
 
 export const extractAllStrings = (obj, acc = []) => {
   if (obj === null || obj === undefined) return acc;
@@ -145,6 +145,30 @@ export const getCategoryDescendantIds = (rootId, categories = []) => {
   };
   getChildren(rootId);
   return Array.from(descendantIds);
+};
+
+export const isCategoryDescendant = (ancestorId, potentialDescendantId, categories = []) => {
+  if (!ancestorId || !potentialDescendantId) return false;
+  if (ancestorId === potentialDescendantId) return true;
+  let curr = categories.find(c => c.id === potentialDescendantId);
+  const visited = new Set();
+  while (curr && curr.parentId) {
+    if (curr.parentId === ancestorId) return true;
+    if (visited.has(curr.id)) break;
+    visited.add(curr.id);
+    curr = categories.find(c => c.id === curr.parentId);
+  }
+  return false;
+};
+
+export const canMoveCategory = (sourceId, targetParentId, categories = []) => {
+  if (!sourceId) return false;
+  if (ALL_FIXED_CATEGORY_IDS.includes(sourceId)) return false;
+  if (targetParentId === null) return true;
+  if (ALL_FIXED_CATEGORY_IDS.includes(targetParentId)) return false;
+  if (sourceId === targetParentId) return false;
+  if (isCategoryDescendant(sourceId, targetParentId, categories)) return false;
+  return true;
 };
 
 export const getCategoryFullPath = (cat, categories = [], categoryGroups = [], mainTabs = [], activeMainTab = 'explorer') => {
