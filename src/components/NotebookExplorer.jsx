@@ -726,9 +726,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           setItems((prev) =>
             prev.map((i) => (i.id === itemId ? { ...i, checklists: updatedChecklists } : i))
           );
-          if (activeItem?.id === itemId) {
-            setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
-          }
           if (currentUser) {
             try {
               await updateDoc(doc(db, 'items', itemId), {
@@ -744,9 +741,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           setItems((prev) =>
             prev.map((i) => (i.id === itemId ? { ...i, title: eventData.title } : i))
           );
-          if (activeItem?.id === itemId) {
-            setActiveItem((prev) => ({ ...prev, title: eventData.title }));
-          }
           if (currentUser) {
             try {
               await updateDoc(doc(db, 'items', itemId), {
@@ -839,8 +833,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           prev.map((i) => (i.id === targetItem.id ? { ...i, checklists: updatedChecklists } : i))
         );
 
-        if (activeItem?.id === targetItem.id) {
-          setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
+        if (selectedItemId === targetItem.id) {
           if (selectedChecklistId === targetChecklistId) {
             setChecklistDetailBlocks(newBlocks);
             setChecklistDetailDraft(plainText);
@@ -863,8 +856,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           prev.map((i) => (i.id === targetItem.id ? { ...i, body: plainText, detailBlocks: newBlocks } : i))
         );
 
-        if (activeItem?.id === targetItem.id) {
-          setActiveItem((prev) => ({ ...prev, body: plainText, detailBlocks: newBlocks }));
+        if (selectedItemId === targetItem.id && (selectedChecklistId === '__main__' || !selectedChecklistId)) {
           setChecklistDetailBlocks(newBlocks);
           setChecklistDetailDraft(plainText);
         }
