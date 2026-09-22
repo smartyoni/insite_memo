@@ -74,6 +74,12 @@ import MoveBlockModal from './notebook/modals/MoveBlockModal';
 import CategoryMoveModal from './notebook/modals/CategoryMoveModal';
 import MoveItemModal from './notebook/modals/MoveItemModal';
 import { MainModeBar, UserBar } from './notebook/MainModeBar';
+import ChecklistPrintModal from './notebook/modals/ChecklistPrintModal';
+import TemplatePrintModal from './notebook/modals/TemplatePrintModal';
+import DeleteConfirmModal from './notebook/modals/DeleteConfirmModal';
+import AddGroupModal from './notebook/modals/AddGroupModal';
+import QuickMemoModal from './notebook/modals/QuickMemoModal';
+import QuickTabEditModal from './notebook/modals/QuickTabEditModal';
 import {
   getLatestCloudBackupInfo,
   saveCloudBackup,
@@ -12745,233 +12751,35 @@ onClick={() => {
 
       
       {/* Checklist Item Print Selection Modal */}
-      {isChecklistPrintModalOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsChecklistPrintModalOpen(false)}>
-          <div style={{ ...styles.modalContent, maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
-                <Printer size={18} color="#2563EB" />
-                <span>체크리스트 인쇄 항목 선택</span>
-              </div>
-              <button onClick={() => setIsChecklistPrintModalOpen(false)} style={styles.modalCloseBtn}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
-              출력할 체크리스트 항목을 선택해 주세요:
-            </p>
-
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const allObj = {};
-                  currentChecklists.filter(c => !c.isSection).forEach(c => { allObj[c.id] = true; });
-                  setSelectedPrintChecklistIds(allObj);
-                }}
-                style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
-              >
-                전체 선택
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const noneObj = {};
-                  currentChecklists.filter(c => !c.isSection).forEach(c => { noneObj[c.id] = false; });
-                  setSelectedPrintChecklistIds(noneObj);
-                }}
-                style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
-              >
-                전체 해제
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const uncompObj = {};
-                  currentChecklists.filter(c => !c.isSection).forEach(c => { uncompObj[c.id] = !c.completed; });
-                  setSelectedPrintChecklistIds(uncompObj);
-                }}
-                style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #BFDBFE', backgroundColor: '#EFF6FF', color: '#1E40AF', cursor: 'pointer', fontWeight: 600 }}
-              >
-                미완료만 선택
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
-              {currentChecklists.map((checkItem) => (
-                checkItem.isSection ? (
-                  <div
-                    key={checkItem.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '5px 10px',
-                      marginTop: '4px',
-                      backgroundColor: '#F1F5F9',
-                      borderRadius: '6px',
-                      border: '1px solid #CBD5E1',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: '#1E293B'
-                    }}
-                  >
-                    <Folder size={13} color="#2563EB" />
-                    <span>{checkItem.text}</span>
-                  </div>
-                ) : (
-                  <label key={checkItem.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: checkItem.completed ? '#F8FAFC' : '#FFFFFF', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedPrintChecklistIds[checkItem.id] !== false}
-                      onChange={(e) => setSelectedPrintChecklistIds({ ...selectedPrintChecklistIds, [checkItem.id]: e.target.checked })}
-                      style={{ width: '16px', height: '16px', marginTop: '2px', cursor: 'pointer' }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: '13px', color: checkItem.completed ? '#10B981' : '#CBD5E1', fontWeight: 700 }}>
-                        {checkItem.completed ? '☑' : '☐'}
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: checkItem.completed ? '#64748B' : '#1E293B', textDecoration: checkItem.completed ? 'line-through' : 'none' }}>
-                        {checkItem.text}
-                      </span>
-                    </div>
-                  </label>
-                )
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button onClick={() => setIsChecklistPrintModalOpen(false)} style={styles.btnSecondary}>
-                취소
-              </button>
-              <button onClick={handleConfirmChecklistPrint} style={styles.btnPrimary}>
-                <Printer size={14} />
-                <span>선택 항목 인쇄</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ChecklistPrintModal
+        isOpen={isChecklistPrintModalOpen}
+        onClose={() => setIsChecklistPrintModalOpen(false)}
+        currentChecklists={currentChecklists}
+        selectedPrintChecklistIds={selectedPrintChecklistIds}
+        setSelectedPrintChecklistIds={setSelectedPrintChecklistIds}
+        onConfirmPrint={handleConfirmChecklistPrint}
+      />
 
       {/* Template Field Print Selection Modal */}
-      {isPrintModalOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsPrintModalOpen(false)}>
-          <div style={{ ...styles.modalContent, maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid #E2E8F0', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
-                <Printer size={18} color="#2563EB" />
-                <span>인쇄 항목 선택</span>
-              </div>
-              <button onClick={() => setIsPrintModalOpen(false)} style={styles.modalCloseBtn}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
-              출력할 템플릿 항목을 선택해 주세요:
-            </p>
-
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const activeTpl = templates.find(t => t.id === activeItem?.templateId);
-                  const allObj = {};
-                  activeTpl?.fields?.forEach(f => { allObj[f.id] = true; });
-                  setSelectedPrintFieldIds(allObj);
-                }}
-                style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
-              >
-                전체 선택
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const activeTpl = templates.find(t => t.id === activeItem?.templateId);
-                  const noneObj = {};
-                  activeTpl?.fields?.forEach(f => { noneObj[f.id] = false; });
-                  setSelectedPrintFieldIds(noneObj);
-                }}
-                style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
-              >
-                전체 해제
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
-              {(() => {
-                const activeTpl = templates.find(t => t.id === activeItem?.templateId);
-                if (!activeTpl || !activeTpl.fields) return null;
-                return activeTpl.fields.map(field => (
-                  <label key={field.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedPrintFieldIds[field.id] !== false}
-                      onChange={(e) => setSelectedPrintFieldIds({ ...selectedPrintFieldIds, [field.id]: e.target.checked })}
-                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>
-                      {field.label}
-                      <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '6px', fontWeight: 400 }}>
-                        ({field.type === 'phone' ? '전화번호' : field.type === 'datetime' ? '일시' : field.type === 'checklist' ? '체크리스트' : '텍스트'})
-                      </span>
-                    </span>
-                  </label>
-                ));
-              })()}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button onClick={() => setIsPrintModalOpen(false)} style={styles.btnSecondary}>
-                취소
-              </button>
-              <button onClick={handleConfirmTemplatePrint} style={styles.btnPrimary}>
-                <Printer size={14} />
-                <span>선택 항목 인쇄</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TemplatePrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        templates={templates}
+        activeItem={activeItem}
+        selectedPrintFieldIds={selectedPrintFieldIds}
+        setSelectedPrintFieldIds={setSelectedPrintFieldIds}
+        onConfirmPrint={handleConfirmTemplatePrint}
+      />
 
       {/* Global Custom Delete Confirmation Modal */}
-      {deleteModalState.isOpen && (
-        <div style={styles.modalOverlay} onClick={closeDeleteModal}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={styles.modalDangerIconWrapper}>
-                  <Trash2 size={18} color="#DC2626" />
-                </div>
-                <h3 style={styles.modalTitle}>{deleteModalState.title || '삭제 확인'}</h3>
-              </div>
-              <button onClick={closeDeleteModal} style={styles.modalCloseBtn} title="닫기">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <p style={styles.modalMessage}>{deleteModalState.message}</p>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button type="button" onClick={closeDeleteModal} style={styles.btnModalCancel}>
-                취소
-              </button>
-              <button
-                ref={deleteConfirmBtnRef}
-                type="button"
-                autoFocus
-                onClick={handleConfirmDelete}
-                style={styles.btnModalDelete}
-              >
-                삭제하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={deleteModalState.isOpen}
+        title={deleteModalState.title}
+        message={deleteModalState.message}
+        onClose={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+        confirmBtnRef={deleteConfirmBtnRef}
+      />
 
       {/* Detail Block Move Modal */}
       <MoveBlockModal
@@ -13080,115 +12888,14 @@ onClick={() => {
       })()}
 
       {/* Add Group Popover Modal */}
-      {showAddGroupModal && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 9999,
-              backgroundColor: 'transparent'
-            }}
-            onClick={() => setShowAddGroupModal(false)}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: groupModalPos?.top ?? 100,
-              right: groupModalPos?.right ?? 20,
-              width: '260px',
-              backgroundColor: '#FFFFFF',
-              borderRadius: '8px',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08)',
-              border: '1px solid #CBD5E1',
-              padding: '12px',
-              zIndex: 10000,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
-                <FolderPlus size={15} color="#2563EB" />
-                <span>새 그룹 추가</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddGroupModal(false)}
-                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px' }}
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <div>
-              <input
-                type="text"
-                autoFocus
-                value={newGroupNameInput}
-                onChange={(e) => setNewGroupNameInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleCreateGroupFromModal();
-                  } else if (e.key === 'Escape') {
-                    setShowAddGroupModal(false);
-                  }
-                }}
-                placeholder="그룹명을 입력하세요"
-                style={{
-                  width: '100%',
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => setShowAddGroupModal(false)}
-                style={{
-                  padding: '5px 10px',
-                  fontSize: '12px',
-                  borderRadius: '5px',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#475569',
-                  cursor: 'pointer'
-                }}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateGroupFromModal}
-                disabled={!newGroupNameInput.trim()}
-                style={{
-                  padding: '5px 12px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  borderRadius: '5px',
-                  border: 'none',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  cursor: newGroupNameInput.trim() ? 'pointer' : 'not-allowed',
-                  opacity: newGroupNameInput.trim() ? 1 : 0.6
-                }}
-              >
-                추가
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      <AddGroupModal
+        isOpen={showAddGroupModal}
+        groupModalPos={groupModalPos}
+        newGroupNameInput={newGroupNameInput}
+        setNewGroupNameInput={setNewGroupNameInput}
+        onClose={() => setShowAddGroupModal(false)}
+        onCreateGroup={handleCreateGroupFromModal}
+      />
 
       {/* Category Right-Click Context Menu Popup */}
       {categoryContextMenu && (
@@ -13456,196 +13163,16 @@ onClick={() => {
       )}
 
       {/* Global Quick Memo Modal (Ctrl+Enter to save, Esc to close) */}
-      {isQuickMemoOpen && (
-        <div
-          onClick={handleCloseQuickMemo}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.55)',
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 99999,
-            padding: '16px'
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: '#FFFFFF',
-              width: '100%',
-              maxWidth: '520px',
-              borderRadius: '12px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #CBD5E1',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 16px',
-                backgroundColor: '#FFFBEB',
-                borderBottom: '1px solid #FDE68A'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Zap size={18} color="#D97706" fill="#F59E0B" />
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#92400E' }}>
-                  퀵메모 (빠른 기록)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseQuickMemo}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '6px',
-                  color: '#92400E',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="닫기 (Esc)"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Textarea */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <textarea
-                ref={quickMemoTextareaRef}
-                value={quickMemoText}
-                onChange={(e) => setQuickMemoText(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSaveQuickMemo();
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    handleCloseQuickMemo();
-                  }
-                }}
-                placeholder="메모할 내용을 자유롭게 입력하세요...&#13;&#10;(Enter 줄바꿈, Ctrl + Enter 로 즉시 저장)"
-                rows={5}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #CBD5E1',
-                  outline: 'none',
-                  fontSize: '14px',
-                  lineHeight: '1.5',
-                  color: '#1E293B',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit'
-                }}
-                autoFocus
-              />
-              <div style={{ fontSize: '11.5px', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>* 오늘 날짜의 퀵메모 노트에 체크리스트로 추가됩니다.</span>
-                <span>단축키: <strong>Ctrl + Enter</strong></span>
-              </div>
-            </div>
-
-            {/* Footer Buttons */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '8px',
-                padding: '10px 16px',
-                backgroundColor: '#F8FAFC',
-                borderTop: '1px solid #E2E8F0'
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleCloseQuickMemo}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                취소 (Esc)
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveQuickMemo}
-                disabled={!quickMemoText.trim() || isSavingQuickMemo}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
-                  boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
-                }}
-              >
-                <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
-                <span>{isSavingQuickMemo ? '저장 중...' : '저장 (Ctrl+Enter)'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Memo Toast Notification */}
-      {quickMemoToast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: '#1E293B',
-            color: '#FEF3C7',
-            padding: '10px 20px',
-            borderRadius: '24px',
-            fontSize: '13px',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)',
-            zIndex: 99999,
-            pointerEvents: 'none',
-            border: '1px solid #F59E0B',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <Zap size={14} fill="#F59E0B" color="#F59E0B" />
-          <span>오늘 날짜 퀵메모에 저장되었습니다.</span>
-        </div>
-      )}
+      <QuickMemoModal
+        isOpen={isQuickMemoOpen}
+        quickMemoToast={quickMemoToast}
+        quickMemoText={quickMemoText}
+        setQuickMemoText={setQuickMemoText}
+        quickMemoTextareaRef={quickMemoTextareaRef}
+        isSavingQuickMemo={isSavingQuickMemo}
+        onClose={handleCloseQuickMemo}
+        onSave={handleSaveQuickMemo}
+      />
 
       {/* Template 2 Selection & Apply Modal */}
       <Template2Modal
@@ -13674,113 +13201,16 @@ onClick={() => {
       />
 
       {/* Quick Single Tab Label Edit Modal (Long-press or Right-click) */}
-      {editingTab && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 10001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
-          onClick={() => {
-            setEditingTab(null);
-            setEditingTabInput('');
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-              width: '100%',
-              maxWidth: '320px',
-              padding: '18px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>탭 이름 변경</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingTab(null);
-                  setEditingTabInput('');
-                }}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#64748B' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleUpdateTabLabel(editingTab.id, editingTabInput);
-              }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
-            >
-              <input
-                type="text"
-                autoFocus
-                value={editingTabInput}
-                onChange={(e) => setEditingTabInput(e.target.value)}
-                placeholder="탭 이름을 입력하세요"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #CBD5E1',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingTab(null);
-                    setEditingTabInput('');
-                  }}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#FFFFFF',
-                    color: '#475569',
-                    fontSize: '13px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '6px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  저장
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <QuickTabEditModal
+        editingTab={editingTab}
+        editingTabInput={editingTabInput}
+        setEditingTabInput={setEditingTabInput}
+        onClose={() => {
+          setEditingTab(null);
+          setEditingTabInput('');
+        }}
+        onUpdateTabLabel={handleUpdateTabLabel}
+      />
 
       {/* Create Calendar Event Modal */}
       <CreateEventModal
