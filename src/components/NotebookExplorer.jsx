@@ -107,7 +107,7 @@ import {
   getItemFullPath as getItemFullPathFn,
   getMatchedSnippet,
   checkItemMatches,
-  getItemMatchBadges
+  getItemMatchBadges,
 } from './notebook/notebookHelpers';
 import NotebookModals from './notebook/NotebookModals';
 import { useNoteDraftSync } from './notebook/hooks/useNoteDraftSync';
