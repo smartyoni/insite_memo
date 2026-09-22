@@ -80,6 +80,18 @@ import TemplateCanvas from './notebook/TemplateCanvas';
 import CalendarDetailPane from './notebook/CalendarDetailPane';
 import NotebookDetailPane from './notebook/NotebookDetailPane';
 import { useCalendarData } from './notebook/hooks/useCalendarData';
+import {
+  extractAllStrings,
+  getCategoryPath as getCategoryPathFn,
+  buildCategoryTree,
+  getHierarchicalCategoryOptions as getHierarchicalCategoryOptionsFn,
+  getCategoryDescendantIds as getCategoryDescendantIdsFn,
+  getCategoryFullPath as getCategoryFullPathFn,
+  getItemFullPath as getItemFullPathFn,
+  getMatchedSnippet,
+  checkItemMatches,
+  getItemMatchBadges
+} from './notebook/notebookHelpers';
 import ChecklistPrintModal from './notebook/modals/ChecklistPrintModal';
 import TemplatePrintModal from './notebook/modals/TemplatePrintModal';
 import DeleteConfirmModal from './notebook/modals/DeleteConfirmModal';
@@ -424,148 +436,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const searchLower = searchQuery.trim().toLowerCase();
   const isSearchActive = searchLower.length > 0;
 
-  const getCategoryPath = (categoryId) => {
-    const scopeMap = {
-      explorer: 'ME',
-      blog: '블로그',
-      clipboard: '계약',
-      balance: '앱개발',
-      clip: '북마크',
-      office: '정보',
-      ad: '광고',
-      template2: '템플릿',
-      experience: '경험',
-      custom1: '새탭 1',
-      custom2: '새탭 2',
-      custom3: '새탭 3',
-      custom4: '새탭 4',
-      custom5: '새탭 5',
-      custom6: '새탭 6'
-    };
-    (mainTabs || []).forEach(t => {
-      if (t.id && t.label) {
-        scopeMap[t.id] = t.label;
-      }
-    });
-    const meLabel = scopeMap.explorer || 'ME';
-    if (categoryId === 'quick_memo') {
-      return `${meLabel} > 퀵메모`;
-    }
-    if (LEGACY_INBOX_IDS.includes(categoryId)) {
-      return 'In-box';
-    }
-    const found = categories.find(c => c.id === categoryId);
-    if (!found) return '기타';
-
-    const pathSegments = [found.name];
-    let curr = found;
-    const visited = new Set([found.id]);
-    while (curr && curr.parentId) {
-      const parent = categories.find(c => c.id === curr.parentId);
-      if (!parent || visited.has(parent.id)) break;
-      visited.add(parent.id);
-      pathSegments.unshift(parent.name);
-      curr = parent;
-    }
-    const scopeName = scopeMap[found.scope || 'explorer'] || meLabel;
-    return `${scopeName} > ${pathSegments.join(' > ')}`;
-  };
+  const getCategoryPath = (categoryId) => getCategoryPathFn(categoryId, categories, mainTabs);
   const getCategoryBadgeName = getCategoryPath;
-
-  // Tree Structure & Hierarchy Helpers
-  const buildCategoryTree = (catList) => {
-    const nodeMap = new Map();
-    catList.forEach(c => nodeMap.set(c.id, { ...c, children: [] }));
-
-    const roots = [];
-    catList.forEach(c => {
-      const node = nodeMap.get(c.id);
-      if (c.parentId && nodeMap.has(c.parentId) && c.parentId !== c.id) {
-        nodeMap.get(c.parentId).children.push(node);
-      } else {
-        roots.push(node);
-      }
-    });
-
-    const sortNodes = (nodes) => {
-      nodes.sort((a, b) => {
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        const res = nameA.localeCompare(nameB, 'ko-KR', { numeric: true, sensitivity: 'base' });
-        if (res !== 0) return res;
-        return nameA.localeCompare(nameB, 'ko-KR');
-      });
-      nodes.forEach(n => {
-        if (n.children && n.children.length > 0) {
-          sortNodes(n.children);
-        }
-      });
-    };
-
-    sortNodes(roots);
-    return roots;
-  };
-
-  const getHierarchicalCategoryOptions = (scope, excludeId = null, groupIdFilter = null) => {
-    const scopeCategories = categories.filter(c => {
-      if (ALL_FIXED_CATEGORY_IDS.includes(c.id) || LEGACY_INBOX_IDS.includes(c.id) || c.isDeleted) return false;
-      const isScopeMatch = scope === 'explorer' ? (!c.scope || c.scope === 'explorer') : (c.scope === scope);
-      if (!isScopeMatch) return false;
-      if (groupIdFilter === '__ungrouped__') return !c.groupId;
-      if (groupIdFilter && groupIdFilter !== '') return c.groupId === groupIdFilter;
-      return true;
-    });
-
-    const invalidIds = new Set();
-    if (excludeId) {
-      invalidIds.add(excludeId);
-      const addDescendants = (pid) => {
-        scopeCategories.filter(c => c.parentId === pid).forEach(child => {
-          invalidIds.add(child.id);
-          addDescendants(child.id);
-        });
-      };
-      addDescendants(excludeId);
-    }
-
-    const validCategories = scopeCategories.filter(c => !invalidIds.has(c.id));
-    const tree = buildCategoryTree(validCategories);
-
-    const flatList = [];
-    const traverse = (nodes, level = 0) => {
-      nodes.forEach(node => {
-        const indentPrefix = level > 0 ? `${'\u00A0\u00A0'.repeat(level)}└ ` : '';
-        flatList.push({
-          id: node.id,
-          name: node.name,
-          displayName: `${indentPrefix}📁 ${node.name}`,
-          level
-        });
-        if (node.children && node.children.length > 0) {
-          traverse(node.children, level + 1);
-        }
-      });
-    };
-    traverse(tree);
-
-    return [
-      ...(scope === 'explorer' ? [{ id: 'quick_memo', name: '퀵메모', displayName: '⚡ 퀵메모', level: 0 }] : []),
-      ...flatList
-    ];
-  };
-
-  const getCategoryDescendantIds = (rootId) => {
-    const result = [rootId];
-    const getChildren = (pid) => {
-      const children = categories.filter(c => c.parentId === pid);
-      children.forEach(c => {
-        result.push(c.id);
-        getChildren(c.id);
-      });
-    };
-    getChildren(rootId);
-    return result;
-  };
+  const getHierarchicalCategoryOptions = (scope, excludeId = null, groupIdFilter = null) =>
+    getHierarchicalCategoryOptionsFn(categories, scope, excludeId, groupIdFilter);
+  const getCategoryDescendantIds = (rootId) => getCategoryDescendantIdsFn(rootId, categories);
 
   const isDescendant = (ancestorId, potentialDescendantId) => {
     if (!ancestorId || !potentialDescendantId) return false;
@@ -1077,44 +952,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   };
 
   // Helper to compute category full path
-  const getCategoryFullPath = (cat) => {
-    if (!cat) return '';
-    if (cat.id === 'quick_memo') {
-      const tabLabel = mainTabs.find((t) => t.id === 'explorer')?.label || 'ME';
-      return `${tabLabel} > 퀵메모`;
-    }
-    const scope = cat.scope || activeMainTab || 'explorer';
-    const tabLabel = mainTabs.find((t) => t.id === scope)?.label || scope;
-
-    const group = cat.groupId ? categoryGroups.find((g) => g.id === cat.groupId) : null;
-    const groupName = group ? group.name : null;
-
-    const segments = [cat.name];
-    let curr = cat;
-    const visited = new Set([cat.id]);
-    while (curr && curr.parentId) {
-      const parent = categories.find((c) => c.id === curr.parentId);
-      if (!parent || visited.has(parent.id)) break;
-      visited.add(parent.id);
-      segments.unshift(parent.name);
-      curr = parent;
-    }
-
-    const parts = [tabLabel];
-    if (groupName) parts.push(groupName);
-    parts.push(...segments);
-    return parts.join(' > ');
-  };
+  const getCategoryFullPath = (cat) => getCategoryFullPathFn(cat, categories, categoryGroups, mainTabs, activeMainTab);
 
   // Helper to compute item (memo) full path
-  const getItemFullPath = (it) => {
-    if (!it) return '';
-    const cat = it.categoryId === 'quick_memo'
-      ? { id: 'quick_memo', name: '퀵메모', scope: 'explorer' }
-      : categories.find((c) => c.id === it.categoryId);
-    const catPath = getCategoryFullPath(cat) || '기타';
-    return `${catPath} > ${it.title || '제목 없음'}`;
-  };
+  const getItemFullPath = (it) => getItemFullPathFn(it, categories, categoryGroups, mainTabs, activeMainTab);
 
   // General Clipboard Copy Helper with Toast
   const copyTextToClipboard = async (text, toastMsg) => {
@@ -1607,122 +1448,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       return tA - tB;
     });
 
-  // Helper to extract all text strings from any object recursively
-  const extractAllStrings = (obj, acc = []) => {
-    if (obj === null || obj === undefined) return acc;
-    if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-      acc.push(String(obj));
-    } else if (Array.isArray(obj)) {
-      obj.forEach(item => extractAllStrings(item, acc));
-    } else if (typeof obj === 'object') {
-      Object.values(obj).forEach(val => extractAllStrings(val, acc));
-    }
-    return acc;
-  };
-
-  const getMatchedSnippet = (item, searchQuery) => {
-    if (!searchQuery || !searchQuery.trim()) return null;
-    const q = searchQuery.trim().toLowerCase();
-
-    const formatSnippet = (str, label) => {
-      if (!str || typeof str !== 'string') return null;
-      const idx = str.toLowerCase().indexOf(q);
-      if (idx === -1) return null;
-      const start = Math.max(0, idx - 18);
-      const end = Math.min(str.length, idx + q.length + 22);
-      const prefix = start > 0 ? '...' : '';
-      const suffix = end < str.length ? '...' : '';
-      return {
-        snippetText: prefix + str.substring(start, end) + suffix,
-        label
-      };
-    };
-
-    // 1. Check body
-    const bodySnip = formatSnippet(item.body, '본문');
-    if (bodySnip) return bodySnip;
-
-    // 2. Check subBody
-    const subBodySnip = formatSnippet(item.subBody, '보충노트');
-    if (subBodySnip) return subBodySnip;
-
-    // 3. Check checklists
-    if (item.checklists) {
-      const listStrings = extractAllStrings(item.checklists);
-      for (let s of listStrings) {
-        const snip = formatSnippet(s, '체크리스트');
-        if (snip) return snip;
-      }
-    }
-
-    // 4. Check templateValues
-    if (item.templateValues) {
-      const tplStrings = extractAllStrings(item.templateValues);
-      for (let s of tplStrings) {
-        const snip = formatSnippet(s, '템플릿');
-        if (snip) return snip;
-      }
-    }
-
-    return null;
-  };
-
-  const checkItemMatches = (item, searchLower) => {
-    if (!searchLower) return false;
-
-    // 1. Check title
-    if ((item.title || '').toLowerCase().includes(searchLower)) return true;
-
-    // 2. Check body (상세내용)
-    if ((item.body || '').toLowerCase().includes(searchLower)) return true;
-
-    // 3. Check subBody (보충노트 / 체크리스트 텍스트)
-    if ((item.subBody || '').toLowerCase().includes(searchLower)) return true;
-
-    // 4. Check checklists array (재귀 텍스트 추출)
-    if (item.checklists) {
-      const checklistTexts = extractAllStrings(item.checklists).join(' ').toLowerCase();
-      if (checklistTexts.includes(searchLower)) return true;
-    }
-
-    // 5. Check templateValues (템플릿 필드 입력값 재귀 텍스트 추출)
-    if (item.templateValues) {
-      const templateTexts = extractAllStrings(item.templateValues).join(' ').toLowerCase();
-      if (templateTexts.includes(searchLower)) return true;
-    }
-
-    return false;
-  };
-
-  const getItemMatchBadges = (item, searchLower) => {
-    const badges = [];
-    if (!searchLower) return badges;
-
-    // Title match
-    if ((item.title || '').toLowerCase().includes(searchLower)) {
-      badges.push({ label: '제목', bg: '#FEF3C7', color: '#B45309' });
-    }
-
-    // Body match
-    if ((item.body || '').toLowerCase().includes(searchLower)) {
-      badges.push({ label: '본문', bg: '#E0F2FE', color: '#0369A1' });
-    }
-
-    // Checklist / SubBody match
-    const subBodyMatch = (item.subBody || '').toLowerCase().includes(searchLower);
-    const checklistMatch = item.checklists && extractAllStrings(item.checklists).join(' ').toLowerCase().includes(searchLower);
-    if (subBodyMatch || checklistMatch) {
-      badges.push({ label: '체크리스트', bg: '#DCFCE7', color: '#15803D' });
-    }
-
-    // TemplateValues match
-    const templateMatch = item.templateValues && extractAllStrings(item.templateValues).join(' ').toLowerCase().includes(searchLower);
-    if (templateMatch) {
-      badges.push({ label: '템플릿', bg: '#F3E8FF', color: '#7E22CE' });
-    }
-
-    return badges;
-  };
+  // Search matched items helpers imported from notebookHelpers
 
   // Search matched items (across ALL categories and tabs if search is active)
   const matchedItems = isSearchActive
