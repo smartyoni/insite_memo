@@ -92,6 +92,7 @@ import { useQuickMemoActions } from './notebook/hooks/useQuickMemoActions';
 import { useMainTabs } from './notebook/hooks/useMainTabs';
 import { useNotebookContextMenu } from './notebook/hooks/useNotebookContextMenu';
 import { useDeleteModal } from './notebook/hooks/useDeleteModal';
+import { usePrintActions } from './notebook/hooks/usePrintActions';
 import {
   extractAllStrings,
   getCategoryPath as getCategoryPathFn,
@@ -498,66 +499,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Detail View (Pane 3) states - Split 2-pane Layout
   const [isEditMode, setIsEditMode] = useState(false);
   const [isEditingChecklistDetail, setIsEditingChecklistDetail] = useState(false);
-  const [printTarget, setPrintTarget] = useState('detail');
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [selectedPrintFieldIds, setSelectedPrintFieldIds] = useState({});
-  const [isChecklistPrintModalOpen, setIsChecklistPrintModalOpen] = useState(false);
-  const [selectedPrintChecklistIds, setSelectedPrintChecklistIds] = useState({});
-
-  const handleOpenChecklistPrint = () => {
-    setPrintTarget('checklist');
-    if (currentChecklists.length > 0) {
-      const initialMap = {};
-      currentChecklists.forEach(item => {
-        initialMap[item.id] = true;
-      });
-      setSelectedPrintChecklistIds(initialMap);
-      setIsChecklistPrintModalOpen(true);
-    } else {
-      handlePrint('checklist');
-    }
-  };
-
-  const handleConfirmChecklistPrint = () => {
-    setIsChecklistPrintModalOpen(false);
-    handlePrint('checklist');
-  };
-
-  const isChecklistPrintItemSelected = (checkId) => {
-    return selectedPrintChecklistIds[checkId] !== false;
-  };
-
-  const handleOpenDetailPrint = () => {
-    setPrintTarget('detail');
-    const tpl = activeItem?.templateId ? templates.find(t => t.id === activeItem.templateId) : null;
-    if (tpl && tpl.fields && tpl.fields.length > 0) {
-      const initialMap = {};
-      tpl.fields.forEach(f => {
-        initialMap[f.id] = true;
-      });
-      setSelectedPrintFieldIds(initialMap);
-      setIsPrintModalOpen(true);
-    } else {
-      handlePrint('detail');
-    }
-  };
-
-  const handleConfirmTemplatePrint = () => {
-    setIsPrintModalOpen(false);
-    handlePrint('detail');
-  };
-
-  const isPrintFieldSelected = (fieldId) => {
-    if (!activeItem?.templateId) return true;
-    return selectedPrintFieldIds[fieldId] !== false;
-  };
-
-  const handlePrint = (target) => {
-    setPrintTarget(target);
-    setTimeout(() => {
-      window.print();
-    }, 100);
-  };
   const titleInputRef = useRef(null);
   const autoEditItemIdRef = useRef(null);
   const shouldFocusTitleRef = useRef(false);
@@ -1318,6 +1259,31 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const completedCount = actualChecklistItems.filter((c) => c.completed).length;
   const totalCount = actualChecklistItems.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  const {
+    printTarget,
+    setPrintTarget,
+    isPrintModalOpen,
+    setIsPrintModalOpen,
+    selectedPrintFieldIds,
+    setSelectedPrintFieldIds,
+    isChecklistPrintModalOpen,
+    setIsChecklistPrintModalOpen,
+    selectedPrintChecklistIds,
+    setSelectedPrintChecklistIds,
+    handleOpenChecklistPrint,
+    handleConfirmChecklistPrint,
+    isChecklistPrintItemSelected,
+    handleOpenDetailPrint,
+    handleConfirmTemplatePrint,
+    isPrintFieldSelected,
+    handlePrint
+  } = usePrintActions({
+    currentChecklists,
+    activeItem,
+    templates
+  });
+
 
   // Inline Template Checklist Handlers
   const getSortedChecklistItems = (rawVal, defaultItems) => {
