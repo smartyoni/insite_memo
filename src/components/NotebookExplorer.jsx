@@ -9279,7 +9279,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               backgroundColor: '#FFFFFF'
                             }}>
                               {/* 그룹 내 인라인 항목 추가창 */}
-                              {isAddingItem && itemGroupTargetForNewItem === group.id && (
+                              {isAddingItem && group && itemGroupTargetForNewItem === group.id && (
                                 <div style={{
                                   padding: '6px 8px',
                                   margin: '4px 6px 4px 6px',
@@ -9362,7 +9362,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 </div>
                               )}
 
-                              {grpItems.length === 0 && !(isAddingItem && itemGroupTargetForNewItem === group.id) ? (
+                              {group && grpItems.length === 0 && !(isAddingItem && itemGroupTargetForNewItem === group.id) ? (
                                 <div style={{
                                   padding: '12px 14px',
                                   fontSize: '12px',
