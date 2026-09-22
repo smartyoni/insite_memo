@@ -456,6 +456,25 @@ function getItemTimestamp(item) {
   return 0;
 }
 
+// Helper to determine whether mobile view should be applied (Mobile phones, or Tablets in portrait orientation)
+export const checkIsMobileLayout = () => {
+  if (typeof window === 'undefined') return false;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const isPortrait = height > width || (window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+
+  // 1. 기본 스마트폰 및 좁은 화면 (가로/세로 무관 860px 이하)
+  if (width <= 860) return true;
+
+  // 2. 태블릿 세로 화면: 세로 모드(portrait)이면서 가로 너비 1150px 이하인 경우 모바일 뷰 적용
+  // (iPad Pro 12.9의 portrait 가로폭 1024px 및 갤럭시 탭 전 기종 세로 해상도 완벽 커버)
+  if (isPortrait && width <= 1150) {
+    return true;
+  }
+
+  return false;
+};
+
 export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Nav Location Persistence: Retrieve saved location
   const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
@@ -1752,8 +1771,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   const isTrashSelected = FIXED_TRASH_IDS.includes(selectedCategoryId);
 
-  // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 860);
+  // Mobile responsiveness & navigation state (Threshold 860px or Tablets in portrait)
+  const [isMobile, setIsMobile] = useState(() => checkIsMobileLayout());
   const [mobileView, setMobileView] = useState(() => initialNavLoc?.mobileView || 'categories'); // 'categories' | 'items' | 'detail'
   const [mobileSubTab, setMobileSubTab] = useState(() => initialNavLoc?.mobileSubTab || 'main'); // 'main' (상세내용) | 'sub' (보충노트)
   const [showExitToast, setShowExitToast] = useState(false);
@@ -2464,15 +2483,37 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     };
   }, [categoryContextMenu, itemContextMenu]);
 
-  // Resize listener for mobile responsive layout
+  // Resize and orientation listener for mobile responsive layout (including tablets in portrait mode)
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth <= 860;
-      setIsMobile(mobile);
+      const mobile = checkIsMobileLayout();
+      setIsMobile((prevIsMobile) => {
+        if (!prevIsMobile && mobile) {
+          // 웹(데스크톱)에서 모바일 화면으로 전환 시, 현재 보던 메모나 카테고리에 맞게 뷰 동기화
+          setMobileView((prevMobView) => {
+            if (selectedItemId) return 'detail';
+            if (selectedCategoryId) return 'items';
+            return prevMobView;
+          });
+        }
+        return mobile;
+      });
     };
+
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    window.addEventListener('orientationchange', handleResize);
+    if (window.screen?.orientation) {
+      window.screen.orientation.addEventListener('change', handleResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      if (window.screen?.orientation) {
+        window.screen.orientation.removeEventListener('change', handleResize);
+      }
+    };
+  }, [selectedItemId, selectedCategoryId]);
 
   // Touch Swipe Handlers for Mobile Tab Switching
   const handleTouchStart = (e) => {
