@@ -1,11 +1,6 @@
 import { useState, useRef } from 'react';
-import {
-  LEGACY_INBOX_IDS,
-  getStoredCollapsedSections,
-  getStoredDetailCollapsedBlocks,
-} from '../notebookConstants';
 
-export function useNotebookUIState({ initialNavLoc }) {
+export function useNotebookUIState({ initialNavLoc, initialDraftCategoryId, initialCollapsedSections, initialDetailCollapsedBlockIds }) {
   // Item List Sort Order State & Search
   const [itemSortOrder, setItemSortOrder] = useState('asc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,13 +95,7 @@ export function useNotebookUIState({ initialNavLoc }) {
   const autoEditItemIdRef = useRef(null);
   const shouldFocusTitleRef = useRef(false);
 
-  const [draftCategoryId, setDraftCategoryId] = useState(() => {
-    const saved = initialNavLoc?.selectedCategoryId;
-    if (saved && !LEGACY_INBOX_IDS.includes(saved)) {
-      return saved;
-    }
-    return initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab ? 'quick_memo' : '';
-  });
+  const [draftCategoryId, setDraftCategoryId] = useState(() => initialDraftCategoryId ?? 'quick_memo');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const [draftSubBody, setDraftSubBody] = useState('');
@@ -165,16 +154,12 @@ export function useNotebookUIState({ initialNavLoc }) {
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
-  const [collapsedSections, setCollapsedSections] = useState(() => {
-    return getStoredCollapsedSections(initialNavLoc?.selectedItemId);
-  });
+  const [collapsedSections, setCollapsedSections] = useState(() => initialCollapsedSections ?? {});
   const [editingCheckId, setEditingCheckId] = useState(null);
   const [editingCheckText, setEditingCheckText] = useState('');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
-  const [detailCollapsedBlockIds, setDetailCollapsedBlockIds] = useState(() => {
-    return getStoredDetailCollapsedBlocks(initialNavLoc?.selectedItemId, initialNavLoc?.selectedChecklistId || '__main__');
-  });
+  const [detailCollapsedBlockIds, setDetailCollapsedBlockIds] = useState(() => initialDetailCollapsedBlockIds ?? {});
   const [newChecklistText, setNewChecklistText] = useState('');
 
   return {

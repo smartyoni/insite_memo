@@ -490,7 +490,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     customTagInput, setCustomTagInput,
     detailCollapsedBlockIds, setDetailCollapsedBlockIds,
     newChecklistText, setNewChecklistText,
-  } = useNotebookUIState({ initialNavLoc });
+  } = useNotebookUIState({
+    initialNavLoc,
+    initialDraftCategoryId: (() => {
+      const saved = initialNavLoc?.selectedCategoryId;
+      if (saved && !LEGACY_INBOX_IDS.includes(saved)) {
+        return saved;
+      }
+      return (initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab) ? 'quick_memo' : '';
+    })(),
+    initialCollapsedSections: getStoredCollapsedSections(initialNavLoc?.selectedItemId),
+    initialDetailCollapsedBlockIds: getStoredDetailCollapsedBlocks(initialNavLoc?.selectedItemId, initialNavLoc?.selectedChecklistId || '__main__'),
+  });
 
   const {
     openChecklistMenuId,
