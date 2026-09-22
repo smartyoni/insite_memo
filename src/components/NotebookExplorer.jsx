@@ -1120,6 +1120,80 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
+  // 원본 메모/체크리스트 하위 블록 수정 시 연동된 캘린더 일정 블록 실시간 동기화
+  const syncCalendarEventBlocks = async ({ itemId, checklistId = null, blocks = [] }) => {
+    if (!itemId) return;
+
+    let checkText = '';
+    if (checklistId) {
+      const sourceItem = items.find((i) => i.id === itemId);
+      const targetCheck = (sourceItem?.checklists || []).find((c) => c.id === checklistId);
+      if (targetCheck?.text) checkText = targetCheck.text.trim();
+    }
+
+    const targetEvents = calendarEvents.filter((e) => {
+      if (e.isDeleted) return false;
+
+      // 1. sourceMemo 기반 매칭 (가장 정확)
+      if (e.sourceMemo?.itemId === itemId) {
+        if (checklistId) {
+          if (e.sourceMemo?.checklistId === checklistId) return true;
+        } else {
+          if (!e.sourceMemo?.checklistId) return true;
+        }
+      }
+
+      // 2. 텍스트 기반 폴백 매칭 (과거 등록된 일정 호환)
+      if (checklistId && checkText && e.title && e.title.trim() === checkText) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (targetEvents.length === 0) return;
+
+    const targetEventIds = new Set(targetEvents.map((e) => e.id));
+    const nextEvents = calendarEvents.map((e) => {
+      if (targetEventIds.has(e.id)) {
+        return {
+          ...e,
+          blocks,
+          sourceMemo: e.sourceMemo || {
+            itemId,
+            checklistId: checklistId || null
+          }
+        };
+      }
+      return e;
+    });
+
+    setCalendarEvents(nextEvents);
+    try {
+      localStorage.setItem('insite_calendar_events', JSON.stringify(nextEvents));
+    } catch {}
+
+    if (currentUser) {
+      try {
+        const batch = writeBatch(db);
+        targetEvents.forEach((e) => {
+          const docRef = doc(db, 'calendar_events', e.id);
+          batch.update(docRef, {
+            blocks,
+            sourceMemo: e.sourceMemo || {
+              itemId,
+              checklistId: checklistId || null
+            },
+            updatedAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error('Error syncing calendar event blocks:', err);
+      }
+    }
+  };
+
   // 상세화면 좌측 블록/체크리스트에서 우클릭/롱프레스 시 모달 오픈
   const handleOpenCreateEventFromBlock = (data) => {
     setCreateEventModalState({
@@ -3813,16 +3887,22 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const targetBlocks = blocksToSave !== undefined ? blocksToSave : checklistDetailBlocks;
     const plainText = blocksToPlainText(targetBlocks);
     if (checkId === '__main__') {
+      setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, body: plainText, detailBlocks: targetBlocks } : it));
+      setChecklistDetailDraft(plainText);
+      setChecklistDetailBlocks(targetBlocks);
+      setIsEditingChecklistDetail(false);
+      setIsEditMode(false);
+      syncCalendarEventBlocks({
+        itemId: activeItem.id,
+        checklistId: null,
+        blocks: targetBlocks
+      });
       try {
         await updateDoc(doc(db, 'items', activeItem.id), {
           body: plainText,
           detailBlocks: targetBlocks,
           updatedAt: serverTimestamp()
         });
-        setChecklistDetailDraft(plainText);
-        setChecklistDetailBlocks(targetBlocks);
-        setIsEditingChecklistDetail(false);
-        setIsEditMode(false);
         setShowSavedToast(true);
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
@@ -3834,15 +3914,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const updated = baseChecklists.map((c) =>
       c.id === checkId ? { ...c, detail: plainText, detailBlocks: targetBlocks } : c
     );
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
+    setChecklistDetailDraft(plainText);
+    setChecklistDetailBlocks(targetBlocks);
+    setIsEditingChecklistDetail(false);
+    setIsEditMode(false);
+    syncCalendarEventBlocks({
+      itemId: activeItem.id,
+      checklistId: checkId,
+      blocks: targetBlocks
+    });
     try {
       await updateDoc(doc(db, 'items', activeItem.id), {
         checklists: updated,
         updatedAt: serverTimestamp()
       });
-      setChecklistDetailDraft(plainText);
-      setChecklistDetailBlocks(targetBlocks);
-      setIsEditingChecklistDetail(false);
-      setIsEditMode(false);
       setShowSavedToast(true);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
@@ -10468,6 +10554,35 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               const catColor = cat?.color || '#3B82F6';
                               const catName = cat?.name || '할일';
 
+                              // 연동된 원본 메모/체크리스트의 실시간 최신 하위 블록 우선 조회
+                              let effectiveBlocks = Array.isArray(selectedEvent.blocks) ? selectedEvent.blocks : [];
+                              if (selectedEvent.sourceMemo?.itemId) {
+                                const sourceItem = items.find((i) => i.id === selectedEvent.sourceMemo.itemId && !i.isDeleted);
+                                if (sourceItem) {
+                                  if (selectedEvent.sourceMemo.checklistId) {
+                                    const sourceCheck = (sourceItem.checklists || []).find((c) => c.id === selectedEvent.sourceMemo.checklistId);
+                                    if (sourceCheck) {
+                                      effectiveBlocks = parseDetailBlocks(sourceCheck.detail || '', sourceCheck.detailBlocks);
+                                    }
+                                  } else {
+                                    effectiveBlocks = parseDetailBlocks(sourceItem.body || '', sourceItem.detailBlocks);
+                                  }
+                                }
+                              } else {
+                                // sourceMemo가 없는 경우 일정 제목과 일치하는 체크리스트 탐색 (과거 일정 호환)
+                                const cleanTitle = (selectedEvent.title || '').trim();
+                                if (cleanTitle) {
+                                  for (const it of items) {
+                                    if (it.isDeleted) continue;
+                                    const matchedCheck = (it.checklists || []).find((c) => (c.text || '').trim() === cleanTitle);
+                                    if (matchedCheck) {
+                                      effectiveBlocks = parseDetailBlocks(matchedCheck.detail || '', matchedCheck.detailBlocks);
+                                      break;
+                                    }
+                                  }
+                                }
+                              }
+
                               return (
                                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                   {/* Selected Event Header */}
@@ -10570,7 +10685,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   {/* Event Sub-blocks Manager (Using DetailBlocksManager identically) */}
                                   <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
                                     <DetailBlocksManager
-                                      blocks={Array.isArray(selectedEvent.blocks) ? selectedEvent.blocks : []}
+                                      blocks={effectiveBlocks}
                                       onChangeAndSave={(newBlocks) => handleSaveCalendarEventBlocks(selectedEvent.id, newBlocks)}
                                       searchQuery=""
                                       editingBlockId={editingBlockId}
