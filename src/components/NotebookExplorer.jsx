@@ -110,6 +110,9 @@ import {
   getItemMatchBadges
 } from './notebook/notebookHelpers';
 import NotebookModals from './notebook/NotebookModals';
+import { useNoteDraftSync } from './notebook/hooks/useNoteDraftSync';
+import { useNotebookKeyEvents } from './notebook/hooks/useNotebookKeyEvents';
+import { useNotebookLayoutActions } from './notebook/hooks/useNotebookLayoutActions';
 import {
   getLatestCloudBackupInfo,
   saveCloudBackup,
@@ -630,49 +633,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [copyToastText, setCopyToastText] = useState('');
   const copyToastTimerRef = useRef(null);
 
-  const handleCopyChecklist = async (checkItem) => {
-    setOpenChecklistMenuId(null);
-    if (!checkItem) return;
 
-    let detailText = '';
-    if (checkItem.detail) {
-      detailText = checkItem.detail;
-    } else if (checkItem.detailBlocks && Array.isArray(checkItem.detailBlocks)) {
-      detailText = blocksToPlainText(checkItem.detailBlocks);
-    }
-
-    const trimmedText = (checkItem.text || '').trim();
-    const trimmedDetail = (detailText || '').trim();
-
-    let copyContent = trimmedText;
-    if (trimmedDetail) {
-      copyContent = trimmedText ? `${trimmedText}\n\n${trimmedDetail}` : trimmedDetail;
-    }
-
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(copyContent);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = copyContent;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        textarea.style.top = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      setCopyToastText('✓ 체크리스트 내용이 복사되었습니다.');
-      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
-      copyToastTimerRef.current = setTimeout(() => {
-        setCopyToastText('');
-      }, 1800);
-    } catch (err) {
-      console.error('체크리스트 복사 실패:', err);
-    }
-  };
 
   const {
     categoryContextMenu,
@@ -810,24 +771,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   });
 
 
-  // Inline Template Checklist Handlers
-  const getSortedChecklistItems = (rawVal, defaultItems) => {
-    const list = Array.isArray(rawVal)
-      ? rawVal
-      : (defaultItems || []).map((t) => (typeof t === 'object' ? t : { text: t, completed: false }));
 
-    const indexed = list.map((item, idx) => ({
-      ...(typeof item === 'object' ? item : { text: item, completed: false }),
-      originalIndex: idx
-    }));
-
-    return indexed.sort((a, b) => {
-      const aDone = Boolean(a.completed);
-      const bDone = Boolean(b.completed);
-      if (aDone !== bDone) return aDone ? 1 : -1;
-      return a.originalIndex - b.originalIndex;
-    });
-  };
 
   const {
     updateCollapsedSections,
@@ -884,92 +828,34 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     hasLegacyBody
   });
 
-  const updateDetailCollapsedBlockIds = (updater) => {
-    setDetailCollapsedBlockIds((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      const targetId = activeItem?.id || selectedItemId;
-      if (targetId) {
-        saveStoredDetailCollapsedBlocks(targetId, selectedChecklistId || '__main__', next);
-      }
-      return next;
-    });
-  };
+  const {
+    handleCopyChecklist,
+    getSortedChecklistItems,
+    updateDetailCollapsedBlockIds,
+    handleExpandAllDetailBlocks,
+    handleCollapseAllDetailBlocks,
+    handleExpandAllCategories,
+    handleCollapseAllCategories,
+    handleExpandAllItemGroups,
+    handleCollapseAllItemGroups,
+  } = useNotebookLayoutActions({
+    setOpenChecklistMenuId,
+    setCopyToastText,
+    copyToastTimerRef,
+    setDetailCollapsedBlockIds,
+    activeItem,
+    selectedItemId,
+    selectedChecklistId,
+    checklistDetailBlocks,
+    setCollapsedCategoryGroups,
+    categories,
+    setExpandedFolders,
+    categoryGroups,
+    collapsedItemGroups,
+    activeCategory,
+    setCollapsedItemGroups,
+  });
 
-  const handleExpandAllDetailBlocks = () => {
-    updateDetailCollapsedBlockIds({});
-  };
-
-  const handleCollapseAllDetailBlocks = () => {
-    const newCollapsed = {};
-    (checklistDetailBlocks || []).forEach((b) => {
-      if (b && b.id) {
-        newCollapsed[b.id] = true;
-      }
-    });
-    updateDetailCollapsedBlockIds(newCollapsed);
-  };
-
-  const handleExpandAllCategories = () => {
-    setCollapsedCategoryGroups({});
-    try {
-      localStorage.setItem('memo_collapsed_category_groups', JSON.stringify({}));
-    } catch {}
-
-    const allExpanded = {};
-    categories.forEach((c) => {
-      if (c && c.id) allExpanded[c.id] = true;
-    });
-    setExpandedFolders(allExpanded);
-    try {
-      localStorage.setItem('memo_expanded_folders', JSON.stringify(allExpanded));
-    } catch {}
-  };
-
-  const handleCollapseAllCategories = () => {
-    const allCollapsedGroups = {};
-    categoryGroups.forEach((g) => {
-      if (g && g.id) allCollapsedGroups[g.id] = true;
-    });
-    setCollapsedCategoryGroups(allCollapsedGroups);
-    try {
-      localStorage.setItem('memo_collapsed_category_groups', JSON.stringify(allCollapsedGroups));
-    } catch {}
-
-    const allCollapsedFolders = {};
-    categories.forEach((c) => {
-      if (c && c.id) allCollapsedFolders[c.id] = false;
-    });
-    setExpandedFolders(allCollapsedFolders);
-    try {
-      localStorage.setItem('memo_expanded_folders', JSON.stringify(allCollapsedFolders));
-    } catch {}
-  };
-
-  const handleExpandAllItemGroups = () => {
-    const next = { ...collapsedItemGroups };
-    if (activeCategory && Array.isArray(activeCategory.itemGroups)) {
-      activeCategory.itemGroups.forEach((g) => {
-        if (g && g.id) delete next[g.id];
-      });
-    }
-    setCollapsedItemGroups(next);
-    try {
-      localStorage.setItem('memo_collapsed_item_groups', JSON.stringify(next));
-    } catch {}
-  };
-
-  const handleCollapseAllItemGroups = () => {
-    const next = { ...collapsedItemGroups };
-    if (activeCategory && Array.isArray(activeCategory.itemGroups)) {
-      activeCategory.itemGroups.forEach((g) => {
-        if (g && g.id) next[g.id] = true;
-      });
-    }
-    setCollapsedItemGroups(next);
-    try {
-      localStorage.setItem('memo_collapsed_item_groups', JSON.stringify(next));
-    } catch {}
-  };
 
   const {
     handleSaveChecklistDetail,
@@ -1007,175 +893,65 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setMoveBlockModalState
   });
 
-  // Sync draft state when active item changes
-  useEffect(() => {
-    if (autoEditItemIdRef.current && autoEditItemIdRef.current === selectedItemId) {
-      autoEditItemIdRef.current = null;
-      setIsEditMode(true);
-      setEditingBlockId(null);
-      setIsEditingChecklistDetail(false);
-      return;
-    }
+  useNoteDraftSync({
+    autoEditItemIdRef,
+    selectedItemId,
+    setIsEditMode,
+    setEditingBlockId,
+    setIsEditingChecklistDetail,
+    activeItem,
+    setDraftTitle,
+    setDraftBody,
+    setDraftSubBody,
+    setDraftCategoryId,
+    activeMainTab,
+    categories,
+    setDraftTemplateId,
+    setDraftTemplateValues,
+    setDraftChecklists,
+    templates,
+    baseChecklists,
+    selectedChecklistId,
+    setSelectedChecklistId,
+    setChecklistDetailDraft,
+    setChecklistDetailBlocks,
+    setCollapsedSections,
+    isEditMode,
+    shouldFocusTitleRef,
+    titleInputRef,
+    mobileView,
+    currentChecklists,
+    setDetailCollapsedBlockIds,
+  });
 
-    if (activeItem) {
-      setDraftTitle(activeItem.title || '');
-      setDraftBody(activeItem.body || '');
-      setDraftSubBody(activeItem.subBody || '');
-      setDraftCategoryId(activeItem.categoryId || getDefaultCategoryIdForTab(activeMainTab, categories));
-      setDraftTemplateId(activeItem.templateId || null);
-      setDraftTemplateValues(activeItem.templateValues || {});
-      setDraftChecklists(null);
-      const hasTpl = Boolean(activeItem.templateId && templates.find(t => t.id === activeItem.templateId));
-      const hasItemBlocks = Boolean(
-        Array.isArray(activeItem.detailBlocks) &&
-        activeItem.detailBlocks.some((b) => {
-          if (!b) return false;
-          if (b.type === 'checklist') {
-            const hasCustomTitle = b.title && b.title.trim() && b.title.trim() !== '체크리스트';
-            const hasValidItems = Array.isArray(b.items) && b.items.some((it) => it && typeof it.text === 'string' && it.text.trim().length > 0);
-            return Boolean(hasCustomTitle || hasValidItems);
-          }
-          return Boolean((b.title && b.title.trim().length > 0) || (b.content && b.content.trim().length > 0));
-        })
-      );
-      const hasLegacyBody = Boolean((activeItem.body && activeItem.body.trim()) || hasItemBlocks);
-      const firstId = hasTpl || hasLegacyBody ? '__main__' : (baseChecklists[0]?.id || null);
-      const isSavedChecklistValid = Boolean(
-        selectedChecklistId && (
-          selectedChecklistId === '__main__' ||
-          baseChecklists.some((c) => c.id === selectedChecklistId)
-        )
-      );
-      const targetCheckId = isSavedChecklistValid ? selectedChecklistId : firstId;
-      setSelectedChecklistId(targetCheckId);
-      const initialText = firstId === '__main__' ? (activeItem.body || '') : (baseChecklists[0]?.detail || '');
-      const initialBlocksData = firstId === '__main__' ? activeItem.detailBlocks : baseChecklists[0]?.detailBlocks;
-      setChecklistDetailDraft(initialText);
-      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
-    } else {
-      setDraftTitle('');
-      setDraftBody('');
-      setDraftSubBody('');
-      setDraftCategoryId(getDefaultCategoryIdForTab(activeMainTab, categories));
-      setDraftTemplateId(null);
-      setDraftTemplateValues({});
-      setDraftChecklists(null);
-      setSelectedChecklistId(null);
-      setChecklistDetailDraft('');
-      setChecklistDetailBlocks([]);
-    }
-    setEditingBlockId(null);
-    setIsEditMode(false);
-    setIsEditingChecklistDetail(false);
-    if (selectedItemId) {
-      setCollapsedSections(getStoredCollapsedSections(selectedItemId));
-    } else {
-      setCollapsedSections({});
-    }
-  }, [selectedItemId]);
-
-  // Auto-focus title input when entering edit mode for newly created item
-  useEffect(() => {
-    if (isEditMode && shouldFocusTitleRef.current) {
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        if (titleInputRef.current) {
-          titleInputRef.current.focus();
-          shouldFocusTitleRef.current = false;
-          clearInterval(interval);
-        } else if (attempts > 10) {
-          shouldFocusTitleRef.current = false;
-          clearInterval(interval);
-        }
-      }, 50);
-      return () => clearInterval(interval);
-    }
-  }, [isEditMode, selectedItemId, mobileView]);
-
-  // Sync checklist detail draft when selectedChecklistId changes
-  useEffect(() => {
-    if (!activeItem) return;
-    if (selectedChecklistId === '__main__') {
-      const initialText = activeItem.body || '';
-      const initialBlocksData = activeItem.detailBlocks;
-      setChecklistDetailDraft(initialText);
-      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
-    } else {
-      const found = currentChecklists.find((c) => c.id === selectedChecklistId);
-      const initialText = found?.detail || '';
-      const initialBlocksData = found?.detailBlocks;
-      setChecklistDetailDraft(initialText);
-      setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
-    }
-    setEditingBlockId(null);
-    setIsEditingChecklistDetail(false);
-    setDetailCollapsedBlockIds(getStoredDetailCollapsedBlocks(activeItem?.id, selectedChecklistId || '__main__'));
-  }, [selectedChecklistId, activeItem?.id, activeItem?.body, activeItem?.detailBlocks]);
-
-  // ESC & Enter key handler for modals & detail edit mode
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // 1. 확인 모달(삭제 등)이 열려있을 때의 키보드 동작
-      if (deleteModalState.isOpen) {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          closeDeleteModal();
-          return;
-        }
-        if (e.key === 'Enter') {
-          if (e.isComposing) return;
-          e.preventDefault();
-          e.stopPropagation();
-          handleConfirmDelete();
-          return;
-        }
-        return;
-      }
-
-      // 2. 일반 ESC 동작
-      if (e.key === 'Escape') {
-        if (moveBlockModalState.isOpen) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleCloseMoveBlockModal();
-          return;
-        }
-        if (movingCategory) {
-          setMovingCategory(null);
-        } else if (openCategoryGroupMenuId) {
-          setOpenCategoryGroupMenuId(null);
-        } else if (openItemGroupMenuId) {
-          setOpenItemGroupMenuId(null);
-        } else if (openCatMenuId) {
-          setOpenCatMenuId(null);
-        } else if (openNoteMenuId) {
-          setOpenNoteMenuId(null);
-        } else if (openChecklistMenuId) {
-          setOpenChecklistMenuId(null);
-        } else if (isEditingChecklistDetail) {
-          if (selectedChecklistId === '__main__') {
-            const initialText = activeItem?.body || '';
-            const initialBlocksData = activeItem?.detailBlocks;
-            setChecklistDetailDraft(initialText);
-            setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
-          } else {
-            const found = currentChecklists.find((c) => c.id === selectedChecklistId);
-            const initialText = found?.detail || '';
-            const initialBlocksData = found?.detailBlocks;
-            setChecklistDetailDraft(initialText);
-            setChecklistDetailBlocks(parseDetailBlocks(initialText, initialBlocksData));
-          }
-          setIsEditingChecklistDetail(false);
-        } else if (isEditMode) {
-          handleCancelDetailEdit();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, openNoteMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
+  useNotebookKeyEvents({
+    deleteModalState,
+    closeDeleteModal,
+    handleConfirmDelete,
+    moveBlockModalState,
+    handleCloseMoveBlockModal,
+    movingCategory,
+    setMovingCategory,
+    openCategoryGroupMenuId,
+    setOpenCategoryGroupMenuId,
+    openItemGroupMenuId,
+    setOpenItemGroupMenuId,
+    openCatMenuId,
+    setOpenCatMenuId,
+    openNoteMenuId,
+    setOpenNoteMenuId,
+    openChecklistMenuId,
+    setOpenChecklistMenuId,
+    isEditingChecklistDetail,
+    setIsEditingChecklistDetail,
+    selectedChecklistId,
+    activeItem,
+    setChecklistDetailDraft,
+    setChecklistDetailBlocks,
+    currentChecklists,
+    isEditMode,
+    handleCancelDetailEdit,
+  });
 
 
   // ---------------- Category Group Handlers ----------------
