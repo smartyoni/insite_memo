@@ -93,6 +93,7 @@ import { useMainTabs } from './notebook/hooks/useMainTabs';
 import { useNotebookContextMenu } from './notebook/hooks/useNotebookContextMenu';
 import { useDeleteModal } from './notebook/hooks/useDeleteModal';
 import { usePrintActions } from './notebook/hooks/usePrintActions';
+import { useMenuPositioning } from './notebook/hooks/useMenuPositioning';
 import {
   extractAllStrings,
   getCategoryPath as getCategoryPathFn,
@@ -571,18 +572,34 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [editingCheckText, setEditingCheckText] = useState('');
   const [editingCheckTag, setEditingCheckTag] = useState('');
   const [customTagInput, setCustomTagInput] = useState('');
-  const [openChecklistMenuId, setOpenChecklistMenuId] = useState(null);
-  const [openChecklistMenuPos, setOpenChecklistMenuPos] = useState({ top: 0, right: 0 });
-  const [openGroupMenuId, setOpenGroupMenuId] = useState(null);
-  const [openGroupMenuPos, setOpenGroupMenuPos] = useState({ top: 0, right: 0 });
-  const [openCatMenuId, setOpenCatMenuId] = useState(null);
-  const [openCatMenuPos, setOpenCatMenuPos] = useState({ top: 0, right: 0 });
-  const [openCategoryGroupMenuId, setOpenCategoryGroupMenuId] = useState(null);
-  const [openCategoryGroupMenuPos, setOpenCategoryGroupMenuPos] = useState({ top: 0, right: 0 });
-  const [openItemGroupMenuId, setOpenItemGroupMenuId] = useState(null);
-  const [openItemGroupMenuPos, setOpenItemGroupMenuPos] = useState({ top: 0, right: 0 });
-  const [openNoteMenuId, setOpenNoteMenuId] = useState(null);
-  const [openNoteMenuPos, setOpenNoteMenuPos] = useState({ top: 0, right: 0 });
+  const {
+    openChecklistMenuId,
+    setOpenChecklistMenuId,
+    openChecklistMenuPos,
+    openGroupMenuId,
+    setOpenGroupMenuId,
+    openGroupMenuPos,
+    openCatMenuId,
+    setOpenCatMenuId,
+    openCatMenuPos,
+    openCategoryGroupMenuId,
+    setOpenCategoryGroupMenuId,
+    openCategoryGroupMenuPos,
+    openItemGroupMenuId,
+    setOpenItemGroupMenuId,
+    openItemGroupMenuPos,
+    openNoteMenuId,
+    setOpenNoteMenuId,
+    openNoteMenuPos,
+    handleOpenChecklistMenu,
+    handleOpenGroupMenu,
+    handleOpenCatMenu,
+    handleOpenCategoryGroupMenu,
+    handleOpenItemGroupMenu,
+    handleOpenNoteMenu,
+    handleCloseAllMenus
+  } = useMenuPositioning();
+
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
@@ -1446,96 +1463,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     } catch {}
   };
 
-  const handleOpenChecklistMenu = (e, checkItemId) => {
-    e.stopPropagation();
-    if (openChecklistMenuId === checkItemId) {
-      setOpenChecklistMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 160;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenChecklistMenuPos({ top, right });
-      setOpenChecklistMenuId(checkItemId);
-    }
-  };
-
-  const handleOpenGroupMenu = (e, groupId) => {
-    e.stopPropagation();
-    if (openGroupMenuId === groupId) {
-      setOpenGroupMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 160;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenGroupMenuPos({ top, right });
-      setOpenGroupMenuId(groupId);
-    }
-  };
-
-  const handleOpenCatMenu = (e, catId) => {
-    e.stopPropagation();
-    if (openCatMenuId === catId) {
-      setOpenCatMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 190;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenCatMenuPos({ top, right });
-      setOpenCatMenuId(catId);
-    }
-  };
-
-  const handleOpenCategoryGroupMenu = (e, groupId) => {
-    e.stopPropagation();
-    if (openCategoryGroupMenuId === groupId) {
-      setOpenCategoryGroupMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 220;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenCategoryGroupMenuPos({ top, right });
-      setOpenCategoryGroupMenuId(groupId);
-    }
-  };
-
-  const handleOpenItemGroupMenu = (e, groupId) => {
-    e.stopPropagation();
-    if (openItemGroupMenuId === groupId) {
-      setOpenItemGroupMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 220;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenItemGroupMenuPos({ top, right });
-      setOpenItemGroupMenuId(groupId);
-    }
-  };
-
-  const handleOpenNoteMenu = (e, itemId) => {
-    e.stopPropagation();
-    if (openNoteMenuId === itemId) {
-      setOpenNoteMenuId(null);
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 160;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
-      const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenNoteMenuPos({ top, right });
-      setOpenNoteMenuId(itemId);
-    }
-  };
-
   const {
     handleSaveChecklistDetail,
     handleAddNewTextBlock,
@@ -1742,22 +1669,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, openNoteMenuId, deleteModalState, isEditMode, activeItem, movingCategory]);
 
-  useEffect(() => {
-    if (!openChecklistMenuId && !openCatMenuId && !openCategoryGroupMenuId && !openItemGroupMenuId && !openNoteMenuId) return;
-    const handleCloseMenu = () => {
-      setOpenChecklistMenuId(null);
-      setOpenCatMenuId(null);
-      setOpenCategoryGroupMenuId(null);
-      setOpenItemGroupMenuId(null);
-      setOpenNoteMenuId(null);
-    };
-    window.addEventListener('resize', handleCloseMenu);
-    window.addEventListener('scroll', handleCloseMenu, true);
-    return () => {
-      window.removeEventListener('resize', handleCloseMenu);
-      window.removeEventListener('scroll', handleCloseMenu, true);
-    };
-  }, [openChecklistMenuId, openCatMenuId, openCategoryGroupMenuId, openItemGroupMenuId, openNoteMenuId]);
 
   // ---------------- Category Group Handlers ----------------
   const {
