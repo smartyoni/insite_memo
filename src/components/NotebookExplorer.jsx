@@ -510,6 +510,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Backup & Restore States
   const [settingActiveTab, setSettingActiveTab] = useState('tabs'); // 'tabs' | 'backup'
   const [cloudBackupInfo, setCloudBackupInfo] = useState(null);
+  const [hasPreRestoreSafeguard, setHasPreRestoreSafeguard] = useState(() => !!getPreRestoreSafeguard());
   const [isBackupLoading, setIsBackupLoading] = useState(false);
   const [isRestoreLoading, setIsRestoreLoading] = useState(false);
   const [restoreProgress, setRestoreProgress] = useState(0);
