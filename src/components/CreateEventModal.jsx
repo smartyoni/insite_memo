@@ -8,6 +8,8 @@ export default function CreateEventModal({
   initialBlocks = [],
   categories = [],
   sourceMemo = null,
+  initialDate = '',
+  initialEvent = null,
   onSaveEvent
 }) {
   const [title, setTitle] = useState('');
@@ -17,22 +19,37 @@ export default function CreateEventModal({
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
 
+  const isEditMode = Boolean(initialEvent);
+
   useEffect(() => {
     if (isOpen) {
-      setTitle(initialTitle || '');
-      const defaultCat = categories.find(c => c.name === '할일') || categories[0];
-      setCategoryId(defaultCat?.id || 'cat_todo');
-      
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      setDate(`${yyyy}-${mm}-${dd}`);
-      setIsAllDay(true);
-      setStartTime('09:00');
-      setEndTime('10:00');
+      if (initialEvent) {
+        setTitle(initialEvent.title || '');
+        setCategoryId(initialEvent.categoryId || 'cat_todo');
+        setDate(initialEvent.startDate || '');
+        setIsAllDay(initialEvent.isAllDay !== false);
+        setStartTime(initialEvent.startTime || '09:00');
+        setEndTime(initialEvent.endTime || '10:00');
+      } else {
+        setTitle(initialTitle || '');
+        const defaultCat = categories.find(c => c.name === '할일') || categories[0];
+        setCategoryId(defaultCat?.id || 'cat_todo');
+
+        if (initialDate) {
+          setDate(initialDate);
+        } else {
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const dd = String(now.getDate()).padStart(2, '0');
+          setDate(`${yyyy}-${mm}-${dd}`);
+        }
+        setIsAllDay(true);
+        setStartTime('09:00');
+        setEndTime('10:00');
+      }
     }
-  }, [isOpen, initialTitle, categories]);
+  }, [isOpen, initialTitle, initialDate, initialEvent, categories]);
 
   if (!isOpen) return null;
 
@@ -44,6 +61,23 @@ export default function CreateEventModal({
     }
     if (!date) {
       alert('날짜를 지정해 주세요.');
+      return;
+    }
+
+    if (isEditMode && initialEvent) {
+      const updatedEvent = {
+        ...initialEvent,
+        title: title.trim(),
+        categoryId: categoryId || 'cat_todo',
+        startDate: date,
+        endDate: date,
+        isAllDay,
+        startTime: isAllDay ? '' : startTime,
+        endTime: isAllDay ? '' : endTime,
+        updatedAt: new Date().toISOString()
+      };
+      onSaveEvent(updatedEvent);
+      onClose();
       return;
     }
 
@@ -111,7 +145,7 @@ export default function CreateEventModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CalendarIcon size={18} color="#2563EB" />
             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>
-              일정 만들기
+              {isEditMode ? '일정 수정' : '일정 만들기'}
             </h3>
           </div>
           <button
@@ -299,7 +333,7 @@ export default function CreateEventModal({
                 boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)'
               }}
             >
-              일정 만들기
+              {isEditMode ? '수정 완료' : '일정 만들기'}
             </button>
           </div>
         </form>

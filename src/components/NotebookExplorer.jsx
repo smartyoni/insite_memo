@@ -699,7 +699,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
-  // 일정 저장 / 수정
+  // 일정 저장 / 수정 (원본 메모/체크리스트와 양방향 동기화)
   const handleSaveCalendarEvent = async (eventData) => {
     const exists = calendarEvents.some((e) => e.id === eventData.id);
     let next;
@@ -711,6 +711,55 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setCalendarEvents(next);
     localStorage.setItem('insite_calendar_events', JSON.stringify(next));
     setSelectedCalendarEventId(eventData.id);
+
+    // 원본 메모/체크리스트 제목 동기화 (sourceMemo 존재 시)
+    if (eventData.sourceMemo?.itemId) {
+      const { itemId, checklistId } = eventData.sourceMemo;
+      const targetItem = items.find((i) => i.id === itemId);
+      if (targetItem) {
+        if (checklistId) {
+          // 1. 체크리스트 항목 제목 변경
+          const updatedChecklists = (targetItem.checklists || []).map((c) =>
+            c.id === checklistId ? { ...c, text: eventData.title } : c
+          );
+          setItems((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, checklists: updatedChecklists } : i))
+          );
+          if (activeItem?.id === itemId) {
+            setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
+          }
+          if (currentUser) {
+            try {
+              await updateDoc(doc(db, 'items', itemId), {
+                checklists: updatedChecklists,
+                updatedAt: serverTimestamp()
+              });
+            } catch (err) {
+              console.error('Sync to source checklist title failed:', err);
+            }
+          }
+        } else {
+          // 2. 메모 제목 변경
+          setItems((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, title: eventData.title } : i))
+          );
+          if (activeItem?.id === itemId) {
+            setActiveItem((prev) => ({ ...prev, title: eventData.title }));
+          }
+          if (currentUser) {
+            try {
+              await updateDoc(doc(db, 'items', itemId), {
+                title: eventData.title,
+                updatedAt: serverTimestamp()
+              });
+            } catch (err) {
+              console.error('Sync to source memo title failed:', err);
+            }
+          }
+        }
+      }
+    }
+
     if (currentUser) {
       try {
         await setDoc(doc(db, 'calendar_events', eventData.id), eventData);
@@ -720,11 +769,69 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
   };
 
-  // 일정 하위 블록 수정 (3열 우측 패널 연동)
+  // 일정 하위 블록 수정 (3열 우측 패널 연동 + 원본 체크리스트/메모 본문 블록 실시간 동기화)
   const handleSaveCalendarEventBlocks = async (eventId, newBlocks) => {
+    const targetEvent = calendarEvents.find((e) => e.id === eventId);
     const next = calendarEvents.map((e) => (e.id === eventId ? { ...e, blocks: newBlocks } : e));
     setCalendarEvents(next);
     localStorage.setItem('insite_calendar_events', JSON.stringify(next));
+
+    // 원본 메모/체크리스트 하위 블록 내용 실시간 동기화
+    if (targetEvent?.sourceMemo?.itemId) {
+      const { itemId, checklistId } = targetEvent.sourceMemo;
+      const targetItem = items.find((i) => i.id === itemId);
+      if (targetItem) {
+        const plainText = blocksToPlainText(newBlocks);
+        if (checklistId) {
+          // 1. 체크리스트 하위 블록 동기화
+          const updatedChecklists = (targetItem.checklists || []).map((c) =>
+            c.id === checklistId ? { ...c, detail: plainText, detailBlocks: newBlocks } : c
+          );
+          setItems((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, checklists: updatedChecklists } : i))
+          );
+          if (activeItem?.id === itemId) {
+            setActiveItem((prev) => ({ ...prev, checklists: updatedChecklists }));
+            if (selectedChecklistId === checklistId) {
+              setChecklistDetailBlocks(newBlocks);
+              setChecklistDetailDraft(plainText);
+            }
+          }
+          if (currentUser) {
+            try {
+              await updateDoc(doc(db, 'items', itemId), {
+                checklists: updatedChecklists,
+                updatedAt: serverTimestamp()
+              });
+            } catch (err) {
+              console.error('Sync to source checklist detailBlocks failed:', err);
+            }
+          }
+        } else {
+          // 2. 메모 본문 블록 동기화
+          setItems((prev) =>
+            prev.map((i) => (i.id === itemId ? { ...i, body: plainText, detailBlocks: newBlocks } : i))
+          );
+          if (activeItem?.id === itemId) {
+            setActiveItem((prev) => ({ ...prev, body: plainText, detailBlocks: newBlocks }));
+            setChecklistDetailBlocks(newBlocks);
+            setChecklistDetailDraft(plainText);
+          }
+          if (currentUser) {
+            try {
+              await updateDoc(doc(db, 'items', itemId), {
+                body: plainText,
+                detailBlocks: newBlocks,
+                updatedAt: serverTimestamp()
+              });
+            } catch (err) {
+              console.error('Sync to source memo body/detailBlocks failed:', err);
+            }
+          }
+        }
+      }
+    }
+
     if (currentUser) {
       try {
         await updateDoc(doc(db, 'calendar_events', eventId), { blocks: newBlocks });
@@ -976,7 +1083,21 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         itemId: selectedItemId,
         categoryId: selectedCategoryId,
         checklistId: selectedChecklistId || null
-      } : null)
+      } : null),
+      initialEvent: null
+    });
+  };
+
+  // 캘린더 일정 수정 모달 오픈
+  const handleOpenEditEventModal = (event) => {
+    if (!event) return;
+    setCreateEventModalState({
+      isOpen: true,
+      initialTitle: event.title || '',
+      initialBlocks: Array.isArray(event.blocks) ? event.blocks : [],
+      date: event.startDate || '',
+      sourceMemo: event.sourceMemo || null,
+      initialEvent: event
     });
   };
 
@@ -10142,6 +10263,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               });
                             }}
                             onDeleteEvent={handleDeleteCalendarEvent}
+                            onEditEvent={handleOpenEditEventModal}
                             onNavigateToSource={handleNavigateToEventSource}
                           />
                           {/* Mobile Back to Category Items Button (일정 목록 / 달력 화면일 때) */}
@@ -10249,6 +10371,27 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditEventModal(selectedEvent)}
+                                        style={{
+                                          padding: '4px 8px',
+                                          borderRadius: '6px',
+                                          border: '1px solid #CBD5E1',
+                                          backgroundColor: '#FFFFFF',
+                                          color: '#334155',
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '3px'
+                                        }}
+                                        title="일정 정보(제목, 날짜, 시간, 범주) 수정"
+                                      >
+                                        <Edit2 size={12} color="#2563EB" />
+                                        <span>일정 수정</span>
+                                      </button>
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -15790,6 +15933,8 @@ onClick={() => {
         initialBlocks={createEventModalState.initialBlocks}
         categories={calendarCategories}
         sourceMemo={createEventModalState.sourceMemo}
+        initialDate={createEventModalState.date}
+        initialEvent={createEventModalState.initialEvent}
         onSaveEvent={handleSaveCalendarEvent}
       />
     </div>
