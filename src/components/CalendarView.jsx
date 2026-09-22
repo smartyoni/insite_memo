@@ -609,28 +609,28 @@ export default function CalendarView({
                         }}
                         title="클릭: 하위 내용 확인 | 우클릭/롱프레스: 일정에서 해제"
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span
-                            style={{
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              color: '#FFFFFF',
-                              backgroundColor: catColor,
-                              padding: '1px 6px',
-                              borderRadius: '4px'
-                            }}
-                          >
-                            {catName}
-                          </span>
-                          <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Clock size={11} />
-                            {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '2px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', flex: 1, wordBreak: 'break-word' }}>
-                            {event.title}
+                        {/* 상단 라인: [범주 배지] [시간] 및 우측 [수정] [이동] 버튼 */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden' }}>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                color: '#FFFFFF',
+                                backgroundColor: catColor,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                flexShrink: 0
+                              }}
+                            >
+                              {catName}
+                            </span>
+                            <span style={{ fontSize: '10.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                              <Clock size={10} />
+                              {event.isAllDay ? '종일' : `${event.startTime} ~ ${event.endTime}`}
+                            </span>
                           </div>
+
                           <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
                             <button
                               type="button"
@@ -681,6 +681,11 @@ export default function CalendarView({
                               <ExternalLink size={11} />
                             </button>
                           </div>
+                        </div>
+
+                        {/* 하단 라인: 일정 제목 (가로 전체 폭 활용) */}
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                          {event.title}
                         </div>
                       </div>
                     );
