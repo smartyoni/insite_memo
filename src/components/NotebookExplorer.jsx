@@ -5144,9 +5144,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       setCollapsedItemGroups((prev) => ({ ...prev, [groupId]: false }));
     }
     setTimeout(() => {
-      if (itemScrollRef.current) {
-        itemScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      }
       if (itemInputRef.current) {
         itemInputRef.current.focus();
       }
@@ -8837,8 +8834,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                 )}
 
                 <div style={{ ...styles.paneContent, padding: 0 }} ref={itemScrollRef}>
-                  {/* Inline input for creating new item */}
-                  {isAddingItem && (
+                  {/* Inline input for creating new item (no group target) */}
+                  {isAddingItem && !itemGroupTargetForNewItem && (
                     <div style={{
                       padding: '8px 10px',
                       margin: '4px 6px 6px 6px',
@@ -9281,7 +9278,91 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               flexDirection: 'column',
                               backgroundColor: '#FFFFFF'
                             }}>
-                              {grpItems.length === 0 ? (
+                              {/* 그룹 내 인라인 항목 추가창 */}
+                              {isAddingItem && itemGroupTargetForNewItem === group.id && (
+                                <div style={{
+                                  padding: '6px 8px',
+                                  margin: '4px 6px 4px 6px',
+                                  backgroundColor: '#F0F7FF',
+                                  borderRadius: '5px',
+                                  border: '1.5px solid #2563EB',
+                                  boxShadow: '0 1px 4px rgba(37,99,235,0.10)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}>
+                                  <input
+                                    ref={itemInputRef}
+                                    autoFocus
+                                    type="text"
+                                    value={newItemTitle}
+                                    onChange={(e) => setNewItemTitle(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        if (e.nativeEvent.isComposing) return;
+                                        handleConfirmAddItem();
+                                      }
+                                      if (e.key === 'Escape') {
+                                        setIsAddingItem(false);
+                                        setNewItemTitle('');
+                                        setItemGroupTargetForNewItem(null);
+                                      }
+                                    }}
+                                    onBlur={handleConfirmAddItem}
+                                    placeholder="새 목록명 입력..."
+                                    style={{
+                                      flex: 1,
+                                      border: 'none',
+                                      outline: 'none',
+                                      fontSize: '13px',
+                                      fontWeight: 600,
+                                      color: '#1E293B',
+                                      backgroundColor: 'transparent'
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={handleConfirmAddItem}
+                                    style={{
+                                      backgroundColor: '#2563EB',
+                                      color: '#FFFFFF',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      padding: '2px 8px',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    추가
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      setIsAddingItem(false);
+                                      setNewItemTitle('');
+                                      setItemGroupTargetForNewItem(null);
+                                    }}
+                                    style={{
+                                      backgroundColor: 'transparent',
+                                      color: '#64748B',
+                                      border: '1px solid #CBD5E1',
+                                      borderRadius: '4px',
+                                      padding: '2px 6px',
+                                      fontSize: '11px',
+                                      cursor: 'pointer',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              )}
+
+                              {grpItems.length === 0 && !(isAddingItem && itemGroupTargetForNewItem === group.id) ? (
                                 <div style={{
                                   padding: '12px 14px',
                                   fontSize: '12px',
@@ -9291,7 +9372,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 }}>
                                   여기에 메모를 드래그하거나 [+] 버튼으로 추가하세요.
                                 </div>
-                              ) : (
+                              ) : grpItems.length > 0 ? (
                                 grpItems.map((item, itemIdx) => {
                                   const isSelected = item.id === selectedItemId;
                                   const isEditing = item.id === editingItemId;
@@ -9642,7 +9723,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     </div>
                                   );
                                 })
-                              )}
+                              ) : null}
                             </div>
                           )}
                         </div>
