@@ -8242,6 +8242,80 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                     </div>
                   );
                 })()}
+
+                {/* Global Search Input Bar under Trash */}
+                <div style={{ padding: '8px 8px 12px 8px', marginTop: '4px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    border: '1px solid #CBD5E1',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                  }}>
+                    <Search
+                      size={14}
+                      color="#64748B"
+                      style={{ marginRight: '6px', flexShrink: 0, cursor: isMobile ? 'pointer' : 'default' }}
+                      onClick={() => {
+                        if (isMobile && searchLower.length > 0) {
+                          setMobileView('items');
+                        }
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (e.nativeEvent?.isComposing) return;
+                          if (isMobile && searchLower.length > 0) {
+                            setMobileView('items');
+                          }
+                        }
+                      }}
+                      placeholder="전체 메모/체크리스트 내용 검색..."
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        fontSize: '12px',
+                        color: '#1E293B'
+                      }}
+                    />
+                    {isMobile && searchLower.length > 0 && (
+                      <button
+                        onClick={() => setMobileView('items')}
+                        style={{
+                          backgroundColor: '#2563EB',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '2px 6px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          marginRight: '4px',
+                          flexShrink: 0
+                        }}
+                      >
+                        보기
+                      </button>
+                    )}
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
+                        title="검색어 지우기"
+                      >
+                        <X size={14} color="#64748B" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Mobile Footer for Pane 1 */}
@@ -8704,41 +8778,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   </div>
                 )}
 
-                {/* Global Search Input Bar */}
-                <div style={{ padding: '8px 12px', borderBottom: '1px solid #E2E8F0', backgroundColor: '#FFFFFF' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: '#F1F5F9',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    border: '1px solid #CBD5E1'
-                  }}>
-                    <Search size={15} color="#64748B" style={{ marginRight: '6px', flexShrink: 0 }} />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="전체 메모/체크리스트 내용 검색..."
-                      style={{
-                        border: 'none',
-                        outline: 'none',
-                        backgroundColor: 'transparent',
-                        width: '100%',
-                        fontSize: '12px',
-                        color: '#1E293B'
-                      }}
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
-                      >
-                        <X size={14} color="#64748B" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Inline input for creating new item group */}
                 {isAddingItemGroup && (
