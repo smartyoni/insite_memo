@@ -83,6 +83,7 @@ import { useCalendarData } from './notebook/hooks/useCalendarData';
 import { useNotebookData } from './notebook/hooks/useNotebookData';
 import { useCategoryActions } from './notebook/hooks/useCategoryActions';
 import { useItemActions } from './notebook/hooks/useItemActions';
+import { useTemplateActions } from './notebook/hooks/useTemplateActions';
 import {
   extractAllStrings,
   getCategoryPath as getCategoryPathFn,
@@ -3327,341 +3328,33 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     filteredItems
   });
 
-  // Helper to construct combined body text from template fields
-  const buildTemplateCombinedBody = (tplId, tplVals) => {
-    if (!tplId) return draftBody;
-    const targetTpl = templates.find(t => t.id === tplId);
-    if (!targetTpl || !targetTpl.fields) return draftBody;
-
-    return targetTpl.fields.map((f) => {
-      const val = tplVals[f.id];
-      if (f.type === 'checklist') {
-        const listItems = Array.isArray(val) ? val : (f.defaultItems || []).map(t => ({ text: t, completed: false }));
-        const listText = listItems.map(it => `- [${it.completed ? 'v' : ' '}] ${it.text}`).join('\n');
-        return `[${f.label}]\n${listText}`;
-      } else {
-        return `[${f.label}]\n${val || ''}`;
-      }
-    }).join('\n\n');
-  };
-
-  // ---------------- Template Tab Dedicated Canvas Handlers ----------------
-  const handleSelectTemplateInTab = (tpl) => {
-    setSelectedTemplateIdInTab(tpl.id);
-    setTplDraftTitle(tpl.title || '');
-    setTplDraftFields(tpl.fields ? JSON.parse(JSON.stringify(tpl.fields)) : []);
-    setTplDraftChecklists(tpl.checklists ? JSON.parse(JSON.stringify(tpl.checklists)) : []);
-  };
-
-  const handleCreateNewTemplateInTab = () => {
-    setSelectedTemplateIdInTab('NEW');
-    setTplDraftTitle('');
-    setTplDraftFields([
-      { id: `field_${Date.now()}_1`, type: 'text', label: '항목 1', placeholder: '내용을 입력하세요' }
-    ]);
-    setTplDraftChecklists([]);
-    setTplEditorSection('fields');
-  };
-
-  const handleDeleteTemplateInTab = (id) => {
-    openDeleteModal(
-      '템플릿 삭제',
-      '정말 이 템플릿을 삭제하시겠습니까?',
-      async () => {
-        try {
-          await deleteDoc(doc(db, 'templates', id));
-          if (selectedTemplateIdInTab === id) {
-            setSelectedTemplateIdInTab(null);
-            setTplDraftTitle('');
-            setTplDraftFields([]);
-            setTplDraftChecklists([]);
-          }
-        } catch (err) {
-          console.error('템플릿 삭제 오류:', err);
-          alert('템플릿 삭제에 실패했습니다.');
-        }
-      }
-    );
-  };
-
-  // ==================== Template 2 Handlers ====================
-  const handleCreateNewTemplate2InTab = () => {
-    const initCheckId = `chk_${Date.now()}_1`;
-    setSelectedTemplate2IdInTab('NEW');
-    setTpl2DraftTitle('');
-    setTpl2DraftChecklists([
-      {
-        id: initCheckId,
-        text: '1. 첫 번째 체크 항목',
-        completed: false,
-        detailBlocks: [
-          {
-            id: `chk_${Date.now()}_sub`,
-            type: 'checklist',
-            title: '세부 체크리스트',
-            items: [
-              { id: `item_${Date.now()}_1`, text: '세부 항목 1', completed: false }
-            ]
-          }
-        ]
-      }
-    ]);
-    setSelectedTpl2ChecklistId(initCheckId);
-    setNewTpl2ChecklistText('');
-  };
-
-  const handleSelectTemplate2InTab = (tpl) => {
-    setSelectedTemplate2IdInTab(tpl.id);
-    setTpl2DraftTitle(tpl.title || '');
-    const checks = Array.isArray(tpl.checklists) ? tpl.checklists : [];
-    setTpl2DraftChecklists(checks);
-    setSelectedTpl2ChecklistId(checks[0]?.id || null);
-    setNewTpl2ChecklistText('');
-  };
-
-  const handleAddTpl2UpperChecklist = () => {
-    if (!newTpl2ChecklistText.trim()) return;
-    const newId = `chk_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const newItem = {
-      id: newId,
-      text: newTpl2ChecklistText.trim(),
-      completed: false,
-      detailBlocks: [
-        {
-          id: `chk_${Date.now()}_sub`,
-          type: 'checklist',
-          title: '세부 체크리스트',
-          items: [
-            { id: `item_${Date.now()}_1`, text: '', completed: false }
-          ]
-        }
-      ]
-    };
-    setTpl2DraftChecklists((prev) => [...prev, newItem]);
-    setSelectedTpl2ChecklistId(newId);
-    setNewTpl2ChecklistText('');
-  };
-
-  const handleDeleteTpl2UpperChecklist = (id) => {
-    setTpl2DraftChecklists((prev) => {
-      const filtered = prev.filter((c) => c.id !== id);
-      if (selectedTpl2ChecklistId === id) {
-        setSelectedTpl2ChecklistId(filtered[0]?.id || null);
-      }
-      return filtered;
-    });
-  };
-
-  const handleUpdateTpl2UpperChecklistText = (id, newText) => {
-    setTpl2DraftChecklists((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, text: newText } : c))
-    );
-  };
-
-  const handleSaveTpl2DetailBlocks = (targetCheckId, newBlocks) => {
-    setTpl2DraftChecklists((prev) =>
-      prev.map((c) => (c.id === targetCheckId ? { ...c, detailBlocks: newBlocks } : c))
-    );
-  };
-
-  const handleSaveTemplate2FromCanvas = async () => {
-    if (!tpl2DraftTitle.trim()) {
-      alert('템플릿2 이름을 입력해 주세요.');
-      return;
-    }
-    if (tpl2DraftChecklists.length === 0) {
-      alert('상위 체크리스트 항목을 최소 1개 이상 작성해 주세요.');
-      return;
-    }
-
-    setIsSavingTpl2(true);
-    try {
-      const docId = (selectedTemplate2IdInTab && selectedTemplate2IdInTab !== 'NEW')
-        ? selectedTemplate2IdInTab
-        : `tpl2_${Date.now()}`;
-
-      const tplData = {
-        id: docId,
-        title: tpl2DraftTitle.trim(),
-        checklists: tpl2DraftChecklists,
-        updatedAt: new Date().toISOString()
-      };
-
-      await setDoc(doc(db, 'templates2', docId), tplData);
-      setSelectedTemplate2IdInTab(docId);
-      setShowSavedToast(true);
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
-    } catch (err) {
-      console.error('템플릿2 저장 오류:', err);
-      alert('템플릿2 저장에 실패했습니다.');
-    } finally {
-      setIsSavingTpl2(false);
-    }
-  };
-
-  const handleDeleteTemplate2InTab = (id) => {
-    openDeleteModal(
-      '템플릿2 삭제',
-      '정말 이 템플릿2를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.',
-      async () => {
-        try {
-          await deleteDoc(doc(db, 'templates2', id));
-          if (selectedTemplate2IdInTab === id) {
-            setSelectedTemplate2IdInTab(null);
-            setTpl2DraftTitle('');
-            setTpl2DraftChecklists([]);
-            setSelectedTpl2ChecklistId(null);
-          }
-        } catch (err) {
-          console.error('템플릿2 삭제 오류:', err);
-          alert('템플릿2 삭제에 실패했습니다.');
-        }
-      }
-    );
-  };
-
-  const cloneTemplateData = (tpl) => {
-    if (!tpl) return { checklists: [], body: '', detailBlocks: [] };
-
-    const clonedChecklists = (tpl.checklists || []).map((chk, cIdx) => {
-      const isSec = Boolean(chk.isSection || chk.type === 'section');
-      const newChkId = isSec
-        ? `sec_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`
-        : `chk_${Date.now()}_${cIdx}_${Math.random().toString(36).substring(2, 6)}`;
-
-      const clonedBlocks = (chk.detailBlocks || []).map((b, bIdx) => ({
-        ...b,
-        id: `b_${Date.now()}_${cIdx}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
-        items: Array.isArray(b.items)
-          ? b.items.map((it, itIdx) => ({
-              ...it,
-              id: `it_${Date.now()}_${cIdx}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
-              completed: false
-            }))
-          : []
-      }));
-
-      let detailText = '';
-      if (clonedBlocks.length > 0) {
-        detailText = blocksToPlainText(clonedBlocks);
-      } else if (chk.detail) {
-        detailText = chk.detail;
-      }
-
-      return {
-        ...chk,
-        id: newChkId,
-        text: chk.text || '',
-        completed: false,
-        isSection: isSec,
-        type: chk.type || (isSec ? 'section' : 'item'),
-        tag: chk.tag || null,
-        detailBlocks: clonedBlocks,
-        detail: detailText
-      };
-    });
-
-    const clonedMainBlocks = (tpl.detailBlocks || []).map((b, bIdx) => ({
-      ...b,
-      id: `mb_${Date.now()}_${bIdx}_${Math.random().toString(36).substring(2, 6)}`,
-      items: Array.isArray(b.items)
-        ? b.items.map((it, itIdx) => ({
-            ...it,
-            id: `mit_${Date.now()}_${bIdx}_${itIdx}_${Math.random().toString(36).substring(2, 6)}`,
-            completed: false
-          }))
-        : []
-    }));
-
-    return {
-      checklists: clonedChecklists,
-      body: tpl.body || '',
-      detailBlocks: clonedMainBlocks
-    };
-  };
-
-  const handleApplyTemplate2ToItem = async (tpl2, mode = 'replace') => {
-    if (!tpl2) return;
-    try {
-      const { checklists: clonedChecklists, body: tplBody, detailBlocks: tplBlocks } = cloneTemplateData(tpl2);
-
-      let finalChecklists = [];
-      let finalBody = isEditMode ? draftBody : (activeItem?.body || '');
-      let finalDetailBlocks = Array.isArray(activeItem?.detailBlocks) ? activeItem.detailBlocks : [];
-
-      if (mode === 'append') {
-        const existing = Array.isArray(isEditMode && draftChecklists !== null ? draftChecklists : activeItem?.checklists)
-          ? (isEditMode && draftChecklists !== null ? draftChecklists : (activeItem?.checklists || []))
-          : [];
-        finalChecklists = [...existing, ...clonedChecklists];
-        if (tplBody) {
-          finalBody = finalBody ? `${finalBody}\n\n${tplBody}` : tplBody;
-        }
-        if (tplBlocks.length > 0) {
-          finalDetailBlocks = [...finalDetailBlocks, ...tplBlocks];
-        }
-      } else {
-        finalChecklists = clonedChecklists;
-        if (tplBody) finalBody = tplBody;
-        if (tplBlocks.length > 0) finalDetailBlocks = tplBlocks;
-      }
-
-      // 1. 현재 편집 모드(isEditMode)일 경우 draft 상태 즉시 갱신
-      if (isEditMode) {
-        setDraftChecklists(finalChecklists);
-        setDraftBody(finalBody);
-        if (finalDetailBlocks.length > 0) {
-          setChecklistDetailBlocks(finalDetailBlocks);
-        }
-      }
-
-      // 2. 만약 activeItem이 존재한다면 Firestore DB 및 items 상태도 업데이트
-      if (activeItem && activeItem.id) {
-        const updatePayload = {
-          checklists: finalChecklists,
-          updatedAt: new Date().toISOString()
-        };
-        if (tplBody || mode === 'replace') {
-          updatePayload.body = finalBody;
-        }
-        if (finalDetailBlocks.length > 0 || mode === 'replace') {
-          updatePayload.detailBlocks = finalDetailBlocks;
-        }
-
-        await updateDoc(doc(db, 'items', activeItem.id), updatePayload);
-
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === activeItem.id ? { ...item, ...updatePayload } : item
-          )
-        );
-      }
-
-      // 3. 네비게이션 포커스 설정
-      if (finalChecklists.length > 0) {
-        const targetIndex = (mode === 'append' && activeItem?.checklists?.length)
-          ? activeItem.checklists.length
-          : 0;
-        const firstTarget = finalChecklists[targetIndex] || finalChecklists[0];
-        setSelectedChecklistId(firstTarget?.id || '__main__');
-        if (firstTarget && Array.isArray(firstTarget.detailBlocks) && firstTarget.detailBlocks.length > 0) {
-          setChecklistDetailBlocks(firstTarget.detailBlocks);
-        } else {
-          setChecklistDetailBlocks([]);
-        }
-      }
-
-      setShowTemplate2Modal(false);
-      setShowSavedToast(true);
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => setShowSavedToast(false), 1800);
-    } catch (err) {
-      console.error('템플릿 적용 오류:', err);
-      alert('템플릿을 적용하지 못했습니다.');
-    }
-  };
-
+  const {
+    buildTemplateCombinedBody,
+    handleSelectTemplateInTab,
+    handleCreateNewTemplateInTab,
+    handleDeleteTemplateInTab,
+    cloneTemplateData,
+    handleApplyTemplate2ToItem
+  } = useTemplateActions({
+    db,
+    templates,
+    items,
+    setItems,
+    activeItem,
+    isEditMode,
+    draftBody,
+    setDraftBody,
+    draftChecklists,
+    setDraftChecklists,
+    setChecklistDetailBlocks,
+    selectedTemplateIdInTab,
+    setSelectedTemplateIdInTab,
+    setSelectedChecklistId,
+    setShowTemplate2Modal,
+    setShowSavedToast,
+    toastTimerRef,
+    openDeleteModal
+  });
 
   const handleSaveDetail = async () => {
     if (!selectedItemId) return;
