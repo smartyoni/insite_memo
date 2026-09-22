@@ -95,6 +95,7 @@ import { useDeleteModal } from './notebook/hooks/useDeleteModal';
 import { usePrintActions } from './notebook/hooks/usePrintActions';
 import { useMenuPositioning } from './notebook/hooks/useMenuPositioning';
 import { useAddGroupModal } from './notebook/hooks/useAddGroupModal';
+import { useNotebookNavigation } from './notebook/hooks/useNotebookNavigation';
 import {
   extractAllStrings,
   getCategoryPath as getCategoryPathFn,
@@ -239,6 +240,38 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     return (initialNavLoc?.activeMainTab === 'explorer' || !initialNavLoc?.activeMainTab) ? 'quick_memo' : '';
   });
   const [selectedItemId, setSelectedItemId] = useState(() => initialNavLoc?.selectedItemId || null);
+  const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__');
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const itemInputRef = useRef(null);
+
+  const {
+    isMobile,
+    setIsMobile,
+    mobileView,
+    setMobileView,
+    mobileSubTab,
+    setMobileSubTab,
+    showExitToast,
+    handleTouchStart,
+    handleTouchEnd,
+    navigateToItems,
+    navigateToDetail,
+    navigateBack,
+  } = useNotebookNavigation({
+    initialNavLoc,
+    activeMainTab,
+    categories,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    selectedItemId,
+    setSelectedItemId,
+    selectedChecklistId,
+    isAddingItem,
+    setIsAddingItem,
+    setNewItemTitle,
+    itemInputRef,
+  });
 
   // Main Tabs Configuration (Custom order, custom labels, drag & drop, cloud sync)
   const {
@@ -398,16 +431,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
   const isTrashSelected = FIXED_TRASH_IDS.includes(selectedCategoryId);
 
-  // Mobile responsiveness & navigation state (Threshold 860px for tablets & mobile)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 860);
-  const [mobileView, setMobileView] = useState(() => initialNavLoc?.mobileView || 'categories'); // 'categories' | 'items' | 'detail'
-  const [mobileSubTab, setMobileSubTab] = useState(() => initialNavLoc?.mobileSubTab || 'main'); // 'main' (상세내용) | 'sub' (보충노트)
-  const [showExitToast, setShowExitToast] = useState(false);
 
-  const lastBackPressRef = useRef(0);
-  const exitToastTimerRef = useRef(null);
-  const touchStartXRef = useRef(null);
-  const touchStartYRef = useRef(null);
   const sidebarRef = useRef(null);
 
   // Category inline editing states & hierarchy states
@@ -419,10 +443,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [deletingCategoryId, setDeletingCategoryId] = useState(null);
 
   // Item inline adding states
-  const [isAddingItem, setIsAddingItem] = useState(false);
-  const [newItemTitle, setNewItemTitle] = useState('');
   const itemScrollRef = useRef(null);
-  const itemInputRef = useRef(null);
   const isSubmittingItemRef = useRef(false);
 
   // Folder collapse/expand state (persisted to localStorage)
@@ -601,7 +622,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     handleCloseAllMenus
   } = useMenuPositioning();
 
-  const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
+
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
   const [editingBlockId, setEditingBlockId] = useState(null);
@@ -711,168 +732,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     copyToastTimerRef
   });
 
-  // Resize listener for mobile responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth <= 860;
-      setIsMobile(mobile);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
-  // Touch Swipe Handlers for Mobile Tab Switching
-  const handleTouchStart = (e) => {
-    if (!isMobile) return;
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e) => {
-    if (!isMobile || touchStartXRef.current === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const diffX = touchEndX - touchStartXRef.current;
-    const diffY = touchEndY - touchStartYRef.current;
-
-    // Ensure horizontal swipe is dominant over vertical scroll
-    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
-      if (diffX < 0) {
-        // Swiped Left -> Switch to 'sub' (보충노트)
-        setMobileSubTab('sub');
-      } else {
-        // Swiped Right -> Switch to 'main' (상세내용)
-        setMobileSubTab('main');
-      }
-    }
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-  };
-
-  // Automatically ensure history guard entry exists whenever mobileView becomes 'categories'
-  useEffect(() => {
-    if (!isMobile) return;
-    if (mobileView === 'categories') {
-      if (window.history.state?.view !== 'categories') {
-        window.history.pushState({ view: 'categories' }, '');
-      }
-    }
-  }, [isMobile, mobileView, activeMainTab]);
-
-  // Hardware/Browser Back button handling (popstate)
-  useEffect(() => {
-    // Initial mount guard state - align with initial mobileView
-    const initView = initialNavLoc?.mobileView || 'categories';
-    if (initView !== 'categories') {
-      window.history.replaceState({ view: 'categories' }, '');
-      if (initView === 'items') {
-        window.history.pushState({ view: 'items' }, '');
-      } else if (initView === 'detail') {
-        window.history.pushState({ view: 'items' }, '');
-        window.history.pushState({ view: 'detail' }, '');
-      }
-    } else {
-      if (window.history.state?.view !== 'categories') {
-        window.history.pushState({ view: 'categories' }, '');
-      }
-    }
-
-    const handlePopState = (e) => {
-      const stateView = e.state?.view;
-
-      if (stateView === 'detail') {
-        setMobileView('detail');
-      } else if (stateView === 'items') {
-        setMobileView('items');
-      } else {
-        // Popped back while at top-level categories or invalid state
-        setMobileView('categories');
-
-        const now = Date.now();
-        if (now - lastBackPressRef.current < 2000) {
-          // Double back press within 2 seconds: Allow actual app exit
-          try {
-            window.close();
-          } catch (err) {
-            console.log('App exited');
-          }
-          window.history.back();
-        } else {
-          lastBackPressRef.current = now;
-          // Re-push categories guard state to block immediate page exit
-          window.history.pushState({ view: 'categories' }, '');
-
-          setShowExitToast(true);
-          if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
-          exitToastTimerRef.current = setTimeout(() => {
-            setShowExitToast(false);
-          }, 2000);
-        }
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // Navigation Helpers
-  const navigateToItems = (catId) => {
-    setSelectedCategoryId(catId);
-    setIsAddingItem(false);
-    setNewItemTitle('');
-    if (isMobile) {
-      setMobileView('items');
-      window.history.pushState({ view: 'items' }, '');
-    }
-  };
-
-  useEffect(() => {
-    if (isAddingItem && itemInputRef.current) {
-      itemInputRef.current.focus();
-    }
-  }, [isAddingItem]);
-
-  const navigateToDetail = (itemId) => {
-    setSelectedItemId(itemId);
-    setMobileSubTab('main');
-    if (isMobile) {
-      setMobileView('detail');
-      window.history.pushState({ view: 'detail' }, '');
-    }
-  };
-
-  const navigateBack = () => {
-    window.history.back();
-  };
-
-  // Ensure valid selectedCategoryId when categories or tab change
-  useEffect(() => {
-    if (categories.length === 0) return;
-    const isFixed = ALL_FIXED_CATEGORY_IDS.includes(selectedCategoryId);
-    const currentTabScope = getScopeForTab(activeMainTab);
-    const isValid = isFixed || categories.some(
-      (c) => c.id === selectedCategoryId && (currentTabScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === currentTabScope)
-    );
-    if (!isValid || LEGACY_INBOX_IDS.includes(selectedCategoryId)) {
-      const defId = getDefaultCategoryIdForTab(activeMainTab, categories);
-      if (defId) {
-        setSelectedCategoryId(defId);
-      }
-    }
-  }, [categories, activeMainTab, selectedCategoryId]);
-
-  // Automatically save current navigation location to localStorage
-  useEffect(() => {
-    saveStoredNavLocation({
-      activeMainTab,
-      selectedCategoryId,
-      selectedItemId,
-      selectedChecklistId,
-      mobileView,
-      mobileSubTab
-    });
-  }, [activeMainTab, selectedCategoryId, selectedItemId, selectedChecklistId, mobileView, mobileSubTab]);
 
   // Filter & Sort items by selected category (Default: ascending order by title / 가나다순)
   const filteredItems = items
