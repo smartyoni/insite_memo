@@ -12066,16 +12066,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             )}
                             {!isItemInTrash && (
                               <button
-                                onClick={handleEnterEditMode}
-                                style={styles.btnPrimary}
-                                title="메모 기본정보 및 템플릿 수정"
-                              >
-                                <Edit2 size={13} />
-                                수정
-                              </button>
-                            )}
-                            {!isItemInTrash && (
-                              <button
                                 onClick={() => setShowTemplate2Modal(true)}
                                 style={{
                                   ...styles.btnSecondary,
