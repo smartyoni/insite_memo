@@ -11566,20 +11566,20 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 ...styles.checklistItemRow,
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
-                                                backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                                backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                                 border: 'none',
                                                 borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                                boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                                boxShadow: 'none',
                                                 opacity: isDragged ? 0.4 : 1,
                                                 cursor: 'pointer'
                                               } : {
                                                 ...styles.checklistItemRow,
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
-                                                backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                                backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                                 border: 'none',
                                                 borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                                boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                                boxShadow: 'none',
                                                 opacity: isDragged ? 0.4 : 1,
                                                 cursor: 'pointer'
                                               }}
@@ -11691,7 +11691,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                         width: '7px',
                                                         height: '7px',
                                                         borderRadius: '50%',
-                                                        backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
+                                                        backgroundColor: '#0F172A',
                                                         marginTop: isMobile ? '5px' : '5.5px',
                                                         flexShrink: 0
                                                       }}
@@ -11713,8 +11713,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                         flex: 1,
                                                         minWidth: 0,
                                                         textDecoration: 'none',
-                                                        color: isSelected ? '#1E40AF' : '#1E293B',
-                                                        fontWeight: isSelected ? 700 : 500,
+                                                        color: '#1E293B',
+                                                        fontWeight: 500,
                                                         fontSize: isMobile ? '13px' : '14px',
                                                         cursor: 'pointer'
                                                       }}
@@ -13145,20 +13145,20 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               ...styles.checklistItemRow,
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: '0',
-                                              backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                              backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                               border: 'none',
                                               borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                              boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                              boxShadow: 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             } : {
                                               ...styles.checklistItemRow,
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: 0,
-                                              backgroundColor: isDragOver ? '#DBEAFE' : isSelected ? '#EFF6FF' : isEditing ? '#F8FAFC' : '#FFFFFF',
+                                              backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                               border: 'none',
                                               borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                              boxShadow: isSelected ? 'inset 3px 0 0 #2563EB' : 'none',
+                                              boxShadow: 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             }}
@@ -13228,7 +13228,7 @@ onClick={() => {
                                                       width: '7px',
                                                       height: '7px',
                                                       borderRadius: '50%',
-                                                      backgroundColor: isSelected ? '#1D4ED8' : '#0F172A',
+                                                      backgroundColor: '#0F172A',
                                                       marginTop: isMobile ? '5px' : '5.5px',
                                                       flexShrink: 0
                                                     }}
@@ -13250,8 +13250,8 @@ onClick={() => {
                                                       flex: 1,
                                                       minWidth: 0,
                                                       textDecoration: 'none',
-                                                      color: isSelected ? '#1E40AF' : '#1E293B',
-                                                      fontWeight: isSelected ? 700 : 500,
+                                                      color: '#1E293B',
+                                                      fontWeight: 500,
                                                       fontSize: isMobile ? '13px' : '14px',
                                                       cursor: 'pointer'
                                                     }}
