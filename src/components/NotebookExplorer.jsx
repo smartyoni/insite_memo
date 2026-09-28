@@ -7623,9 +7623,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               height: isMobile ? '29px' : '31px',
                               padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                               boxSizing: 'border-box',
-                              backgroundColor: isGroupDragOver ? '#FFEDD5' : '#F8C8A0',
+                              backgroundColor: isGroupDragOver ? '#DBEAFE' : '#BFDBFE',
                               border: 'none',
-                              borderBottom: isSecCollapsed ? 'none' : '1px solid #E2A374',
+                              borderBottom: isSecCollapsed ? 'none' : '1px solid #93C5FD',
                               borderRadius: '0',
                               boxShadow: 'none',
                               cursor: isSecEditing ? 'default' : 'pointer',
@@ -7662,7 +7662,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     color: '#1E293B',
                                     padding: '2px 6px',
                                     borderRadius: '4px',
-                                    border: '1px solid #EA580C',
+                                    border: '1px solid #2563EB',
                                     outline: 'none',
                                     flex: 1
                                   }}
@@ -7671,7 +7671,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateCategoryGroupName(group.id)}
-                                  style={{ ...styles.btnPrimary, backgroundColor: '#EA580C', padding: '2px 8px', fontSize: '11px' }}
+                                  style={{ ...styles.btnPrimary, backgroundColor: '#2563EB', padding: '2px 8px', fontSize: '11px' }}
                                 >
                                   저장
                                 </button>
@@ -7686,7 +7686,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                                 <span
-                                  style={{ display: 'flex', alignItems: 'center', color: '#C2410C' }}
+                                  style={{ display: 'flex', alignItems: 'center', color: '#1D4ED8' }}
                                   title={isSecCollapsed ? '펼치기' : '접기'}
                                 >
                                   {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
@@ -7714,10 +7714,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 <span
                                   style={{
                                     fontSize: '10px',
-                                    color: '#9A3412',
+                                    color: '#1E40AF',
                                     opacity: 0.9,
                                     fontWeight: 600,
-                                    backgroundColor: '#FED7AA',
+                                    backgroundColor: '#DBEAFE',
                                     padding: '0 4px',
                                     borderRadius: '8px',
                                     lineHeight: 1.2
