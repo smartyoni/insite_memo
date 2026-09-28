@@ -7352,13 +7352,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
               {isAddingCategoryGroup && (
                 <div style={{
                   padding: '8px 12px',
-                  backgroundColor: '#F0FDF4',
-                  borderBottom: '1px solid #86EFAC',
+                  backgroundColor: '#F8FAFC',
+                  borderBottom: '1px solid #CBD5E1',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
                 }}>
-                  <FolderPlus size={16} color="#059669" style={{ flexShrink: 0 }} />
+                  <FolderPlus size={16} color="#2563EB" style={{ flexShrink: 0 }} />
                   <input
                     autoFocus
                     type="text"
@@ -7380,14 +7380,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                       fontSize: '13px',
                       padding: '4px 8px',
                       borderRadius: '4px',
-                      border: '1px solid #10B981',
+                      border: '1px solid #3B82F6',
                       outline: 'none'
                     }}
                   />
                   <button
                     type="button"
                     onClick={handleAddCategoryGroup}
-                    style={{ ...styles.btnPrimary, backgroundColor: '#059669', padding: '4px 8px', fontSize: '11px' }}
+                    style={{ ...styles.btnPrimary, padding: '4px 8px', fontSize: '11px' }}
                   >
                     추가
                   </button>
@@ -7597,7 +7597,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           boxShadow: 'none'
                         }}
                       >
-                        {/* 녹색 그룹 헤더 바 */}
+                        {/* 그룹 헤더 바 */}
                         {group && (
                           <div
                             onDragOver={(e) => {
@@ -7623,9 +7623,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               height: isMobile ? '29px' : '31px',
                               padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
                               boxSizing: 'border-box',
-                              backgroundColor: isGroupDragOver ? '#DCFCE7' : '#BBF7D0',
+                              backgroundColor: isGroupDragOver ? '#FFEDD5' : '#F8C8A0',
                               border: 'none',
-                              borderBottom: isSecCollapsed ? 'none' : '1px solid #86EFAC',
+                              borderBottom: isSecCollapsed ? 'none' : '1px solid #E2A374',
                               borderRadius: '0',
                               boxShadow: 'none',
                               cursor: isSecEditing ? 'default' : 'pointer',
@@ -7659,10 +7659,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   style={{
                                     fontSize: '13px',
                                     fontWeight: 700,
-                                    color: '#064E3B',
+                                    color: '#1E293B',
                                     padding: '2px 6px',
                                     borderRadius: '4px',
-                                    border: '1px solid #059669',
+                                    border: '1px solid #EA580C',
                                     outline: 'none',
                                     flex: 1
                                   }}
@@ -7671,7 +7671,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateCategoryGroupName(group.id)}
-                                  style={{ ...styles.btnPrimary, backgroundColor: '#059669', padding: '2px 8px', fontSize: '11px' }}
+                                  style={{ ...styles.btnPrimary, backgroundColor: '#EA580C', padding: '2px 8px', fontSize: '11px' }}
                                 >
                                   저장
                                 </button>
@@ -7686,7 +7686,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                                 <span
-                                  style={{ display: 'flex', alignItems: 'center', color: '#047857' }}
+                                  style={{ display: 'flex', alignItems: 'center', color: '#C2410C' }}
                                   title={isSecCollapsed ? '펼치기' : '접기'}
                                 >
                                   {isSecCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
@@ -7702,7 +7702,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   style={{
                                     fontSize: '12px',
                                     fontWeight: 700,
-                                    color: '#064E3B',
+                                    color: '#0F172A',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
@@ -7714,10 +7714,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 <span
                                   style={{
                                     fontSize: '10px',
-                                    color: '#047857',
-                                    opacity: 0.85,
+                                    color: '#9A3412',
+                                    opacity: 0.9,
                                     fontWeight: 600,
-                                    backgroundColor: '#A7F3D0',
+                                    backgroundColor: '#FED7AA',
                                     padding: '0 4px',
                                     borderRadius: '8px',
                                     lineHeight: 1.2
@@ -7736,7 +7736,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   backgroundColor: '#FFFFFF',
-                                  border: '1px solid #A7F3D0',
+                                  border: '1px solid #CBD5E1',
                                   borderRight: 'none',
                                   borderTopRightRadius: 0,
                                   borderBottomRightRadius: 0,
@@ -7765,7 +7765,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     border: 'none',
                                     borderRight: '1px solid #E2E8F0',
                                     backgroundColor: 'transparent',
-                                    color: '#059669',
+                                    color: '#2563EB',
                                     cursor: 'pointer',
                                     padding: 0
                                   }}
@@ -7786,14 +7786,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       width: isMobile ? '20px' : '22px',
                                       height: '100%',
                                       border: 'none',
-                                      backgroundColor: openCategoryGroupMenuId === group.id ? '#DCFCE7' : 'transparent',
-                                      color: openCategoryGroupMenuId === group.id ? '#059669' : '#047857',
+                                      backgroundColor: openCategoryGroupMenuId === group.id ? '#EFF6FF' : 'transparent',
+                                      color: openCategoryGroupMenuId === group.id ? '#2563EB' : '#475569',
                                       cursor: 'pointer',
                                       padding: 0,
                                       transition: 'all 0.15s ease'
                                     }}
                                     onMouseEnter={(e) => {
-                                      if (openCategoryGroupMenuId !== group.id) e.currentTarget.style.backgroundColor = '#F0FDF4';
+                                      if (openCategoryGroupMenuId !== group.id) e.currentTarget.style.backgroundColor = '#F8FAFC';
                                     }}
                                     onMouseLeave={(e) => {
                                       if (openCategoryGroupMenuId !== group.id) e.currentTarget.style.backgroundColor = 'transparent';
