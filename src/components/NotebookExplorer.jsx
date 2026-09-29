@@ -61,7 +61,8 @@ import {
   AlertCircle,
   CheckCircle2,
   ShieldCheck,
-  HardDrive
+  HardDrive,
+  Star
 } from 'lucide-react';
 import { renderWithLinks } from '../utils/linkify';
 import { DetailBlocksManager, parseDetailBlocks, blocksToPlainText } from './DetailBlocks';
@@ -308,8 +309,9 @@ const FIXED_TRASH_IDS = [
 
 // Fixed Quick-memo category definition (Only in explorer/note tab)
 const QUICK_MEMO_CATEGORY = { id: 'quick_memo', name: '퀵메모', order: -99990, isFixed: true, isQuickMemo: true, scope: 'explorer' };
+const FAVORITES_CATEGORY = { id: 'favorites', name: '즐겨찾기', order: -99989, isFixed: true, isFavorites: true, scope: 'explorer' };
 
-const ALL_FIXED_CATEGORY_IDS = [...FIXED_TRASH_IDS, 'quick_memo'];
+const ALL_FIXED_CATEGORY_IDS = [...FIXED_TRASH_IDS, 'quick_memo', 'favorites'];
 
 // Default Main Tabs configuration (15 tabs, 5x3 rows)
 export const DEFAULT_MAIN_TABS = [
@@ -1757,7 +1759,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   });
 
   const allCategories = [
-    ...(activeMainTab === 'explorer' ? [QUICK_MEMO_CATEGORY] : []),
+    ...(activeMainTab === 'explorer' ? [QUICK_MEMO_CATEGORY, FAVORITES_CATEGORY] : []),
     ...filteredCategories
       .sort((a, b) => {
         const nameA = a.name || '';
@@ -2753,6 +2755,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         );
       }
       if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
+      if (selectedCategoryId === FAVORITES_CATEGORY.id) {
+        return Boolean(item.isFavorite);
+      }
       return item.categoryId === selectedCategoryId;
     })
     .sort((a, b) => {
@@ -4982,6 +4987,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     navigateToItems(QUICK_MEMO_CATEGORY.id);
   };
 
+  const handleNavigateToFavorites = () => {
+    if (activeMainTab !== 'explorer') {
+      setActiveMainTab('explorer');
+    }
+    navigateToItems(FAVORITES_CATEGORY.id);
+  };
+
   const handleOpenQuickMemo = () => {
     setQuickMemoText('');
     setIsQuickMemoOpen(true);
@@ -6394,7 +6406,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const targetTrashId = getTrashIdForTab(targetTab);
     const isCurrentCatValid = categories.some(
       c => c.id === selectedCategoryId && (targetScope === 'explorer' ? (!c.scope || c.scope === 'explorer') : c.scope === targetScope)
-    ) || (targetTab === 'explorer' && selectedCategoryId === 'quick_memo');
+    ) || (targetTab === 'explorer' && (selectedCategoryId === 'quick_memo' || selectedCategoryId === 'favorites'));
     if (!isCurrentCatValid && selectedCategoryId !== targetTrashId) {
       const fallbackId = getDefaultCategoryIdForTab(targetTab, categories);
       setSelectedCategoryId(fallbackId);
@@ -6821,33 +6833,34 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         </div>
       </div>
 
-      {/* Quick Memo Action Buttons: [이전] [퀵메모이동] [퀵메모] */}
+      {/* Action Buttons: [즐겨찾기] [퀵메모이동] [퀵메모] */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', marginTop: '2px' }}>
         <button
           type="button"
-          disabled={!previousWorkTarget}
-          onClick={handleReturnPrevious}
+          onClick={handleNavigateToFavorites}
+          onContextMenu={(e) => handleCategoryContextMenu(e, FAVORITES_CATEGORY)}
           style={{
             flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '3px',
             padding: '6px 2px',
-            backgroundColor: previousWorkTarget ? '#FEF3C7' : '#F1F5F9',
-            border: `1px solid ${previousWorkTarget ? '#F59E0B' : '#E2E8F0'}`,
+            backgroundColor: (activeMainTab === 'explorer' && selectedCategoryId === FAVORITES_CATEGORY.id) ? '#FDE68A' : '#FEF3C7',
+            border: `1px solid ${(activeMainTab === 'explorer' && selectedCategoryId === FAVORITES_CATEGORY.id) ? '#F59E0B' : '#FDE047'}`,
             borderRadius: '6px',
-            color: previousWorkTarget ? '#92400E' : '#94A3B8',
+            color: '#B45309',
             fontSize: '12px',
-            fontWeight: previousWorkTarget ? 700 : 500,
-            cursor: previousWorkTarget ? 'pointer' : 'not-allowed',
-            opacity: previousWorkTarget ? 1 : 0.6,
-            boxShadow: previousWorkTarget ? '0 1px 2px rgba(245, 158, 11, 0.15)' : 'none',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(245, 158, 11, 0.15)',
             transition: 'all 0.15s ease',
             whiteSpace: 'nowrap'
           }}
-          title={previousWorkTarget ? `이전 작업 위치로 이동: ${previousWorkTarget.itemTitle || '메모'}` : '이전 작업 위치 없음'}
+          title="즐겨찾기 항목 모아보기로 이동 (우클릭: 주소 복사)"
         >
-          <span>이전</span>
+          <Star size={12} color="#D97706" fill={selectedCategoryId === FAVORITES_CATEGORY.id ? '#D97706' : '#F59E0B'} style={{ flexShrink: 0 }} />
+          <span>즐겨찾기</span>
         </button>
         <button
           type="button"
@@ -7469,6 +7482,85 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                         <Zap size={15} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#F59E0B' : 'transparent'} style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {QUICK_MEMO_CATEGORY.name}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '11px',
+                        color: isSelected ? '#D97706' : '#94A3B8',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}>
+                        ({count})
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Fixed Favorites Category (Only in explorer/note tab, right below quick_memo) */}
+                {activeMainTab === 'explorer' && (() => {
+                  const isSelected = FAVORITES_CATEGORY.id === selectedCategoryId;
+                  const isDropTarget = dragOverCategoryId === FAVORITES_CATEGORY.id;
+                  const count = items.filter((item) => {
+                    if (item.isDeleted || FIXED_TRASH_IDS.includes(item.categoryId)) return false;
+                    return Boolean(item.isFavorite);
+                  }).length;
+
+                  return (
+                    <div
+                      key={FAVORITES_CATEGORY.id}
+                      onDragOver={(e) => {
+                        if (draggedItemId) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'copy';
+                          setDragOverCategoryId(FAVORITES_CATEGORY.id);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        e.stopPropagation();
+                        if (dragOverCategoryId === FAVORITES_CATEGORY.id) {
+                          setDragOverCategoryId(null);
+                        }
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragOverCategoryId(null);
+                        if (draggedItemId) {
+                          const itemId = draggedItemId;
+                          setDraggedItemId(null);
+                          try {
+                            await updateDoc(doc(db, 'items', itemId), {
+                              isFavorite: true,
+                              updatedAt: serverTimestamp()
+                            });
+                          } catch (err) {
+                            console.error('Error adding item to favorites via drop:', err);
+                          }
+                        }
+                      }}
+                      onClick={() => navigateToItems(FAVORITES_CATEGORY.id)}
+                      onContextMenu={(e) => handleCategoryContextMenu(e, FAVORITES_CATEGORY)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '7px 10px',
+                        marginBottom: '2px',
+                        backgroundColor: isDropTarget ? '#FEF08A' : isSelected ? '#FEF3C7' : '#FFFFFF',
+                        borderBottom: '1px solid #E2E8F0',
+                        boxShadow: isSelected ? 'inset 3px 0 0 #D97706' : 'none',
+                        color: isSelected ? '#92400E' : '#1E293B',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: 'pointer',
+                        userSelect: 'none'
+                      }}
+                      title="즐겨찾기 항목 모아보기 (우클릭: 주소 복사)"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                        <Star size={15} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#F59E0B' : '#FDE68A'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {FAVORITES_CATEGORY.name}
                         </span>
                       </div>
                       <span style={{
@@ -8647,7 +8739,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             <span>휴지통 비우기</span>
                           </button>
                         )
-                      ) : (
+                      ) : selectedCategoryId === 'favorites' ? null : (
                         <div
                           style={{
                             display: 'inline-flex',
@@ -8830,7 +8922,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                           </button>
                         </div>
                       )}
-                      {!isTrashSelected && (
+                      {!isTrashSelected && selectedCategoryId !== 'favorites' && (
                         <div
                           style={{
                             display: 'inline-flex',
@@ -9000,7 +9092,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
                   {displayedItems.length === 0 && !isAddingItem && (!activeCategory?.itemGroups || activeCategory.itemGroups.length === 0) ? (
                     <div style={styles.emptyStateText}>
-                      {isSearchActive ? '검색 결과와 일치하는 메모가 없습니다.' : '등록된 메모가 없습니다.'}
+                      {isSearchActive
+                        ? '검색 결과와 일치하는 메모가 없습니다.'
+                        : selectedCategoryId === 'favorites'
+                        ? '즐겨찾기된 메모가 없습니다. 2번 패널 메모의 3점(⋮) 메뉴에서 [즐겨찾기 추가]를 눌러보세요.'
+                        : '등록된 메모가 없습니다.'}
                     </div>
                   ) : (
                     displayedItemGrouped.map((groupObj, groupIdx) => {
@@ -9626,9 +9722,15 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               whiteSpace: 'normal',
                                               wordBreak: 'break-word',
                                               lineHeight: 1.45,
-                                              flex: 1
+                                              flex: 1,
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px'
                                             }}>
-                                              {highlightText(item.title || '제목 없음', searchQuery)}
+                                              {item.isFavorite && (
+                                                <Star size={12} color="#D97706" fill="#F59E0B" style={{ flexShrink: 0 }} />
+                                              )}
+                                              <span>{highlightText(item.title || '제목 없음', searchQuery)}</span>
                                             </span>
                                           )}
                                         </div>
@@ -9742,6 +9844,37 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
                                                     <button
                                                       type="button"
+                                                      onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        setOpenNoteMenuId(null);
+                                                        try {
+                                                          const nextFavorite = !item.isFavorite;
+                                                          await updateDoc(doc(db, 'items', item.id), {
+                                                            isFavorite: nextFavorite,
+                                                            updatedAt: serverTimestamp()
+                                                          });
+                                                        } catch (err) {
+                                                          console.error('Error toggling favorite:', err);
+                                                          alert('즐겨찾기 상태 변경 중 오류가 발생했습니다.');
+                                                        }
+                                                      }}
+                                                      style={{
+                                                        ...styles.checklistDropdownItem,
+                                                        color: item.isFavorite ? '#D97706' : '#475569'
+                                                      }}
+                                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = item.isFavorite ? '#FEF3C7' : '#F1F5F9'}
+                                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
+                                                      <Star
+                                                        size={13}
+                                                        color={item.isFavorite ? '#D97706' : '#64748B'}
+                                                        fill={item.isFavorite ? '#F59E0B' : 'transparent'}
+                                                      />
+                                                      <span>{item.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}</span>
+                                                    </button>
+
+                                                    <button
+                                                      type="button"
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         setOpenNoteMenuId(null);
@@ -9840,6 +9973,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           </>
                                         );
                                       })()}
+
+                                      {!isSearchActive && selectedCategoryId === 'favorites' && (
+                                        <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                          <span style={{ fontSize: '10px', backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                                            {getCategoryBadgeName(item.categoryId)}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })
@@ -9853,7 +9994,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                   </div>
 
                 {/* Floating Action Button (FAB) for Mobile Sublist */}
-                {isMobile && !isTrashSelected && (
+                {isMobile && !isTrashSelected && selectedCategoryId !== 'favorites' && (
                   <button
                     onClick={handleAddItem}
                     style={styles.mobileFabBtn}
