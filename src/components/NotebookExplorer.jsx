@@ -463,14 +463,16 @@ export const checkIsMobileLayout = () => {
   if (typeof window === 'undefined') return false;
   const width = window.innerWidth;
   const height = window.innerHeight;
-  const isPortrait = height > width || (window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  const screenPortrait = window.screen ? (window.screen.height > window.screen.width) : false;
+  const isPortrait = height > width || screenPortrait || (window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
 
   // 1. 기본 스마트폰 및 좁은 화면 (가로/세로 무관 860px 이하)
   if (width <= 860) return true;
 
-  // 2. 태블릿 세로 화면: 세로 모드(portrait)이면서 가로 너비 1150px 이하인 경우 모바일 뷰 적용
-  // (iPad Pro 12.9의 portrait 가로폭 1024px 및 갤럭시 탭 전 기종 세로 해상도 완벽 커버)
-  if (isPortrait && width <= 1150) {
+  // 2. 태블릿 세로 화면: 세로 모드(portrait)인 경우 모바일 뷰 적용
+  // 갤럭시 탭 S10+(가로 1200~1280px 구간) 및 대화면 태블릿(울트라 등) 전 기종 세로 뷰 완벽 지원
+  if (isPortrait && (width <= 1450 || isTouchDevice)) {
     return true;
   }
 
@@ -2502,17 +2504,24 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       });
     };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+    const handleOrientationOrResize = () => {
+      handleResize();
+      // 안드로이드/태블릿 기기의 뷰포트 렌더링 지연에 대비한 이중 체크
+      setTimeout(handleResize, 100);
+      setTimeout(handleResize, 300);
+    };
+
+    window.addEventListener('resize', handleOrientationOrResize);
+    window.addEventListener('orientationchange', handleOrientationOrResize);
     if (window.screen?.orientation) {
-      window.screen.orientation.addEventListener('change', handleResize);
+      window.screen.orientation.addEventListener('change', handleOrientationOrResize);
     }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
+      window.removeEventListener('resize', handleOrientationOrResize);
+      window.removeEventListener('orientationchange', handleOrientationOrResize);
       if (window.screen?.orientation) {
-        window.screen.orientation.removeEventListener('change', handleResize);
+        window.screen.orientation.removeEventListener('change', handleOrientationOrResize);
       }
     };
   }, [selectedItemId, selectedCategoryId]);
