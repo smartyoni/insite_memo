@@ -11705,22 +11705,26 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               }}
                                               style={group.section ? {
                                                 ...styles.checklistItemRow,
+                                                position: 'relative',
+                                                zIndex: isSelected ? 1 : 0,
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
                                                 backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                                 border: 'none',
                                                 borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                                boxShadow: 'none',
+                                                boxShadow: isSelected ? 'inset 0 0 0 2px #2563EB' : 'none',
                                                 opacity: isDragged ? 0.4 : 1,
                                                 cursor: 'pointer'
                                               } : {
                                                 ...styles.checklistItemRow,
+                                                position: 'relative',
+                                                zIndex: isSelected ? 1 : 0,
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
                                                 backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                                 border: 'none',
                                                 borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                                boxShadow: 'none',
+                                                boxShadow: isSelected ? 'inset 0 0 0 2px #2563EB' : 'none',
                                                 opacity: isDragged ? 0.4 : 1,
                                                 cursor: 'pointer'
                                               }}
@@ -11817,7 +11821,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   }}
                                                   style={{
                                                     display: 'flex',
-                                                    alignItems: 'center',
+                                                    alignItems: 'flex-start',
                                                     justifyContent: 'space-between',
                                                     width: '100%',
                                                     gap: isMobile ? '4px' : '8px',
@@ -11864,7 +11868,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     </span>
                                                   </div>
 
-                                                  <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                  <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                                     <button
                                                       type="button"
                                                       onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
@@ -11914,23 +11918,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                             type="button"
                                                             onClick={() => {
                                                               setOpenChecklistMenuId(null);
-                                                              const subBlocks = getCheckItemDetailBlocks(checkItem);
-                                                              handleOpenCreateEventFromBlock({
-                                                                title: checkItem.text || '',
-                                                                blocks: subBlocks,
-                                                                sourceMemo: {
-                                                                  itemId: activeItem.id,
-                                                                  categoryId: activeItem.categoryId || selectedCategoryId,
-                                                                  checklistId: checkItem.id
-                                                                },
-                                                              });
+                                                              copyTextToClipboard(checkItem.text, '✓ 체크리스트 내용이 복사되었습니다.');
                                                             }}
                                                             style={styles.checklistDropdownItem}
-                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
                                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                           >
-                                                            <CalendarIcon size={14} color="#2563EB" />
-                                                            <span style={{ color: "#2563EB", fontWeight: 600 }}>일정 만들기</span>
+                                                            <Copy size={14} color="#2563EB" />
+                                                            <span>복사</span>
                                                           </button>
                                                           <button
                                                             type="button"
@@ -11941,6 +11936,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                               setEditingCheckTag(checkItem.tag || '');
                                                             }}
                                                             style={styles.checklistDropdownItem}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                           >
                                                             <Edit2 size={14} color="#475569" />
                                                             <span>수정</span>
@@ -13284,22 +13281,26 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             }}
                                             style={group.section ? {
                                               ...styles.checklistItemRow,
+                                              position: 'relative',
+                                              zIndex: isSelected ? 1 : 0,
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: '0',
                                               backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                               border: 'none',
                                               borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                              boxShadow: 'none',
+                                              boxShadow: isSelected ? 'inset 0 0 0 2px #2563EB' : 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             } : {
                                               ...styles.checklistItemRow,
+                                              position: 'relative',
+                                              zIndex: isSelected ? 1 : 0,
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: 0,
                                               backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
                                               border: 'none',
                                               borderBottom: itemIdx < group.sortedItems.length - 1 ? '1px solid #E2E8F0' : 'none',
-                                              boxShadow: 'none',
+                                              boxShadow: isSelected ? 'inset 0 0 0 2px #2563EB' : 'none',
                                               opacity: isDragged ? 0.4 : 1,
                                               cursor: 'pointer'
                                             }}
@@ -13357,7 +13358,7 @@ onClick={() => {
                                             ) : (
                                               <div style={{
                                                 display: 'flex',
-                                                alignItems: 'center',
+                                                alignItems: 'flex-start',
                                                 justifyContent: 'space-between',
                                                 width: '100%',
                                                 gap: isMobile ? '4px' : '8px',
@@ -13401,7 +13402,7 @@ onClick={() => {
                                                   </span>
                                                 </div>
                                                 {/* Right End: 3-dot Menu */}
-                                                <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
                                                   <button
                                                     type="button"
                                                     onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
@@ -13451,11 +13452,26 @@ onClick={() => {
                                                           type="button"
                                                           onClick={() => {
                                                             setOpenChecklistMenuId(null);
+                                                            copyTextToClipboard(checkItem.text, '✓ 체크리스트 내용이 복사되었습니다.');
+                                                          }}
+                                                          style={styles.checklistDropdownItem}
+                                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                        >
+                                                          <Copy size={14} color="#2563EB" />
+                                                          <span>복사</span>
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => {
+                                                            setOpenChecklistMenuId(null);
                                                             setEditingCheckId(checkItem.id);
                                                             setEditingCheckText(checkItem.text);
                                                             setEditingCheckTag(checkItem.tag || '');
                                                           }}
                                                           style={styles.checklistDropdownItem}
+                                                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                                                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                         >
                                                           <Edit2 size={14} color="#475569" />
                                                           <span>수정</span>
@@ -17040,9 +17056,11 @@ const styles = {
   },
   checklistTextarea: {
     flex: 1,
-    fontSize: '12px',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#0F172A',
     padding: '6px 10px',
-    border: '1px solid #CBD5E1',
+    border: '1px solid #94A3B8',
     borderRadius: '6px',
     outline: 'none',
     resize: 'vertical',
