@@ -11706,7 +11706,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               style={group.section ? {
                                                 ...styles.checklistItemRow,
                                                 position: 'relative',
-                                                zIndex: isSelected ? 1 : 0,
+                                                zIndex: openChecklistMenuId === checkItem.id ? 999 : (isSelected ? 2 : 'auto'),
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
                                                 backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
@@ -11718,7 +11718,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               } : {
                                                 ...styles.checklistItemRow,
                                                 position: 'relative',
-                                                zIndex: isSelected ? 1 : 0,
+                                                zIndex: openChecklistMenuId === checkItem.id ? 999 : (isSelected ? 2 : 'auto'),
                                                 padding: isMobile ? '5px 8px' : '6px 12px',
                                                 borderRadius: '0',
                                                 backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
@@ -13282,7 +13282,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             style={group.section ? {
                                               ...styles.checklistItemRow,
                                               position: 'relative',
-                                              zIndex: isSelected ? 1 : 0,
+                                              zIndex: openChecklistMenuId === checkItem.id ? 999 : (isSelected ? 2 : 'auto'),
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: '0',
                                               backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
@@ -13294,7 +13294,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             } : {
                                               ...styles.checklistItemRow,
                                               position: 'relative',
-                                              zIndex: isSelected ? 1 : 0,
+                                              zIndex: openChecklistMenuId === checkItem.id ? 999 : (isSelected ? 2 : 'auto'),
                                               padding: isMobile ? '5px 8px' : '6px 12px',
                                               borderRadius: 0,
                                               backgroundColor: isDragOver ? '#DBEAFE' : isEditing ? '#F8FAFC' : '#FFFFFF',
