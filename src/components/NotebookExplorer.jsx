@@ -12006,42 +12006,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             </div>
                                           );
                                         })}
-
-                                        {/* 그룹 하단 4번 패널 스타일 [+ 항목 추가] 버튼 */}
-                                        <div style={{ padding: '4px 8px 6px 8px', backgroundColor: '#FFFFFF' }} className="no-print">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                            style={{
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '6px',
-                                              padding: '5px 10px',
-                                              fontSize: '12px',
-                                              fontWeight: 600,
-                                              color: '#2563EB',
-                                              backgroundColor: '#F8FAFC',
-                                              border: '1px dashed #CBD5E1',
-                                              borderRadius: '6px',
-                                              cursor: 'pointer',
-                                              width: '100%',
-                                              justifyContent: 'center',
-                                              transition: 'all 0.15s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                              e.currentTarget.style.borderColor = '#93C5FD';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.backgroundColor = '#F8FAFC';
-                                              e.currentTarget.style.borderColor = '#CBD5E1';
-                                            }}
-                                            title="이 그룹에 새 항목 추가"
-                                          >
-                                            <Plus size={13} strokeWidth={2.5} />
-                                            <span>항목 추가</span>
-                                          </button>
-                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -13527,44 +13491,6 @@ onClick={() => {
                                           </div>
                                         );
                                       })}
-
-                                      {/* 그룹 하단 4번 패널 스타일 [+ 항목 추가] 버튼 */}
-                                      {!isItemInTrash && (
-                                        <div style={{ padding: '4px 8px 6px 8px', backgroundColor: '#FFFFFF' }} className="no-print">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
-                                            style={{
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '6px',
-                                              padding: '5px 10px',
-                                              fontSize: '12px',
-                                              fontWeight: 600,
-                                              color: '#2563EB',
-                                              backgroundColor: '#F8FAFC',
-                                              border: '1px dashed #CBD5E1',
-                                              borderRadius: '6px',
-                                              cursor: 'pointer',
-                                              width: '100%',
-                                              justifyContent: 'center',
-                                              transition: 'all 0.15s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                              e.currentTarget.style.backgroundColor = '#EFF6FF';
-                                              e.currentTarget.style.borderColor = '#93C5FD';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                              e.currentTarget.style.backgroundColor = '#F8FAFC';
-                                              e.currentTarget.style.borderColor = '#CBD5E1';
-                                            }}
-                                            title="이 그룹에 새 항목 추가"
-                                          >
-                                            <Plus size={13} strokeWidth={2.5} />
-                                            <span>항목 추가</span>
-                                          </button>
-                                        </div>
-                                      )}
                                     </div>
                                   )}
                                 </div>
