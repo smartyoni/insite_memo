@@ -3173,6 +3173,30 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       groups.push(currentGroup);
     }
 
+    // 기본 그룹이 항상 1개 이상 존재하도록 보장 (그룹이 없거나 비어있는 경우 기본 그룹 자동 생성)
+    if (groups.length === 0) {
+      groups.push({
+        section: {
+          id: 'sec_default',
+          isSection: true,
+          type: 'section',
+          text: '체크리스트'
+        },
+        items: []
+      });
+    } else {
+      groups.forEach((g, idx) => {
+        if (!g.section) {
+          g.section = {
+            id: idx === 0 ? 'sec_default' : `sec_group_${idx}`,
+            isSection: true,
+            type: 'section',
+            text: '체크리스트'
+          };
+        }
+      });
+    }
+
     return groups.map((g) => {
       const sortedItems = [...g.items].sort((a, b) => {
         if (a.id === '__main__') return -1;
@@ -3365,7 +3389,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const secIdx = baseChecklists.findIndex((c) => c.id === sectionId);
     let updated;
     if (secIdx === -1) {
-      updated = [...baseChecklists, newItem];
+      const defaultSec = {
+        id: sectionId,
+        isSection: true,
+        type: 'section',
+        text: '체크리스트'
+      };
+      updated = [defaultSec, ...baseChecklists, newItem];
     } else {
       let insertIdx = baseChecklists.length;
       for (let i = secIdx + 1; i < baseChecklists.length; i++) {
@@ -3783,15 +3813,31 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const oldText = oldItem?.text || '';
     const newText = editingCheckText.trim();
     const finalTag = editingCheckTag === 'custom' ? customTagInput.trim() : editingCheckTag;
-    const updated = baseChecklists.map((c) =>
-      c.id === checkId
-        ? {
-            ...c,
-            text: newText,
-            tag: finalTag || null
-          }
-        : c
-    );
+    let updated;
+    if (!oldItem && checkId.startsWith('sec_')) {
+      const newSec = {
+        id: checkId,
+        isSection: true,
+        type: 'section',
+        text: newText,
+        tag: finalTag || null
+      };
+      updated = [newSec, ...baseChecklists];
+    } else {
+      updated = baseChecklists.map((c) =>
+        c.id === checkId
+          ? {
+              ...c,
+              text: newText,
+              tag: finalTag || null
+            }
+          : c
+      );
+    }
+    if (isEditMode) {
+      setDraftChecklists(updated);
+    }
+    setItems((prevItems) => prevItems.map((it) => it.id === activeItem.id ? { ...it, checklists: updated } : it));
     setEditingCheckId(null);
     setEditingCheckText('');
     setEditingCheckTag('');
@@ -5130,6 +5176,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // ---------------- Quick Add Note (Fast Entry) ----------------
   const handleQuickAddNote = async () => {
     const targetCatId = getDefaultCategoryIdForTab(activeMainTab, categories);
+    const initialSection = {
+      id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+      isSection: true,
+      type: 'section',
+      text: '체크리스트'
+    };
     try {
       const newRef = doc(collection(db, 'items'));
       await setDoc(newRef, {
@@ -5138,7 +5190,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         body: '',
         subBody: '',
         detailBlocks: [],
-        checklists: [],
+        checklists: [initialSection],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -5152,7 +5204,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       setDraftSubBody('');
       setDraftTemplateId(null);
       setDraftTemplateValues({});
-      setDraftChecklists([]);
+      setDraftChecklists([initialSection]);
       setSelectedChecklistId(null);
       setChecklistDetailDraft('');
       setChecklistDetailBlocks([]);
@@ -5448,7 +5500,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         body: '',
         subBody: '',
         detailBlocks: [],
-        checklists: [],
+        checklists: [
+          {
+            id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
+            isSection: true,
+            type: 'section',
+            text: '체크리스트'
+          }
+        ],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -11167,55 +11226,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
 
 
-                          {/* Input Form for new checklist item or section */}
-                          <div style={{
-                            ...styles.checklistInputContainer,
-                            ...(isMobile ? { paddingLeft: '2px', paddingRight: '2px' } : {})
-                          }} className="no-print">
-                            <div style={styles.checklistInputGroup}>
-                              <textarea
-                                rows={2}
-                                value={newChecklistText}
-                                onChange={(e) => setNewChecklistText(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                    e.preventDefault();
-                                    handleAddChecklist();
-                                  }
-                                }}
-                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
-                                style={styles.checklistTextarea}
-                              />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
-                                <button
-                                  onClick={handleAddChecklist}
-                                  style={{
-                                    ...styles.checklistAddBtn,
-                                    opacity: newChecklistText.trim() ? 1 : 0.6,
-                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
-                                    flex: 1,
-                                    height: 'auto',
-                                    padding: '5px 12px'
-                                  }}
-                                  disabled={!newChecklistText.trim()}
-                                  title="체크리스트 추가 (Ctrl+Enter)"
-                                >
-                                  <Plus size={14} />
-                                  <span>항목 추가</span>
-                                </button>
-                                
-                              </div>
-                            </div>
-                          </div>
-
                           {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                           <div style={{
                             ...styles.checklistListContainer,
                             ...(isMobile ? { padding: '2px 0 6px 0' } : {})
                           }}>
-                            {currentChecklists.length === 0 ? (
+                            {checklistGroups.length === 0 ? (
                               <div style={styles.checklistEmptyText}>
-                                등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
+                                등록된 체크리스트가 없습니다. 상단 [그룹] 버튼을 눌러 새 그룹을 추가해보세요!
                               </div>
                             ) : (
                                 checklistGroups.map((group, groupIdx) => {
@@ -11989,6 +12007,41 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           );
                                         })}
 
+                                        {/* 그룹 하단 4번 패널 스타일 [+ 항목 추가] 버튼 */}
+                                        <div style={{ padding: '4px 8px 6px 8px', backgroundColor: '#FFFFFF' }} className="no-print">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '6px',
+                                              padding: '5px 10px',
+                                              fontSize: '12px',
+                                              fontWeight: 600,
+                                              color: '#2563EB',
+                                              backgroundColor: '#F8FAFC',
+                                              border: '1px dashed #CBD5E1',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              width: '100%',
+                                              justifyContent: 'center',
+                                              transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                              e.currentTarget.style.borderColor = '#93C5FD';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                              e.currentTarget.style.borderColor = '#CBD5E1';
+                                            }}
+                                            title="이 그룹에 새 항목 추가"
+                                          >
+                                            <Plus size={13} strokeWidth={2.5} />
+                                            <span>항목 추가</span>
+                                          </button>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -12738,58 +12791,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
 
 
 
-                        {/* Input Form for new multiline checklist item or section */}
-                        {!isItemInTrash && (
-                          <div style={{
-                            ...styles.checklistInputContainer,
-                            paddingLeft: '10px',
-                            paddingRight: '10px'
-                          }} className="no-print">
-                            <div style={styles.checklistInputGroup}>
-                              <textarea
-                                rows={2}
-                                value={newChecklistText}
-                                onChange={(e) => setNewChecklistText(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                    e.preventDefault();
-                                    handleAddChecklist();
-                                  }
-                                }}
-                                placeholder="새 체크리스트 항목 입력... (Ctrl+Enter 항목 추가)"
-                                style={styles.checklistTextarea}
-                              />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignSelf: 'stretch', flexShrink: 0 }}>
-                                <button
-                                  onClick={handleAddChecklist}
-                                  style={{
-                                    ...styles.checklistAddBtn,
-                                    opacity: newChecklistText.trim() ? 1 : 0.6,
-                                    cursor: newChecklistText.trim() ? 'pointer' : 'not-allowed',
-                                    flex: 1,
-                                    height: 'auto',
-                                    padding: '5px 12px'
-                                  }}
-                                  disabled={!newChecklistText.trim()}
-                                  title="체크리스트 추가 (Ctrl+Enter)"
-                                >
-                                  <Plus size={14} />
-                                  <span>항목 추가</span>
-                                </button>
-                                
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
                         {/* Checklist Items List (Grouped with Section Headers & Accordion) */}
                         <div style={{
                           ...styles.checklistListContainer,
                           padding: '0'
                         }}>
-                          {currentChecklists.length === 0 ? (
+                          {checklistGroups.length === 0 ? (
                             <div style={styles.checklistEmptyText}>
-                              등록된 체크리스트 항목이 없습니다. 위 입력창에서 항목 또는 그룹을 추가해보세요!
+                              등록된 체크리스트가 없습니다. 상단 [그룹] 버튼을 눌러 새 그룹을 추가해보세요!
                             </div>
                           ) : (
                             checklistGroups.map((group, groupIdx) => {
@@ -13519,7 +13528,43 @@ onClick={() => {
                                         );
                                       })}
 
-
+                                      {/* 그룹 하단 4번 패널 스타일 [+ 항목 추가] 버튼 */}
+                                      {!isItemInTrash && (
+                                        <div style={{ padding: '4px 8px 6px 8px', backgroundColor: '#FFFFFF' }} className="no-print">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAddChecklistToGroup(group.section.id)}
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '6px',
+                                              padding: '5px 10px',
+                                              fontSize: '12px',
+                                              fontWeight: 600,
+                                              color: '#2563EB',
+                                              backgroundColor: '#F8FAFC',
+                                              border: '1px dashed #CBD5E1',
+                                              borderRadius: '6px',
+                                              cursor: 'pointer',
+                                              width: '100%',
+                                              justifyContent: 'center',
+                                              transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#EFF6FF';
+                                              e.currentTarget.style.borderColor = '#93C5FD';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#F8FAFC';
+                                              e.currentTarget.style.borderColor = '#CBD5E1';
+                                            }}
+                                            title="이 그룹에 새 항목 추가"
+                                          >
+                                            <Plus size={13} strokeWidth={2.5} />
+                                            <span>항목 추가</span>
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
