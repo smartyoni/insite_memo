@@ -7781,7 +7781,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               justifyContent: 'space-between',
                               gap: isMobile ? '4px' : '6px',
                               height: isMobile ? '29px' : '31px',
-                              padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                              padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
                               boxSizing: 'border-box',
                               backgroundColor: isGroupDragOver ? '#BFDBFE' : '#93C5FD',
                               border: 'none',
@@ -7903,7 +7903,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   borderTopLeftRadius: '4px',
                                   borderBottomLeftRadius: '4px',
                                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                  height: isMobile ? '18px' : '20px',
+                                  height: '100%',
                                   flexShrink: 0
                                 }}
                                 onClick={(e) => e.stopPropagation()}
@@ -7920,7 +7920,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    width: isMobile ? '20px' : '22px',
+                                    width: isMobile ? '22px' : '24px',
                                     height: '100%',
                                     border: 'none',
                                     borderRight: '1px solid #E2E8F0',
@@ -7931,7 +7931,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   }}
                                   title="이 그룹에 카테고리 추가"
                                 >
-                                  <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                  <Plus size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                 </button>
 
                                 {/* 2. 3점 더보기 (⋮) 메뉴 버튼 */}
@@ -7943,7 +7943,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      width: isMobile ? '20px' : '22px',
+                                      width: isMobile ? '22px' : '24px',
                                       height: '100%',
                                       border: 'none',
                                       backgroundColor: openCategoryGroupMenuId === group.id ? '#EFF6FF' : 'transparent',
@@ -7960,7 +7960,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                     title="그룹 메뉴"
                                   >
-                                    <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                    <MoreVertical size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                   </button>
 
                                   {/* 3점 드롭다운 팝업 메뉴 */}
@@ -9238,7 +9238,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                 justifyContent: 'space-between',
                                 gap: isMobile ? '4px' : '6px',
                                 height: isMobile ? '29px' : '31px',
-                                padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                                padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
                                 boxSizing: 'border-box',
                                 backgroundColor: isGroupDragOver ? '#FDBA74' : '#FBAE72',
                                 border: 'none',
@@ -9350,7 +9350,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     borderTopLeftRadius: '4px',
                                     borderBottomLeftRadius: '4px',
                                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                    height: isMobile ? '18px' : '20px',
+                                    height: '100%',
                                     flexShrink: 0
                                   }}
                                   onClick={(e) => e.stopPropagation()}
@@ -9366,7 +9366,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      width: isMobile ? '20px' : '22px',
+                                      width: isMobile ? '22px' : '24px',
                                       height: '100%',
                                       border: 'none',
                                       borderRight: '1px solid #E2E8F0',
@@ -9377,7 +9377,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }}
                                     title="이 그룹에 메모 추가"
                                   >
-                                    <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                    <Plus size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                   </button>
 
                                   {/* 2. 3점 더보기 (⋮) 메뉴 버튼 */}
@@ -9389,7 +9389,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        width: isMobile ? '20px' : '22px',
+                                        width: isMobile ? '22px' : '24px',
                                         height: '100%',
                                         border: 'none',
                                         backgroundColor: openItemGroupMenuId === group.id ? '#EFF6FF' : 'transparent',
@@ -9406,7 +9406,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       }}
                                       title="그룹 메뉴"
                                     >
-                                      <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                      <MoreVertical size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                     </button>
 
                                     {/* 3점 드롭다운 팝업 메뉴 */}
@@ -11288,7 +11288,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                           justifyContent: 'space-between',
                                           gap: isMobile ? '4px' : '6px',
                                           height: isMobile ? '29px' : '31px',
-                                          padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                                          padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
                                           boxSizing: 'border-box',
                                           marginTop: '0',
                                           marginBottom: '0',
@@ -11393,9 +11393,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               alignItems: 'center',
                                               backgroundColor: '#FFFFFF',
                                               border: '1px solid #CBD5E1',
-                                              borderRadius: '4px',
+                                              borderRight: 'none',
+                                              borderRadius: '4px 0 0 4px',
                                               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                              height: isMobile ? '18px' : '20px',
+                                              height: '100%',
                                               flexShrink: 0
                                             }}
                                             className="no-print"
@@ -11413,7 +11414,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
+                                                  width: isMobile ? '22px' : '24px',
                                                   height: '100%',
                                                   border: 'none',
                                                   borderRight: '1px solid #E2E8F0',
@@ -11433,7 +11434,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="이 그룹에 체크 항목 추가"
                                               >
-                                                <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                <Plus size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                               </button>
                                             )}
 
@@ -11446,7 +11447,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
+                                                  width: isMobile ? '22px' : '24px',
                                                   height: '100%',
                                                   border: 'none',
                                                   backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
@@ -11463,7 +11464,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="그룹 메뉴"
                                               >
-                                                <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                <MoreVertical size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                               </button>
 
                                               {openGroupMenuId === group.section.id && (
@@ -12817,7 +12818,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         justifyContent: 'space-between',
                                         gap: isMobile ? '4px' : '6px',
                                         height: isMobile ? '29px' : '31px',
-                                        padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                                        padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
                                         boxSizing: 'border-box',
                                         marginTop: '0',
                                         marginBottom: '0',
@@ -12927,7 +12928,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               borderRight: 'none',
                                               borderRadius: '4px 0 0 4px',
                                               boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                                              height: isMobile ? '18px' : '20px',
+                                              height: '100%',
                                               flexShrink: 0
                                             }}
                                             className="no-print"
@@ -12945,7 +12946,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
+                                                  width: isMobile ? '22px' : '24px',
                                                   height: '100%',
                                                   border: 'none',
                                                   borderRight: '1px solid #E2E8F0',
@@ -12965,7 +12966,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="이 그룹에 체크 항목 추가"
                                               >
-                                                <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                <Plus size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                               </button>
                                             )}
 
@@ -12978,7 +12979,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
-                                                  width: isMobile ? '20px' : '22px',
+                                                  width: isMobile ? '22px' : '24px',
                                                   height: '100%',
                                                   border: 'none',
                                                   backgroundColor: openGroupMenuId === group.section.id ? '#E2E8F0' : 'transparent',
@@ -12995,7 +12996,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }}
                                                 title="그룹 메뉴"
                                               >
-                                                <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                                                <MoreVertical size={isMobile ? 13 : 14} strokeWidth={2.5} />
                                               </button>
                                             {openGroupMenuId === group.section.id && (
                                               <>
