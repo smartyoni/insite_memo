@@ -3180,7 +3180,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           id: 'sec_default',
           isSection: true,
           type: 'section',
-          text: '체크리스트'
+          text: '기본그룹'
         },
         items: []
       });
@@ -3191,7 +3191,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
             id: idx === 0 ? 'sec_default' : `sec_group_${idx}`,
             isSection: true,
             type: 'section',
-            text: '체크리스트'
+            text: '기본그룹'
           };
         }
       });
@@ -3393,7 +3393,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         id: sectionId,
         isSection: true,
         type: 'section',
-        text: '체크리스트'
+        text: '기본그룹'
       };
       updated = [defaultSec, ...baseChecklists, newItem];
     } else {
@@ -5180,7 +5180,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
       isSection: true,
       type: 'section',
-      text: '체크리스트'
+      text: '기본그룹'
     };
     try {
       const newRef = doc(collection(db, 'items'));
@@ -5505,7 +5505,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
             id: 'sec_' + Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
             isSection: true,
             type: 'section',
-            text: '체크리스트'
+            text: '기본그룹'
           }
         ],
         createdAt: serverTimestamp(),
