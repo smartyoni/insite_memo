@@ -7800,7 +7800,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                             {/* 좌측: 토글 화살표 + 그룹명 */}
                             {isSecEditing ? (
                               <div
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <input
@@ -7817,28 +7817,32 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                     }
                                   }}
                                   style={{
-                                    fontSize: '13px',
+                                    height: '100%',
+                                    boxSizing: 'border-box',
+                                    fontSize: '14px',
                                     fontWeight: 700,
                                     color: '#1E293B',
-                                    padding: '2px 6px',
+                                    padding: '0 8px',
                                     borderRadius: '4px',
-                                    border: '1px solid #2563EB',
+                                    border: '1.5px solid #2563EB',
                                     outline: 'none',
-                                    flex: 1
+                                    backgroundColor: '#FFFFFF',
+                                    flex: 1,
+                                    minWidth: 0
                                   }}
                                   autoFocus
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateCategoryGroupName(group.id)}
-                                  style={{ ...styles.btnPrimary, backgroundColor: '#2563EB', padding: '2px 8px', fontSize: '11px' }}
+                                  style={{ ...styles.btnPrimary, backgroundColor: '#2563EB', padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                 >
                                   저장
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingCategoryGroupId(null)}
-                                  style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                  style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                 >
                                   취소
                                 </button>
@@ -9257,7 +9261,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                               {/* 좌측: 토글 화살표 + 그룹명 */}
                               {isSecEditing ? (
                                 <div
-                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <input
@@ -9274,28 +9278,32 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       }
                                     }}
                                     style={{
-                                      fontSize: '13px',
+                                      height: '100%',
+                                      boxSizing: 'border-box',
+                                      fontSize: '14px',
                                       fontWeight: 700,
                                       color: '#1E293B',
-                                      padding: '2px 6px',
+                                      padding: '0 8px',
                                       borderRadius: '4px',
-                                      border: '1px solid #EA580C',
+                                      border: '1.5px solid #EA580C',
                                       outline: 'none',
-                                      flex: 1
+                                      backgroundColor: '#FFFFFF',
+                                      flex: 1,
+                                      minWidth: 0
                                     }}
                                     autoFocus
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateItemGroupName(group.id)}
-                                    style={{ ...styles.btnPrimary, backgroundColor: '#EA580C', padding: '2px 8px', fontSize: '11px' }}
+                                    style={{ ...styles.btnPrimary, backgroundColor: '#EA580C', padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                   >
                                     저장
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setEditingItemGroupId(null)}
-                                    style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px' }}
+                                    style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                   >
                                     취소
                                   </button>
@@ -11314,10 +11322,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       >
                                         {isSecEditing ? (
                                           <div
-                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            <Folder size={13} color="#2563EB" />
+                                            <Folder size={13} color="#2563EB" style={{ flexShrink: 0 }} />
                                             <input
                                               type="text"
                                               value={editingCheckText}
@@ -11332,28 +11340,32 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                 }
                                               }}
                                               style={{
-                                                fontSize: '12px',
+                                                height: '100%',
+                                                boxSizing: 'border-box',
+                                                fontSize: '14px',
                                                 fontWeight: 700,
                                                 color: '#0F172A',
-                                                padding: '1px 4px',
+                                                padding: '0 8px',
                                                 borderRadius: '4px',
-                                                border: '1px solid #2563EB',
+                                                border: '1.5px solid #2563EB',
                                                 outline: 'none',
-                                                flex: 1
+                                                backgroundColor: '#FFFFFF',
+                                                flex: 1,
+                                                minWidth: 0
                                               }}
                                               autoFocus
                                             />
                                             <button
                                               type="button"
                                               onClick={() => handleSaveEditChecklist(group.section.id)}
-                                              style={{ ...styles.btnPrimary, padding: '1px 6px', fontSize: '10px' }}
+                                              style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                             >
                                               저장
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => setEditingCheckId(null)}
-                                              style={{ ...styles.btnSecondary, padding: '1px 6px', fontSize: '10px' }}
+                                              style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                             >
                                               취소
                                             </button>
@@ -12845,10 +12857,10 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                       {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
                                       {isSecEditing ? (
                                         <div
-                                          style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}
+                                          style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Folder size={13} color="#2563EB" />
+                                          <Folder size={13} color="#2563EB" style={{ flexShrink: 0 }} />
                                           <input
                                             type="text"
                                             value={editingCheckText}
@@ -12863,28 +12875,32 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               }
                                             }}
                                             style={{
-                                              fontSize: '12px',
+                                              height: '100%',
+                                              boxSizing: 'border-box',
+                                              fontSize: '14px',
                                               fontWeight: 700,
                                               color: '#1E293B',
-                                              padding: '1px 4px',
+                                              padding: '0 8px',
                                               borderRadius: '4px',
-                                              border: '1px solid #2563EB',
+                                              border: '1.5px solid #2563EB',
                                               outline: 'none',
-                                              flex: 1
+                                              backgroundColor: '#FFFFFF',
+                                              flex: 1,
+                                              minWidth: 0
                                             }}
                                             autoFocus
                                           />
                                           <button
                                             type="button"
                                             onClick={() => handleSaveEditChecklist(group.section.id)}
-                                            style={{ ...styles.btnPrimary, padding: '1px 6px', fontSize: '10px' }}
+                                            style={{ ...styles.btnPrimary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                           >
                                             저장
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => setEditingCheckId(null)}
-                                            style={{ ...styles.btnSecondary, padding: '1px 6px', fontSize: '10px' }}
+                                            style={{ ...styles.btnSecondary, padding: '2px 8px', fontSize: '11px', flexShrink: 0 }}
                                           >
                                             취소
                                           </button>

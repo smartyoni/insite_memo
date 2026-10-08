@@ -1349,9 +1349,9 @@ export const DetailBlocksManager = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  height: isMobile ? '29px' : '31px',
+                  height: isMobile ? '35px' : '37px',
                   boxSizing: 'border-box',
-                  padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
+                  padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
                   backgroundColor: '#86C99B',
                   borderBottom: isCollapsed ? 'none' : '1px solid #4B7E5E',
                   cursor: isEditingTitle ? 'default' : 'pointer',
@@ -1370,7 +1370,7 @@ export const DetailBlocksManager = ({
                 {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
                 {isEditingTitle ? (
                   <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, marginRight: '6px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Folder size={isMobile ? 12 : 13} color="#065F46" style={{ flexShrink: 0 }} />
@@ -1390,15 +1390,17 @@ export const DetailBlocksManager = ({
                       placeholder="체크리스트 이름 입력..."
                       autoFocus
                       style={{
-                        flex: 1,
-                        fontSize: '12px',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                        fontSize: '14px',
                         fontWeight: 700,
                         color: '#052E16',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        border: '1px solid #065F46',
+                        padding: '0 8px',
+                        borderRadius: '4px',
+                        border: '1.5px solid #065F46',
                         outline: 'none',
                         backgroundColor: '#FFFFFF',
+                        flex: 1,
                         minWidth: 0
                       }}
                     />
@@ -1406,14 +1408,15 @@ export const DetailBlocksManager = ({
                       type="button"
                       onClick={() => handleSaveChecklistTitle(block.id, draftChecklistTitle)}
                       style={{
-                        padding: '1px 6px',
-                        borderRadius: '3px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
                         border: 'none',
                         backgroundColor: '#065F46',
                         color: '#FFFFFF',
-                        fontSize: '10px',
+                        fontSize: '11px',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flexShrink: 0
                       }}
                     >
                       저장
@@ -1422,14 +1425,15 @@ export const DetailBlocksManager = ({
                       type="button"
                       onClick={() => setEditingChecklistTitleId(null)}
                       style={{
-                        padding: '1px 6px',
-                        borderRadius: '3px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
                         border: '1px solid #CBD5E1',
                         backgroundColor: '#FFFFFF',
                         color: '#64748B',
-                        fontSize: '10px',
+                        fontSize: '11px',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flexShrink: 0
                       }}
                     >
                       취소
