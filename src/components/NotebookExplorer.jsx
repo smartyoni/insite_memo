@@ -7028,14 +7028,14 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // ---------------- Render ----------------
   return (
     <div style={styles.appContainer}>
-      {/* Pane 1: Category Sidebar (Pastel Blue, 280px or 100% on Mobile) */}
+      {/* Pane 1: Category Sidebar (Pastel Blue, 350px or 100% on Mobile) */}
       {(!isMobile || mobileView === 'categories') && (
         <div
           ref={sidebarRef}
           style={{
             ...styles.pane1,
-            width: isMobile ? '100%' : '280px',
-            minWidth: isMobile ? '100%' : '280px'
+            width: isMobile ? '100%' : '350px',
+            minWidth: isMobile ? '100%' : '350px'
           }}
         >
           {/* Main Mode Tab Switcher & Header for Desktop */}
@@ -8647,12 +8647,12 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         </div>
       ) : (
         <React.Fragment>
-          {/* Pane 2: Note Item List (Light, 308px or 100% on Mobile) - Only shown when NOT in template mode */}
+          {/* Pane 2: Note Item List (Light, 385px or 100% on Mobile) - Only shown when NOT in template mode */}
           {activeMainTab !== 'template' && (!isMobile || mobileView === 'items') && (
             <div style={{
               ...styles.pane2,
-              width: isMobile ? '100%' : '308px',
-              minWidth: isMobile ? '100%' : '308px'
+              width: isMobile ? '100%' : '385px',
+              minWidth: isMobile ? '100%' : '385px'
             }}>
               {/* Standard Note Items List for Pane 2 OR Calendar Category List */}
               {isCalendarMode ? (
@@ -16478,7 +16478,7 @@ const styles = {
     transition: 'transform 0.15s ease, background-color 0.15s ease'
   },
 
-  // Pane 1: Category (Pastel Blue, 280px)
+  // Pane 1: Category (Pastel Blue, 350px)
   pane1: {
     height: '100%',
     backgroundColor: '#EBF3FA',
@@ -16609,7 +16609,7 @@ const styles = {
     alignItems: 'center'
   },
 
-  // Pane 2: Notes List (Light, 308px)
+  // Pane 2: Notes List (Light, 385px)
   pane2: {
     height: '100%',
     backgroundColor: '#FFFFFF',
