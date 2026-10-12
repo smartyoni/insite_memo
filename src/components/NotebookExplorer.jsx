@@ -11908,7 +11908,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     </span>
                                                   </div>
 
-                                                  <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                    <div style={{ position: 'relative' }}>
                                                     <button
                                                       type="button"
                                                       onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
@@ -12013,6 +12014,36 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                         </div>
                                                       </>
                                                     )}
+                                                    </div>
+
+                                                    {/* 4번 패널 하위 항목(블록) 수 배지 */}
+                                                    {(() => {
+                                                      const subCount = getCheckItemDetailBlocks(checkItem).length;
+                                                      if (subCount === 0) return null;
+                                                      return (
+                                                        <span
+                                                          style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            minWidth: isMobile ? '16px' : '18px',
+                                                            height: isMobile ? '16px' : '18px',
+                                                            padding: '0 4px',
+                                                            borderRadius: '9px',
+                                                            backgroundColor: '#EFF6FF',
+                                                            border: '1px solid #BFDBFE',
+                                                            color: '#2563EB',
+                                                            fontSize: isMobile ? '10px' : '11px',
+                                                            fontWeight: 700,
+                                                            lineHeight: 1,
+                                                            boxSizing: 'border-box'
+                                                          }}
+                                                          title={`4번 패널 하위 항목 ${subCount}개`}
+                                                        >
+                                                          {subCount}
+                                                        </span>
+                                                      );
+                                                    })()}
                                                   </div>
                                                 </div>
                                               )}
@@ -13401,7 +13432,8 @@ onClick={() => {
                                                   </span>
                                                 </div>
                                                 {/* Right End: 3-dot Menu */}
-                                                <div style={{ position: 'relative', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginRight: isMobile ? '-2px' : '-2px', alignSelf: 'flex-start', marginTop: isMobile ? '0px' : '1px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+                                                  <div style={{ position: 'relative' }}>
                                                   <button
                                                     type="button"
                                                     onClick={(e) => handleOpenChecklistMenu(e, checkItem.id)}
@@ -13502,6 +13534,36 @@ onClick={() => {
                                                       </div>
                                                     </>
                                                   )}
+                                                  </div>
+
+                                                  {/* 4번 패널 하위 항목(블록) 수 배지 */}
+                                                  {(() => {
+                                                    const subCount = getCheckItemDetailBlocks(checkItem).length;
+                                                    if (subCount === 0) return null;
+                                                    return (
+                                                      <span
+                                                        style={{
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'center',
+                                                          minWidth: isMobile ? '16px' : '18px',
+                                                          height: isMobile ? '16px' : '18px',
+                                                          padding: '0 4px',
+                                                          borderRadius: '9px',
+                                                          backgroundColor: '#EFF6FF',
+                                                          border: '1px solid #BFDBFE',
+                                                          color: '#2563EB',
+                                                          fontSize: isMobile ? '10px' : '11px',
+                                                          fontWeight: 700,
+                                                          lineHeight: 1,
+                                                          boxSizing: 'border-box'
+                                                        }}
+                                                        title={`4번 패널 하위 항목 ${subCount}개`}
+                                                      >
+                                                        {subCount}
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                               </div>
                                             )}
