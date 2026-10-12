@@ -372,10 +372,10 @@ function DetailChecklistItemRow({
         </div>
       ) : (
         // [조회 모드 (체크박스 + 텍스트 + 3점 메뉴)]
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
           {/* 좌측: 체크박스 + 텍스트 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-            {/* 체크박스 (기존의 80% 크기) */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1, minWidth: 0 }}>
+            {/* 체크박스 (첫 줄 좌측 고정) */}
             <button
               type="button"
               onClick={(e) => {
@@ -394,6 +394,8 @@ function DetailChecklistItemRow({
                 cursor: 'pointer',
                 padding: 0,
                 flexShrink: 0,
+                alignSelf: 'flex-start',
+                marginTop: '2px',
                 transition: 'all 0.15s ease'
               }}
               title={item.completed ? '완료 해제 (Shift+Enter: 새 항목 추가)' : '완료 체크 (Shift+Enter: 새 항목 추가)'}
@@ -433,15 +435,27 @@ function DetailChecklistItemRow({
                 fontWeight: 700,
                 padding: '1px 6px',
                 borderRadius: '4px',
-                flexShrink: 0
+                flexShrink: 0,
+                alignSelf: 'flex-start',
+                marginTop: '1px'
               }}>
                 ✓ 완료
               </span>
             )}
           </div>
 
-          {/* 우측: 3점 메뉴 */}
-          <div style={{ position: 'relative', flexShrink: 0, marginRight: '-2px' }} className="no-print" onClick={(e) => e.stopPropagation()}>
+          {/* 우측: 3점 메뉴 (첫 줄 우측 고정) */}
+          <div
+            style={{
+              position: 'relative',
+              flexShrink: 0,
+              marginRight: '-2px',
+              alignSelf: 'flex-start',
+              marginTop: '0px'
+            }}
+            className="no-print"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={(e) => onOpenItemMenu(e, item.id)}
