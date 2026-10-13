@@ -15258,45 +15258,61 @@ onClick={() => {
               overflow: 'hidden'
             }}
           >
-            {/* Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 16px',
-                backgroundColor: '#FFFBEB',
-                borderBottom: '1px solid #FDE68A'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Zap size={18} color="#D97706" fill="#F59E0B" />
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#92400E' }}>
-                  퀵메모 (빠른 기록)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseQuickMemo}
+            {/* Mobile Header Buttons */}
+            {isMobile && (
+              <div
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '6px',
-                  color: '#92400E',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  backgroundColor: '#F8FAFC',
+                  borderBottom: '1px solid #E2E8F0'
                 }}
-                title="닫기 (Esc)"
               >
-                <X size={18} />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleCloseQuickMemo}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuickMemo}
+                  disabled={!quickMemoText.trim() || isSavingQuickMemo}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
+                    boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                  }}
+                >
+                  <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
+                  <span>{isSavingQuickMemo ? '저장 중...' : '저장'}</span>
+                </button>
+              </div>
+            )}
 
             {/* Textarea */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
               <textarea
                 ref={quickMemoTextareaRef}
                 value={quickMemoText}
@@ -15310,80 +15326,79 @@ onClick={() => {
                     handleCloseQuickMemo();
                   }
                 }}
-                placeholder="메모할 내용을 자유롭게 입력하세요...&#13;&#10;(Enter 줄바꿈, Ctrl + Enter 로 즉시 저장)"
-                rows={5}
+                placeholder="메모할 내용을 자유롭게 입력하세요..."
+                rows={8}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #CBD5E1',
+                  minHeight: '180px',
+                  padding: '14px 16px',
+                  borderRadius: 0,
+                  border: 'none',
                   outline: 'none',
                   fontSize: '14px',
-                  lineHeight: '1.5',
+                  lineHeight: '1.6',
                   color: '#1E293B',
-                  resize: 'vertical',
+                  resize: 'none',
                   boxSizing: 'border-box',
                   fontFamily: 'inherit'
                 }}
                 autoFocus
               />
-              <div style={{ fontSize: '11.5px', color: '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>* 오늘 날짜의 퀵메모 노트에 체크리스트로 추가됩니다.</span>
-                <span>단축키: <strong>Ctrl + Enter</strong></span>
-              </div>
             </div>
 
-            {/* Footer Buttons */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '8px',
-                padding: '10px 16px',
-                backgroundColor: '#F8FAFC',
-                borderTop: '1px solid #E2E8F0'
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleCloseQuickMemo}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                취소 (Esc)
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveQuickMemo}
-                disabled={!quickMemoText.trim() || isSavingQuickMemo}
+            {/* Desktop Footer Buttons */}
+            {!isMobile && (
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
-                  boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                  justifyContent: 'flex-end',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  backgroundColor: '#F8FAFC',
+                  borderTop: '1px solid #E2E8F0'
                 }}
               >
-                <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
-                <span>{isSavingQuickMemo ? '저장 중...' : '저장 (Ctrl+Enter)'}</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleCloseQuickMemo}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  취소 (Esc)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveQuickMemo}
+                  disabled={!quickMemoText.trim() || isSavingQuickMemo}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
+                    boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                  }}
+                >
+                  <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
+                  <span>{isSavingQuickMemo ? '저장 중...' : '저장 (Ctrl+Enter)'}</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
