@@ -3000,6 +3000,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Current active selected item & category objects
   const activeItem = items.find((item) => item.id === selectedItemId);
   const activeCategory = allCategories.find((cat) => cat.id === selectedCategoryId);
+  const isCurrentQuickMemo = activeItem?.categoryId === 'quick_memo' || selectedCategoryId === 'quick_memo';
 
   // Current active tab scope category groups
   const currentScopeCategoryGroups = React.useMemo(() => {
@@ -11999,17 +12000,37 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   title="우클릭 또는 길게 눌러 일정 만들기"
                                                 >
                                                   <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
-                                                    <span
-                                                      style={{
-                                                        width: '7px',
-                                                        height: '7px',
-                                                        borderRadius: '50%',
-                                                        backgroundColor: '#0F172A',
-                                                        marginTop: isMobile ? '5px' : '5.5px',
-                                                        flexShrink: 0
-                                                      }}
-                                                      aria-hidden="true"
-                                                    />
+                                                    {isCurrentQuickMemo ? (
+                                                       <input
+                                                         type="checkbox"
+                                                         checked={Boolean(checkItem.completed)}
+                                                         onChange={(e) => {
+                                                           e.stopPropagation();
+                                                           handleToggleChecklist(checkItem.id);
+                                                         }}
+                                                         onClick={(e) => e.stopPropagation()}
+                                                         style={{
+                                                           width: '15px',
+                                                           height: '15px',
+                                                           marginTop: isMobile ? '2px' : '3px',
+                                                           cursor: 'pointer',
+                                                           accentColor: '#2563EB',
+                                                           flexShrink: 0
+                                                         }}
+                                                       />
+                                                     ) : (
+                                                       <span
+                                                         style={{
+                                                           width: '7px',
+                                                           height: '7px',
+                                                           borderRadius: '50%',
+                                                           backgroundColor: '#0F172A',
+                                                           marginTop: isMobile ? '5px' : '5.5px',
+                                                           flexShrink: 0
+                                                         }}
+                                                         aria-hidden="true"
+                                                       />
+                                                     )}
                                                     <span
                                                       onDoubleClick={(e) => {
                                                         if (checkItem.id !== '__main__') {
@@ -12025,8 +12046,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                         ...styles.checkitemText,
                                                         flex: 1,
                                                         minWidth: 0,
-                                                        textDecoration: 'none',
-                                                        color: '#1E293B',
+                                                        textDecoration: isCurrentQuickMemo && checkItem.completed ? 'line-through' : 'none',
+                                                         color: isCurrentQuickMemo && checkItem.completed ? '#94A3B8' : '#1E293B',
                                                         fontWeight: 500,
                                                         fontSize: isMobile ? '13px' : '14px',
                                                         cursor: 'pointer'
@@ -13523,17 +13544,37 @@ onClick={() => {
                                                 minHeight: isMobile ? '22px' : '26px'
                                               }}>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1, minWidth: 0, gap: '6px' }}>
-                                                  <span
-                                                    style={{
-                                                      width: '7px',
-                                                      height: '7px',
-                                                      borderRadius: '50%',
-                                                      backgroundColor: '#0F172A',
-                                                      marginTop: isMobile ? '5px' : '5.5px',
-                                                      flexShrink: 0
-                                                    }}
-                                                    aria-hidden="true"
-                                                  />
+                                                  {isCurrentQuickMemo ? (
+                                                       <input
+                                                         type="checkbox"
+                                                         checked={Boolean(checkItem.completed)}
+                                                         onChange={(e) => {
+                                                           e.stopPropagation();
+                                                           handleToggleChecklist(checkItem.id);
+                                                         }}
+                                                         onClick={(e) => e.stopPropagation()}
+                                                         style={{
+                                                           width: '15px',
+                                                           height: '15px',
+                                                           marginTop: isMobile ? '2px' : '3px',
+                                                           cursor: 'pointer',
+                                                           accentColor: '#2563EB',
+                                                           flexShrink: 0
+                                                         }}
+                                                       />
+                                                     ) : (
+                                                       <span
+                                                         style={{
+                                                           width: '7px',
+                                                           height: '7px',
+                                                           borderRadius: '50%',
+                                                           backgroundColor: '#0F172A',
+                                                           marginTop: isMobile ? '5px' : '5.5px',
+                                                           flexShrink: 0
+                                                         }}
+                                                         aria-hidden="true"
+                                                       />
+                                                     )}
                                                   <span
                                                     onDoubleClick={(e) => {
                                                       if (checkItem.id !== '__main__') {
@@ -13549,8 +13590,8 @@ onClick={() => {
                                                       ...styles.checkitemText,
                                                       flex: 1,
                                                       minWidth: 0,
-                                                      textDecoration: 'none',
-                                                      color: '#1E293B',
+                                                      textDecoration: isCurrentQuickMemo && checkItem.completed ? 'line-through' : 'none',
+                                                         color: isCurrentQuickMemo && checkItem.completed ? '#94A3B8' : '#1E293B',
                                                       fontWeight: 500,
                                                       fontSize: isMobile ? '13px' : '14px',
                                                       cursor: 'pointer'
