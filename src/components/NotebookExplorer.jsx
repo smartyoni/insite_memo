@@ -479,6 +479,45 @@ export const checkIsMobileLayout = () => {
   return false;
 };
 
+// 9월 6일 기준 2주(14일) 단위 퀵메모 기간 산정 헬퍼
+export const getTwoWeekQuickMemoRange = (dateInput = new Date()) => {
+  const d = new Date(dateInput);
+  d.setHours(0, 0, 0, 0);
+
+  let baseYear = d.getFullYear();
+  let baseDate = new Date(baseYear, 8, 6, 0, 0, 0, 0); // YYYY-09-06
+  if (d.getTime() < baseDate.getTime()) {
+    baseYear -= 1;
+    baseDate = new Date(baseYear, 8, 6, 0, 0, 0, 0);
+  }
+
+  const diffMs = d.getTime() - baseDate.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const periodIndex = Math.floor(diffDays / 14);
+
+  const start = new Date(baseDate);
+  start.setDate(baseDate.getDate() + periodIndex * 14);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 13);
+
+  const formatDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const startStr = formatDate(start);
+  const endStr = formatDate(end);
+
+  return {
+    startDateStr: startStr,
+    endDateStr: endStr,
+    title: `${startStr} ~ ${endStr}`
+  };
+};
+
 export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   // Nav Location Persistence: Retrieve saved location
   const initialNavLoc = React.useMemo(() => getStoredNavLocation(), []);
@@ -5064,6 +5103,102 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setQuickMemoText('');
   };
 
+  // 9월 6일 이후 기존 일별 퀵메모 노트를 2주 단위 노트로 안전 병합 마이그레이션 (시간 기록 제거 및 소프트 삭제 보존)
+  const hasMigratedQuickMemosRef = useRef(false);
+  useEffect(() => {
+    if (hasMigratedQuickMemosRef.current || !items || items.length === 0) return;
+
+    // quick_memo 카테고리 중 단일 날짜(YYYY-MM-DD) 형식의 비삭제 노트 탐색
+    const dailyQuickMemos = items.filter((item) => {
+      if (item.categoryId !== 'quick_memo' || item.isDeleted) return false;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(item.title || '')) return false;
+      const parts = item.title.split('-');
+      const monthDay = `${parts[1]}-${parts[2]}`;
+      return monthDay >= '09-06';
+    });
+
+    if (dailyQuickMemos.length === 0) {
+      hasMigratedQuickMemosRef.current = true;
+      return;
+    }
+
+    const runMigration = async () => {
+      hasMigratedQuickMemosRef.current = true;
+      try {
+        const groups = {};
+
+        for (const note of dailyQuickMemos) {
+          const date = new Date(note.title);
+          if (isNaN(date.getTime())) continue;
+          const { title: twoWeekTitle } = getTwoWeekQuickMemoRange(date);
+
+          if (!groups[twoWeekTitle]) {
+            const existing2W = items.find(
+              (it) => it.categoryId === 'quick_memo' && it.title === twoWeekTitle && !it.isDeleted
+            );
+            groups[twoWeekTitle] = {
+              targetNote: existing2W || null,
+              sourceNotes: [],
+              checklists: existing2W?.checklists ? [...existing2W.checklists] : []
+            };
+          }
+
+          groups[twoWeekTitle].sourceNotes.push(note);
+          if (Array.isArray(note.checklists)) {
+            note.checklists.forEach((chk) => {
+              // 시간 접두어(예: [14:05], [09/06 14:05] 등) 제거하고 순수 내용만 남김
+              const cleanText = (chk.text || '').replace(/^\[.*?\]\s*/, '');
+              groups[twoWeekTitle].checklists.push({
+                ...chk,
+                text: cleanText || chk.text
+              });
+            });
+          }
+        }
+
+        const batch = writeBatch(db);
+
+        for (const [twoWeekTitle, group] of Object.entries(groups)) {
+          if (group.targetNote) {
+            batch.update(doc(db, 'items', group.targetNote.id), {
+              checklists: group.checklists,
+              updatedAt: serverTimestamp()
+            });
+          } else {
+            const newRef = doc(collection(db, 'items'));
+            batch.set(newRef, {
+              categoryId: 'quick_memo',
+              title: twoWeekTitle,
+              scope: 'explorer',
+              body: '',
+              subBody: '',
+              checklists: group.checklists,
+              detailBlocks: [],
+              order: -Date.now(),
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            });
+          }
+
+          // 기존 일별 노트들은 100% 복구 가능하도록 소프트 삭제(isDeleted: true) 보존
+          for (const sNote of group.sourceNotes) {
+            batch.update(doc(db, 'items', sNote.id), {
+              isDeleted: true,
+              deletedAt: serverTimestamp()
+            });
+          }
+        }
+
+        await batch.commit();
+        console.log(`[QuickMemo Migration] ${dailyQuickMemos.length} daily notes safely migrated to 2-week intervals.`);
+      } catch (err) {
+        console.error('[QuickMemo Migration Error]', err);
+      }
+    };
+
+    runMigration();
+  }, [items]);
+
   const handleSaveQuickMemo = async () => {
     const text = quickMemoText.trim();
     if (!text || isSavingQuickMemo) return;
@@ -5071,20 +5206,13 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     setIsSavingQuickMemo(true);
     try {
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${year}-${month}-${day}`;
+      const { title: twoWeekTitle } = getTwoWeekQuickMemoRange(now);
 
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const timeStr = `${hours}:${minutes}`;
-
-      // 2줄 요약 (체크리스트 표시용)
+      // 2줄 요약 (체크리스트 표시용) - 시간/날짜 기록 없이 순수 내용만 저장
       const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
       const summaryLines = lines.slice(0, 2).join(' ');
       const summaryText = summaryLines.length > 70 ? `${summaryLines.slice(0, 70)}...` : summaryLines;
-      const checkItemTitle = `[${timeStr}] ${summaryText}`;
+      const checkItemTitle = summaryText;
 
       // 세부 원문
       const fullMemoBody = text;
@@ -5106,30 +5234,30 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
         createdAt: Date.now()
       };
 
-      // 오늘 날짜 퀵메모 노트 찾기
-      const existingTodayNote = items.find(
-        (item) => item.categoryId === 'quick_memo' && item.title === todayStr && !item.isDeleted
+      // 해당 2주 구간의 퀵메모 노트 찾기
+      const existingTwoWeekNote = items.find(
+        (item) => item.categoryId === 'quick_memo' && item.title === twoWeekTitle && !item.isDeleted
       );
 
-      if (existingTodayNote) {
-        // 기존 노트의 체크리스트 맨 아래에 추가(Append)
-        const updatedChecklists = [...(existingTodayNote.checklists || []), newChecklistItem];
-        await updateDoc(doc(db, 'items', existingTodayNote.id), {
+      if (existingTwoWeekNote) {
+        // 기존 2주 노트의 체크리스트 맨 아래에 추가(Append)
+        const updatedChecklists = [...(existingTwoWeekNote.checklists || []), newChecklistItem];
+        await updateDoc(doc(db, 'items', existingTwoWeekNote.id), {
           checklists: updatedChecklists,
           updatedAt: serverTimestamp()
         });
         recordWorkLocation({
           tab: 'explorer',
           catId: 'quick_memo',
-          itemId: existingTodayNote.id,
-          itemTitle: `퀵메모 (${todayStr})`
+          itemId: existingTwoWeekNote.id,
+          itemTitle: `퀵메모 (${twoWeekTitle})`
         });
       } else {
-        // 오늘 첫 퀵메모 노트 신규 생성
+        // 해당 2주 구간 첫 퀵메모 노트 신규 생성
         const newRef = doc(collection(db, 'items'));
         await setDoc(newRef, {
           categoryId: 'quick_memo',
-          title: todayStr,
+          title: twoWeekTitle,
           scope: 'explorer',
           body: '',
           subBody: '',
@@ -5143,7 +5271,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
           tab: 'explorer',
           catId: 'quick_memo',
           itemId: newRef.id,
-          itemTitle: `퀵메모 (${todayStr})`
+          itemTitle: `퀵메모 (${twoWeekTitle})`
         });
       }
 
