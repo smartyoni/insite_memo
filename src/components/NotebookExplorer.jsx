@@ -15337,10 +15337,10 @@ onClick={() => {
                   }
                 }}
                 placeholder="메모할 내용을 자유롭게 입력하세요..."
-                rows={8}
+                rows={10}
                 style={{
                   width: '100%',
-                  minHeight: '180px',
+                  minHeight: '235px',
                   padding: '14px 16px',
                   borderRadius: 0,
                   border: 'none',
