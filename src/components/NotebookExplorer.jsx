@@ -15264,50 +15264,60 @@ onClick={() => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
+                  justifyContent: 'flex-end',
+                  padding: '8px 12px',
                   backgroundColor: '#F8FAFC',
                   borderBottom: '1px solid #E2E8F0'
                 }}
               >
-                <button
-                  type="button"
-                  onClick={handleCloseQuickMemo}
+                {/* Segmented Tab */}
+                <div
                   style={{
-                    padding: '7px 14px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#FFFFFF',
-                    color: '#475569',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveQuickMemo}
-                  disabled={!quickMemoText.trim() || isSavingQuickMemo}
-                  style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '7px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
-                    boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                    backgroundColor: '#F1F5F9',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    gap: '4px',
+                    border: '1px solid #E2E8F0'
                   }}
                 >
-                  <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
-                  <span>{isSavingQuickMemo ? '저장 중...' : '저장'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseQuickMemo}
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#EF4444',
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(239, 68, 68, 0.2)'
+                    }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveQuickMemo}
+                    disabled={!quickMemoText.trim() || isSavingQuickMemo}
+                    style={{
+                      padding: '6px 18px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#2563EB' : '#93C5FD',
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
+                      boxShadow: quickMemoText.trim() && !isSavingQuickMemo ? '0 1px 2px rgba(37, 99, 235, 0.2)' : 'none'
+                    }}
+                  >
+                    {isSavingQuickMemo ? '저장...' : '저장'}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -15353,50 +15363,59 @@ onClick={() => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
-                  gap: '8px',
-                  padding: '10px 16px',
+                  padding: '8px 14px',
                   backgroundColor: '#F8FAFC',
                   borderTop: '1px solid #E2E8F0'
                 }}
               >
-                <button
-                  type="button"
-                  onClick={handleCloseQuickMemo}
+                {/* Segmented Tab */}
+                <div
                   style={{
-                    padding: '7px 14px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#FFFFFF',
-                    color: '#475569',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  취소 (Esc)
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveQuickMemo}
-                  disabled={!quickMemoText.trim() || isSavingQuickMemo}
-                  style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '7px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#D97706' : '#FDE68A',
-                    color: '#FFFFFF',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
-                    boxShadow: quickMemoText.trim() ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none'
+                    backgroundColor: '#F1F5F9',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    gap: '4px',
+                    border: '1px solid #E2E8F0'
                   }}
                 >
-                  <Zap size={14} fill="#FFFFFF" color="#FFFFFF" />
-                  <span>{isSavingQuickMemo ? '저장 중...' : '저장 (Ctrl+Enter)'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseQuickMemo}
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#EF4444',
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(239, 68, 68, 0.2)'
+                    }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveQuickMemo}
+                    disabled={!quickMemoText.trim() || isSavingQuickMemo}
+                    style={{
+                      padding: '6px 18px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: quickMemoText.trim() && !isSavingQuickMemo ? '#2563EB' : '#93C5FD',
+                      color: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: quickMemoText.trim() && !isSavingQuickMemo ? 'pointer' : 'not-allowed',
+                      boxShadow: quickMemoText.trim() && !isSavingQuickMemo ? '0 1px 2px rgba(37, 99, 235, 0.2)' : 'none'
+                    }}
+                  >
+                    {isSavingQuickMemo ? '저장...' : '저장'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
