@@ -2083,6 +2083,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   const [selectedChecklistId, setSelectedChecklistId] = useState(() => initialNavLoc?.selectedChecklistId || '__main__'); // '__main__' (부모 메모/템플릿) | checklistId
   const [checklistDetailDraft, setChecklistDetailDraft] = useState('');
   const [checklistDetailBlocks, setChecklistDetailBlocks] = useState([]);
+  const [activeDetailTab, setActiveDetailTab] = useState('text'); // 'text' | 'checklist'
   const [editingBlockId, setEditingBlockId] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState(() => {
     return getStoredCollapsedSections(initialNavLoc?.selectedItemId);
@@ -12237,36 +12238,106 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   flexWrap: 'wrap',
                                   gap: '6px'
                                 }} className="no-print">
-                                  <button
-                                    type="button"
-                                    onClick={handleAddNewTextBlock}
-                                    style={{
-                                      ...styles.btnSecondary,
-                                      color: '#1D4ED8',
-                                      backgroundColor: '#EFF6FF',
-                                      borderColor: '#BFDBFE',
-                                      fontWeight: 600
-                                    }}
-                                    title="새 텍스트 추가"
-                                  >
-                                    <Plus size={13} />
-                                    <span>텍스트</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleAddNewChecklistBlock}
-                                    style={{
-                                      ...styles.btnSecondary,
-                                      color: '#D97706',
-                                      backgroundColor: '#FEF3C7',
-                                      borderColor: '#FDE68A',
-                                      fontWeight: 600
-                                    }}
-                                    title="새 체크 추가"
-                                  >
-                                    <CheckSquare size={13} />
-                                    <span>체크</span>
-                                  </button>
+{/* 세그먼트 탭: [텍스트 (N) | 체크리스트 (N)] */}
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          backgroundColor: '#F1F5F9',
+                                          border: '1px solid #E2E8F0',
+                                          borderRadius: '6px',
+                                          padding: '2px',
+                                          gap: '2px'
+                                        }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('text')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '3px 8px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'text' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'text' ? '#7C3AED' : 'transparent',
+                                            color: activeDetailTab === 'text' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="텍스트박스 보기"
+                                        >
+                                          <Type size={12} />
+                                          <span>텍스트</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'text' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'text' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'text').length}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('checklist')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '3px 8px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'checklist' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'checklist' ? '#059669' : 'transparent',
+                                            color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="체크리스트 보기"
+                                        >
+                                          <CheckSquare size={12} />
+                                          <span>체크</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'checklist' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'checklist').length}
+                                          </span>
+                                        </button>
+                                      </div>
+
+                                      {/* 활성 탭에 따른 [+ 추가] 버튼 */}
+                                      <button
+                                        type="button"
+                                        onClick={activeDetailTab === 'text' ? handleAddNewTextBlock : handleAddNewChecklistBlock}
+                                        style={{
+                                          ...styles.btnSecondary,
+                                          color: activeDetailTab === 'text' ? '#6D28D9' : '#047857',
+                                          backgroundColor: activeDetailTab === 'text' ? '#F5F3FF' : '#ECFDF5',
+                                          borderColor: activeDetailTab === 'text' ? '#DDD6FE' : '#A7F3D0',
+                                          fontWeight: 700,
+                                          padding: '3px 9px'
+                                        }}
+                                        title={activeDetailTab === 'text' ? '새 텍스트 그룹 추가' : '새 체크리스트 그룹 추가'}
+                                      >
+                                        <Plus size={13} strokeWidth={2.5} />
+                                        <span>{activeDetailTab === 'text' ? '텍스트 추가' : '체크 추가'}</span>
+                                      </button>
                                   {detailClipboard && (
                                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
                                       {detailClipboard.type === 'block' ? (
@@ -12326,6 +12397,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   )}
                                 </div>
                                 <DetailBlocksManager
+                                  filterType={activeDetailTab}
                                   blocks={checklistDetailBlocks}
                                   onChangeAndSave={(newBlocks) => {
                                     setChecklistDetailBlocks(newBlocks);
@@ -12620,35 +12692,105 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                         </div>
                                       )}
 
+                                      {/* 세그먼트 탭: [텍스트 (N) | 체크리스트 (N)] */}
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          backgroundColor: '#F1F5F9',
+                                          border: '1px solid #E2E8F0',
+                                          borderRadius: '6px',
+                                          padding: '2px',
+                                          gap: '2px'
+                                        }}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('text')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '3px 8px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'text' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'text' ? '#7C3AED' : 'transparent',
+                                            color: activeDetailTab === 'text' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="텍스트박스 보기"
+                                        >
+                                          <Type size={12} />
+                                          <span>텍스트</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'text' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'text' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'text').length}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('checklist')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '3px 8px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'checklist' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'checklist' ? '#059669' : 'transparent',
+                                            color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="체크리스트 보기"
+                                        >
+                                          <CheckSquare size={12} />
+                                          <span>체크</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'checklist' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'checklist').length}
+                                          </span>
+                                        </button>
+                                      </div>
+
+                                      {/* 활성 탭에 따른 [+ 추가] 버튼 */}
                                       <button
                                         type="button"
-                                        onClick={handleAddNewTextBlock}
+                                        onClick={activeDetailTab === 'text' ? handleAddNewTextBlock : handleAddNewChecklistBlock}
                                         style={{
                                           ...styles.btnSecondary,
-                                          color: '#1D4ED8',
-                                          backgroundColor: '#EFF6FF',
-                                          borderColor: '#BFDBFE',
-                                          fontWeight: 600
+                                          color: activeDetailTab === 'text' ? '#6D28D9' : '#047857',
+                                          backgroundColor: activeDetailTab === 'text' ? '#F5F3FF' : '#ECFDF5',
+                                          borderColor: activeDetailTab === 'text' ? '#DDD6FE' : '#A7F3D0',
+                                          fontWeight: 700,
+                                          padding: '3px 9px'
                                         }}
-                                        title="새 텍스트 추가"
+                                        title={activeDetailTab === 'text' ? '새 텍스트 그룹 추가' : '새 체크리스트 그룹 추가'}
                                       >
-                                        <Plus size={13} />
-                                        <span>텍스트</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={handleAddNewChecklistBlock}
-                                        style={{
-                                          ...styles.btnSecondary,
-                                          color: '#D97706',
-                                          backgroundColor: '#FEF3C7',
-                                          borderColor: '#FDE68A',
-                                          fontWeight: 600
-                                        }}
-                                        title="새 체크 추가"
-                                      >
-                                        <CheckSquare size={13} />
-                                        <span>체크</span>
+                                        <Plus size={13} strokeWidth={2.5} />
+                                        <span>{activeDetailTab === 'text' ? '텍스트 추가' : '체크 추가'}</span>
                                       </button>
                                       {detailClipboard && (
                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -12711,7 +12853,8 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                   </div>
                                   {/* Detail Content: Always interactive DetailBlocksManager */}
                                   <DetailBlocksManager
-                                    blocks={checklistDetailBlocks}
+                                  filterType={activeDetailTab}
+                                  blocks={checklistDetailBlocks}
                                     onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
                                     searchQuery={searchQuery}
                                     editingBlockId={editingBlockId}
@@ -14079,36 +14222,105 @@ onClick={() => {
                                       </div>
                                     )}
 
-                                    <button
-                                      type="button"
-                                      onClick={handleAddNewTextBlock}
-                                      style={{
-                                        ...styles.btnSecondary,
-                                        color: '#1D4ED8',
-                                        backgroundColor: '#EFF6FF',
-                                        borderColor: '#BFDBFE',
-                                        fontWeight: 600
-                                      }}
-                                      title="새 텍스트 추가"
-                                    >
-                                      <Plus size={13} />
-                                      <span>텍스트</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={handleAddNewChecklistBlock}
-                                      style={{
-                                        ...styles.btnSecondary,
-                                        color: '#D97706',
-                                        backgroundColor: '#FEF3C7',
-                                        borderColor: '#FDE68A',
-                                        fontWeight: 600
-                                      }}
-                                        title="새 체크 추가"
+                                    {/* 세그먼트 탭: [텍스트 (N) | 체크리스트 (N)] */}
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          backgroundColor: '#F1F5F9',
+                                          border: '1px solid #E2E8F0',
+                                          borderRadius: '6px',
+                                          padding: '2px',
+                                          gap: '2px'
+                                        }}
                                       >
-                                        <CheckSquare size={13} />
-                                        <span>체크</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('text')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '2px 7px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'text' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'text' ? '#7C3AED' : 'transparent',
+                                            color: activeDetailTab === 'text' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="텍스트박스 보기"
+                                        >
+                                          <Type size={12} />
+                                          <span>텍스트</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'text' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'text' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'text').length}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveDetailTab('checklist')}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '2px 7px',
+                                            fontSize: '12px',
+                                            fontWeight: activeDetailTab === 'checklist' ? 700 : 500,
+                                            borderRadius: '4px',
+                                            border: 'none',
+                                            backgroundColor: activeDetailTab === 'checklist' ? '#059669' : 'transparent',
+                                            color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#64748B',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="체크리스트 보기"
+                                        >
+                                          <CheckSquare size={12} />
+                                          <span>체크</span>
+                                          <span
+                                            style={{
+                                              fontSize: '10px',
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              backgroundColor: activeDetailTab === 'checklist' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                                              color: activeDetailTab === 'checklist' ? '#FFFFFF' : '#475569',
+                                              fontWeight: 700
+                                            }}
+                                          >
+                                            {checklistDetailBlocks.filter((b) => b && b.type === 'checklist').length}
+                                          </span>
+                                        </button>
+                                      </div>
+
+                                      {/* 활성 탭에 따른 [+ 추가] 버튼 */}
+                                      <button
+                                        type="button"
+                                        onClick={activeDetailTab === 'text' ? handleAddNewTextBlock : handleAddNewChecklistBlock}
+                                        style={{
+                                          ...styles.btnSecondary,
+                                          color: activeDetailTab === 'text' ? '#6D28D9' : '#047857',
+                                          backgroundColor: activeDetailTab === 'text' ? '#F5F3FF' : '#ECFDF5',
+                                          borderColor: activeDetailTab === 'text' ? '#DDD6FE' : '#A7F3D0',
+                                          fontWeight: 700,
+                                          padding: '2px 8px'
+                                        }}
+                                        title={activeDetailTab === 'text' ? '새 텍스트 그룹 추가' : '새 체크리스트 그룹 추가'}
+                                      >
+                                        <Plus size={13} strokeWidth={2.5} />
+                                        <span>{activeDetailTab === 'text' ? '텍스트 추가' : '체크 추가'}</span>
                                       </button>
                                       {detailClipboard && (
                                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -14172,7 +14384,8 @@ onClick={() => {
 
                                   {/* Detail Content: Always interactive DetailBlocksManager */}
                                   <DetailBlocksManager
-                                    blocks={checklistDetailBlocks}
+                                  filterType={activeDetailTab}
+                                  blocks={checklistDetailBlocks}
                                     onChangeAndSave={(newBlocks) => handleSaveChecklistDetail(selectedCheckItem.id, newBlocks)}
                                     searchQuery={searchQuery}
                                     editingBlockId={editingBlockId}

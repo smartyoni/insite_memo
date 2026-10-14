@@ -1146,7 +1146,8 @@ export const DetailBlocksManager = ({
   collapsedBlockIds: externalCollapsedBlockIds,
   setCollapsedBlockIds: externalSetCollapsedBlockIds,
   isMobile = false,
-  onCreateEvent
+  onCreateEvent,
+  filterType = null // 'text' | 'checklist' | null
 }) => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
@@ -1830,48 +1831,72 @@ export const DetailBlocksManager = ({
     }
   };
 
-  // 가장 위로 이동
-  const handleMoveToTop = (index) => {
-    if (index <= 0) return;
-    const next = [...blocks];
-    const [moved] = next.splice(index, 1);
-    next.unshift(moved);
-    if (onChangeAndSave) {
-      onChangeAndSave(next);
+  // 가장 위로 이동 (블록 ID 기준, 동일 타입 내 맨 위로)
+  const handleMoveToTop = (targetBlockId) => {
+    const target = blocks.find((b) => b.id === targetBlockId);
+    if (!target) return;
+    const remaining = blocks.filter((b) => b.id !== targetBlockId);
+    const firstSameIdx = remaining.findIndex((b) => b.type === target.type);
+    if (firstSameIdx !== -1) {
+      remaining.splice(firstSameIdx, 0, target);
+    } else {
+      remaining.unshift(target);
     }
+    if (onChangeAndSave) onChangeAndSave(remaining);
   };
 
-  // 가장 아래로 이동
-  const handleMoveToBottom = (index) => {
-    if (index >= blocks.length - 1) return;
-    const next = [...blocks];
-    const [moved] = next.splice(index, 1);
-    next.push(moved);
-    if (onChangeAndSave) {
-      onChangeAndSave(next);
+  // 가장 아래로 이동 (블록 ID 기준, 동일 타입 내 맨 아래로)
+  const handleMoveToBottom = (targetBlockId) => {
+    const target = blocks.find((b) => b.id === targetBlockId);
+    if (!target) return;
+    const remaining = blocks.filter((b) => b.id !== targetBlockId);
+    let lastSameIdx = -1;
+    for (let i = remaining.length - 1; i >= 0; i--) {
+      if (remaining[i].type === target.type) {
+        lastSameIdx = i;
+        break;
+      }
     }
+    if (lastSameIdx !== -1) {
+      remaining.splice(lastSameIdx + 1, 0, target);
+    } else {
+      remaining.push(target);
+    }
+    if (onChangeAndSave) onChangeAndSave(remaining);
   };
 
-  // 위로 이동
-  const handleMoveUp = (index) => {
-    if (index <= 0) return;
+  // 위로 이동 (블록 ID 기준, 동일 타입 내 바로 위 블록과 맞교환)
+  const handleMoveUp = (targetBlockId) => {
+    const target = blocks.find((b) => b.id === targetBlockId);
+    if (!target) return;
+    const sameType = blocks.filter((b) => b.type === target.type);
+    const sIdx = sameType.findIndex((b) => b.id === targetBlockId);
+    if (sIdx <= 0) return;
+    const prevBlock = sameType[sIdx - 1];
+
+    const idxTarget = blocks.findIndex((b) => b.id === targetBlockId);
+    const idxPrev = blocks.findIndex((b) => b.id === prevBlock.id);
     const next = [...blocks];
-    const [moved] = next.splice(index, 1);
-    next.splice(index - 1, 0, moved);
-    if (onChangeAndSave) {
-      onChangeAndSave(next);
-    }
+    next[idxTarget] = prevBlock;
+    next[idxPrev] = target;
+    if (onChangeAndSave) onChangeAndSave(next);
   };
 
-  // 아래로 이동
-  const handleMoveDown = (index) => {
-    if (index >= blocks.length - 1) return;
+  // 아래로 이동 (블록 ID 기준, 동일 타입 내 바로 아래 블록과 맞교환)
+  const handleMoveDown = (targetBlockId) => {
+    const target = blocks.find((b) => b.id === targetBlockId);
+    if (!target) return;
+    const sameType = blocks.filter((b) => b.type === target.type);
+    const sIdx = sameType.findIndex((b) => b.id === targetBlockId);
+    if (sIdx === -1 || sIdx >= sameType.length - 1) return;
+    const nextBlock = sameType[sIdx + 1];
+
+    const idxTarget = blocks.findIndex((b) => b.id === targetBlockId);
+    const idxNext = blocks.findIndex((b) => b.id === nextBlock.id);
     const next = [...blocks];
-    const [moved] = next.splice(index, 1);
-    next.splice(index + 1, 0, moved);
-    if (onChangeAndSave) {
-      onChangeAndSave(next);
-    }
+    next[idxTarget] = nextBlock;
+    next[idxNext] = target;
+    if (onChangeAndSave) onChangeAndSave(next);
   };
 
   // 실제 블록 삭제 실행
@@ -1971,37 +1996,52 @@ export const DetailBlocksManager = ({
         padding: 0
       }}
     >
-      {blocks.length === 0 ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '36px 16px',
-            color: '#94A3B8',
-            fontSize: '13px',
-            textAlign: 'center',
-            backgroundColor: '#F8FAFC',
-            borderRadius: '8px',
-            border: '1px dashed #CBD5E1',
-            margin: '8px 0'
-          }}
-        >
-          <span style={{ fontWeight: 500, color: '#64748B' }}>등록된 상세 내용이 없습니다.</span>
-          <span style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
-            우측 상단의 <b>[+ 텍스트]</b> 또는 <b>[+ 체크]</b> 버튼을 눌러 내용을 추가해보세요.
-          </span>
-        </div>
-      ) : (
-        blocks.map((block, idx) => {
+      {(() => {
+        const visibleBlocks = filterType
+          ? blocks.filter((b) => b && b.type === filterType)
+          : blocks;
+
+        if (visibleBlocks.length === 0) {
+          return (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '36px 16px',
+                color: '#94A3B8',
+                fontSize: '13px',
+                textAlign: 'center',
+                backgroundColor: '#F8FAFC',
+                borderRadius: '8px',
+                border: '1px dashed #CBD5E1',
+                margin: '8px 0'
+              }}
+            >
+              <span style={{ fontWeight: 600, color: '#64748B' }}>
+                {filterType === 'checklist'
+                  ? '등록된 체크리스트가 없습니다.'
+                  : filterType === 'text'
+                    ? '등록된 텍스트박스가 없습니다.'
+                    : '등록된 상세 내용이 없습니다.'}
+              </span>
+              <span style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
+                우측 상단의 <b>[+ {filterType === 'checklist' ? '체크 추가' : '텍스트 추가'}]</b> 버튼을 눌러 내용을 추가해보세요.
+              </span>
+            </div>
+          );
+        }
+
+        return visibleBlocks.map((block, idx) => {
+          const isFirstBlock = idx === 0;
+          const isLastBlock = idx === visibleBlocks.length - 1;
         if (block.type === 'checklist') {
           const isEditingTitle = editingChecklistTitleId === block.id;
           const items = Array.isArray(block.items) && block.items.length > 0
             ? block.items
             : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
-          const isFirstBlock = idx === 0;
-          const isLastBlock = idx === blocks.length - 1;
+          // isFirstBlock & isLastBlock computed from visibleBlocks
           const isCollapsed = Boolean(collapsedBlockIds[block.id]);
           const isBlockDragOver = dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === null;
 
@@ -2364,8 +2404,7 @@ export const DetailBlocksManager = ({
               id: `tb_${Date.now()}_0`,
               content: typeof block.content === 'string' ? block.content : ''
             }];
-        const isFirstBlock = idx === 0;
-        const isLastBlock = idx === blocks.length - 1;
+        // isFirstBlock & isLastBlock computed from visibleBlocks
         const isCollapsed = Boolean(collapsedBlockIds[block.id]);
         const isBlockDragOver = dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === null;
 
@@ -2625,7 +2664,7 @@ export const DetailBlocksManager = ({
                   disabled={isFirstBlock}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleMoveToTop(idx);
+                    handleMoveToTop(block.id);
                   }}
                   style={{
                     display: 'inline-flex',
@@ -2664,7 +2703,7 @@ export const DetailBlocksManager = ({
                   disabled={isLastBlock}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleMoveToBottom(idx);
+                    handleMoveToBottom(block.id);
                   }}
                   style={{
                     display: 'inline-flex',
@@ -2787,8 +2826,8 @@ export const DetailBlocksManager = ({
             )}
           </div>
         );
-      })
-      )}
+      });
+      })()}
 
       {/* 블록 3점 메뉴 (Stacking Context 및 z-index 잘림 방지를 위해 document.body에 Portal 렌더링) */}
       {openBlockMenuId && openBlockMenuPos && activeMenuBlock && typeof document !== 'undefined' && createPortal(
@@ -2844,7 +2883,7 @@ export const DetailBlocksManager = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenBlockMenuId(null);
-                      handleMoveToTop(activeMenuBlockIdx);
+                      handleMoveToTop(activeMenuBlock.id);
                     }}
                     style={{
                       ...blockMenuItemStyle,
@@ -2863,7 +2902,7 @@ export const DetailBlocksManager = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenBlockMenuId(null);
-                      handleMoveUp(activeMenuBlockIdx);
+                      handleMoveUp(activeMenuBlock.id);
                     }}
                     style={{
                       ...blockMenuItemStyle,
@@ -2882,7 +2921,7 @@ export const DetailBlocksManager = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenBlockMenuId(null);
-                      handleMoveDown(activeMenuBlockIdx);
+                      handleMoveDown(activeMenuBlock.id);
                     }}
                     style={{
                       ...blockMenuItemStyle,
@@ -2901,7 +2940,7 @@ export const DetailBlocksManager = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenBlockMenuId(null);
-                      handleMoveToBottom(activeMenuBlockIdx);
+                      handleMoveToBottom(activeMenuBlock.id);
                     }}
                     style={{
                       ...blockMenuItemStyle,
