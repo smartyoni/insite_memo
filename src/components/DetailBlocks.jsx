@@ -59,7 +59,6 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
         if (Array.isArray(b.items) && b.items.length > 0) {
           parsedTextItems = b.items.map((it, i) => ({
             id: it.id || `tb_${Date.now()}_${i}`,
-            title: typeof it.title === 'string' ? it.title : '',
             content: typeof it.content === 'string' ? it.content : (typeof it.text === 'string' ? it.text : '')
           }));
         } else if (typeof b.content === 'string' && b.content.length > 0) {
@@ -67,7 +66,6 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
           parsedTextItems = [
             {
               id: `tb_${Date.now()}_0`,
-              title: '',
               content: b.content
             }
           ];
@@ -75,7 +73,6 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
           parsedTextItems = [
             {
               id: `tb_${Date.now()}_0`,
-              title: '',
               content: ''
             }
           ];
@@ -661,7 +658,7 @@ function DetailChecklistItemRow({
 
 /**
  * 텍스트 블록 개별 텍스트박스 컴포넌트 (DetailTextItemRow)
- * 3번 패널처럼 그룹 내에 독립적인 텍스트박스(제목 + 줄바꿈 자유 본문)를 렌더링하며,
+ * 3번 패널처럼 제목 입력 없이 순수한 텍스트박스(줄바꿈 자유 본문)로 렌더링하며,
  * 인라인 수정, 순서 이동, 복제, 복사, 다른 텍스트 그룹으로 이동, 삭제를 지원합니다.
  */
 function DetailTextItemRow({
@@ -693,7 +690,6 @@ function DetailTextItemRow({
   searchQuery = '',
   isMobile = false
 }) {
-  const [draftTitle, setDraftTitle] = useState(item.title || '');
   const [draftContent, setDraftContent] = useState(item.content || '');
   const textareaRef = useRef(null);
   const itemLongPressTimerRef = useRef(null);
@@ -702,7 +698,7 @@ function DetailTextItemRow({
     if (!onCreateEvent || isEditing) return;
     itemLongPressTimerRef.current = setTimeout(() => {
       onCreateEvent({
-        title: item.title || item.content?.slice(0, 30) || '텍스트 메모',
+        title: item.content?.slice(0, 30) || '텍스트 메모',
         blocks: []
       });
     }, 500);
@@ -720,7 +716,7 @@ function DetailTextItemRow({
       e.preventDefault();
       e.stopPropagation();
       onCreateEvent({
-        title: item.title || item.content?.slice(0, 30) || '텍스트 메모',
+        title: item.content?.slice(0, 30) || '텍스트 메모',
         blocks: []
       });
     }
@@ -734,7 +730,6 @@ function DetailTextItemRow({
 
   useEffect(() => {
     if (isEditing) {
-      setDraftTitle(item.title || '');
       setDraftContent(item.content || '');
       setTimeout(() => {
         if (textareaRef.current) {
@@ -743,7 +738,7 @@ function DetailTextItemRow({
         }
       }, 30);
     }
-  }, [isEditing, item.title, item.content]);
+  }, [isEditing, item.content]);
 
   const handleKeyDown = (e) => {
     if (e.nativeEvent && e.nativeEvent.isComposing) {
@@ -751,7 +746,7 @@ function DetailTextItemRow({
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      onSaveEdit(blockId, item.id, draftTitle, draftContent);
+      onSaveEdit(blockId, item.id, draftContent);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onCancelEdit(blockId, item);
@@ -791,27 +786,8 @@ function DetailTextItemRow({
       }}
     >
       {isEditing ? (
-        // [수정 모드: 소제목 input + 줄바꿈 본문 textarea + 저장/취소]
+        // [수정 모드: 순수 줄바꿈 본문 textarea + 저장/취소]
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
-          <input
-            type="text"
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="텍스트박스 제목 입력... (선택사항)"
-            style={{
-              width: '100%',
-              fontSize: '13px',
-              fontWeight: 700,
-              color: '#1E293B',
-              padding: '6px 8px',
-              borderRadius: '5px',
-              border: '1px solid #CBD5E1',
-              outline: 'none',
-              backgroundColor: '#FAFAFA',
-              boxSizing: 'border-box'
-            }}
-          />
           <textarea
             ref={textareaRef}
             rows={3}
@@ -862,7 +838,7 @@ function DetailTextItemRow({
             </button>
             <button
               type="button"
-              onClick={() => onSaveEdit(blockId, item.id, draftTitle, draftContent)}
+              onClick={() => onSaveEdit(blockId, item.id, draftContent)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -882,243 +858,8 @@ function DetailTextItemRow({
           </div>
         </div>
       ) : (
-        // [조회 모드: 소제목 + 줄바꿈 본문 + 3점 메뉴]
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '4px' }}>
-          {/* 상단 바: 소제목 또는 미니 헤더 + 3점 메뉴 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, cursor: 'text' }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                onStartEdit(item);
-              }}
-              title="더블클릭하여 수정"
-            >
-              <span style={{ color: '#7C3AED', fontSize: '13px', fontWeight: 700, userSelect: 'none' }}>•</span>
-              {item.title && item.title.trim() ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#4C1D95', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.title.trim()}
-                </span>
-              ) : (
-                <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
-                  (제목 없음)
-                </span>
-              )}
-            </div>
-
-            {/* 우측: 3점 메뉴 */}
-            <div
-              style={{ position: 'relative', flexShrink: 0 }}
-              className="no-print"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={(e) => onOpenItemMenu(e, item.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  backgroundColor: openItemMenuId === item.id ? '#EDE9FE' : 'transparent',
-                  color: openItemMenuId === item.id ? '#7C3AED' : '#64748B',
-                  cursor: 'pointer'
-                }}
-                title="메뉴"
-              >
-                <MoreVertical size={14} />
-              </button>
-
-              {openItemMenuId === item.id && (
-                <>
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 9998,
-                      backgroundColor: 'transparent'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCloseItemMenu();
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: openItemMenuPos?.top ?? 'auto',
-                      bottom: openItemMenuPos?.bottom ?? 'auto',
-                      right: openItemMenuPos?.right ?? 0,
-                      maxHeight: openItemMenuPos?.maxHeight || 'calc(100vh - 20px)',
-                      overflowY: 'auto',
-                      zIndex: 9999,
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)',
-                      border: '1px solid #CBD5E1',
-                      minWidth: '120px',
-                      padding: '4px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onStartEdit(item)}
-                      style={blockMenuItemStyle}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Edit2 size={13} color="#475569" />
-                      <span>수정</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onCopy(blockId, item)}
-                      style={blockMenuItemStyle}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      title="현재 그룹 내 바로 복제"
-                    >
-                      <Copy size={13} color="#475569" />
-                      <span>복제</span>
-                    </button>
-                    {onCopyItem && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onCloseItemMenu();
-                          onCopyItem(item);
-                        }}
-                        style={blockMenuItemStyle}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        title="클립보드에 복사하여 다른 블록에 붙여넣기"
-                      >
-                        <Copy size={13} color="#2563EB" />
-                        <span style={{ color: '#2563EB', fontWeight: 600 }}>텍스트박스 복사</span>
-                      </button>
-                    )}
-
-                    {/* 위치 이동 세트 */}
-                    {onMoveItem && (
-                      <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
-                        <button
-                          type="button"
-                          disabled={isFirstItem}
-                          onClick={() => onMoveItem(blockId, item.id, 'top')}
-                          style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
-                          onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
-                          onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <ChevronsUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
-                          <span>맨 위로 이동</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isFirstItem}
-                          onClick={() => onMoveItem(blockId, item.id, 'up')}
-                          style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
-                          onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
-                          onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <ArrowUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
-                          <span>위로 이동</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLastItem}
-                          onClick={() => onMoveItem(blockId, item.id, 'down')}
-                          style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
-                          onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
-                          onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <ArrowDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
-                          <span>아래로 이동</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLastItem}
-                          onClick={() => onMoveItem(blockId, item.id, 'bottom')}
-                          style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
-                          onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
-                          onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <ChevronsDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
-                          <span>맨 아래로 이동</span>
-                        </button>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => onDelete(blockId, item.id)}
-                      style={blockMenuItemDangerStyle}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Trash2 size={13} color="#DC2626" />
-                      <span>삭제</span>
-                    </button>
-
-                    {Array.isArray(otherTextBlocks) && otherTextBlocks.length > 0 && (
-                      <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
-                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, padding: '3px 8px' }}>
-                          다른 그룹으로 이동:
-                        </div>
-                        {otherTextBlocks.map((targetBlock) => (
-                          <button
-                            key={targetBlock.id}
-                            type="button"
-                            onClick={() => {
-                              onCloseItemMenu();
-                              if (onMoveToBlock) {
-                                onMoveToBlock(blockId, targetBlock.id, item.id);
-                              }
-                            }}
-                            style={{
-                              ...blockMenuItemStyle,
-                              gap: '6px',
-                              color: '#6D28D9',
-                              padding: '4px 8px 4px 12px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAF5FF'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            title={`'${targetBlock.title || '텍스트'}' 그룹으로 이동`}
-                          >
-                            <Folder size={12} color="#7C3AED" style={{ flexShrink: 0 }} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-                              {targetBlock.title && targetBlock.title.trim() ? targetBlock.title : '텍스트'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={onCloseItemMenu}
-                      style={blockMenuItemCancelStyle}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <X size={13} color="#64748B" />
-                      <span>취소</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
+        // [조회 모드: 줄바꿈 본문 + 우측 3점 메뉴 (제목 없음 헤더 없음)]
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
           {/* 본문 줄바꿈 텍스트 (더블클릭 시 편집) */}
           <div
             onDoubleClick={(e) => {
@@ -1127,13 +868,15 @@ function DetailTextItemRow({
             }}
             title="더블클릭하여 수정"
             style={{
+              flex: 1,
+              minWidth: 0,
               fontSize: '13px',
               lineHeight: 1.6,
               color: '#1E293B',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
               cursor: 'text',
-              paddingLeft: '14px'
+              padding: '2px 0'
             }}
           >
             {item.content && item.content.trim() ? (
@@ -1142,6 +885,218 @@ function DetailTextItemRow({
               <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '12px' }}>
                 (내용 없음 - 더블클릭하여 내용 입력)
               </span>
+            )}
+          </div>
+
+          {/* 우측: 3점 메뉴 */}
+          <div
+            style={{ position: 'relative', flexShrink: 0 }}
+            className="no-print"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={(e) => onOpenItemMenu(e, item.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: openItemMenuId === item.id ? '#EDE9FE' : 'transparent',
+                color: openItemMenuId === item.id ? '#7C3AED' : '#64748B',
+                cursor: 'pointer'
+              }}
+              title="메뉴"
+            >
+              <MoreVertical size={14} />
+            </button>
+
+            {openItemMenuId === item.id && (
+              <>
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 9998,
+                    backgroundColor: 'transparent'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseItemMenu();
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: openItemMenuPos?.top ?? 'auto',
+                    bottom: openItemMenuPos?.bottom ?? 'auto',
+                    right: openItemMenuPos?.right ?? 0,
+                    maxHeight: openItemMenuPos?.maxHeight || 'calc(100vh - 20px)',
+                    overflowY: 'auto',
+                    zIndex: 9999,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)',
+                    border: '1px solid #CBD5E1',
+                    minWidth: '120px',
+                    padding: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onStartEdit(item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Edit2 size={13} color="#475569" />
+                    <span>수정</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCopy(blockId, item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="현재 그룹 내 바로 복제"
+                  >
+                    <Copy size={13} color="#475569" />
+                    <span>복제</span>
+                  </button>
+                  {onCopyItem && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCloseItemMenu();
+                        onCopyItem(item);
+                      }}
+                      style={blockMenuItemStyle}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      title="클립보드에 복사하여 다른 블록에 붙여넣기"
+                    >
+                      <Copy size={13} color="#2563EB" />
+                      <span style={{ color: '#2563EB', fontWeight: 600 }}>텍스트박스 복사</span>
+                    </button>
+                  )}
+
+                  {/* 위치 이동 세트 */}
+                  {onMoveItem && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
+                      <button
+                        type="button"
+                        disabled={isFirstItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'top')}
+                        style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ChevronsUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>맨 위로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isFirstItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'up')}
+                        style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ArrowUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>위로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLastItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'down')}
+                        style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ArrowDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>아래로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLastItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'bottom')}
+                        style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ChevronsDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>맨 아래로 이동</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => onDelete(blockId, item.id)}
+                    style={blockMenuItemDangerStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Trash2 size={13} color="#DC2626" />
+                    <span>삭제</span>
+                  </button>
+
+                  {Array.isArray(otherTextBlocks) && otherTextBlocks.length > 0 && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, padding: '3px 8px' }}>
+                        다른 그룹으로 이동:
+                      </div>
+                      {otherTextBlocks.map((targetBlock) => (
+                        <button
+                          key={targetBlock.id}
+                          type="button"
+                          onClick={() => {
+                            onCloseItemMenu();
+                            if (onMoveToBlock) {
+                              onMoveToBlock(blockId, targetBlock.id, item.id);
+                            }
+                          }}
+                          style={{
+                            ...blockMenuItemStyle,
+                            gap: '6px',
+                            color: '#6D28D9',
+                            padding: '4px 8px 4px 12px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAF5FF'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title={`'${targetBlock.title || '텍스트'}' 그룹으로 이동`}
+                        >
+                          <Folder size={12} color="#7C3AED" style={{ flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {targetBlock.title && targetBlock.title.trim() ? targetBlock.title : '텍스트'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onCloseItemMenu}
+                    style={blockMenuItemCancelStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <X size={13} color="#64748B" />
+                    <span>취소</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1699,7 +1654,6 @@ export const DetailBlocksManager = ({
   const handleAddTextItem = (blockId) => {
     const newItem = {
       id: `tb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      title: '',
       content: ''
     };
     const next = blocks.map((b) => {
@@ -1714,12 +1668,12 @@ export const DetailBlocksManager = ({
   };
 
   // 텍스트 개별 텍스트박스 수정 저장
-  const handleSaveEditTextItem = (blockId, itemId, newTitle, newContent) => {
+  const handleSaveEditTextItem = (blockId, itemId, newContent) => {
     const next = blocks.map((b) => {
       if (b.id !== blockId) return b;
       return {
         ...b,
-        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, title: newTitle.trim(), content: newContent } : it))
+        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, content: newContent } : it))
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
@@ -1728,7 +1682,7 @@ export const DetailBlocksManager = ({
 
   // 텍스트 개별 텍스트박스 수정 취소
   const handleCancelEditTextItem = (blockId, item) => {
-    if ((!item.title || !item.title.trim()) && (!item.content || !item.content.trim())) {
+    if (!item.content || !item.content.trim()) {
       const targetBlock = blocks.find((b) => b.id === blockId);
       if (targetBlock && targetBlock.items && targetBlock.items.length > 1) {
         const next = blocks.map((b) => {
@@ -1749,7 +1703,6 @@ export const DetailBlocksManager = ({
     setOpenItemMenuId(null);
     const newItem = {
       id: `tb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      title: item.title ? `${item.title} (복제)` : '',
       content: item.content || ''
     };
     const next = blocks.map((b) => {
@@ -1773,7 +1726,7 @@ export const DetailBlocksManager = ({
       const filtered = (b.items || []).filter((it) => it.id !== itemId);
       return {
         ...b,
-        items: filtered.length > 0 ? filtered : [{ id: `tb_${Date.now()}`, title: '', content: '' }]
+        items: filtered.length > 0 ? filtered : [{ id: `tb_${Date.now()}`, content: '' }]
       };
     });
     if (onChangeAndSave) onChangeAndSave(next);
@@ -1786,13 +1739,13 @@ export const DetailBlocksManager = ({
     const targetBlock = blocks.find((b) => b.id === blockId);
     const targetItem = targetBlock?.items?.find((it) => it.id === itemId);
 
-    if ((!targetItem?.title || !targetItem.title.trim()) && (!targetItem?.content || !targetItem.content.trim())) {
+    if (!targetItem?.content || !targetItem.content.trim()) {
       executeDeleteTextItem(blockId, itemId);
       return;
     }
 
     if (openDeleteModal) {
-      const text = targetItem.title?.trim() || targetItem.content?.trim() || '텍스트박스';
+      const text = targetItem.content?.trim() || '텍스트박스';
       const preview = text.length > 30 ? text.slice(0, 30) + '...' : text;
       openDeleteModal(
         '텍스트박스 삭제',
@@ -1836,7 +1789,6 @@ export const DetailBlocksManager = ({
     const clipItem = detailClipboard.item;
     const newItem = {
       id: `tb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      title: clipItem.title || '',
       content: clipItem.content !== undefined ? clipItem.content : (clipItem.text || '')
     };
     const next = blocks.map((b) => {
@@ -2410,7 +2362,6 @@ export const DetailBlocksManager = ({
           ? block.items
           : [{
               id: `tb_${Date.now()}_0`,
-              title: '',
               content: typeof block.content === 'string' ? block.content : ''
             }];
         const isFirstBlock = idx === 0;
@@ -2831,42 +2782,7 @@ export const DetailBlocksManager = ({
                   />
                 ))}
 
-                {/* 텍스트 그룹 내 텍스트박스 추가 하단 버튼 */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddTextItem(block.id);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    margin: '4px 8px 8px 8px',
-                    borderRadius: '5px',
-                    border: '1px dashed #C4B5FD',
-                    backgroundColor: '#FAF5FF',
-                    color: '#7C3AED',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F3E8FF';
-                    e.currentTarget.style.borderColor = '#A855F7';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FAF5FF';
-                    e.currentTarget.style.borderColor = '#C4B5FD';
-                  }}
-                  title="이 그룹에 새 텍스트박스 추가"
-                >
-                  <Plus size={13} strokeWidth={2.5} />
-                  <span>텍스트박스 추가</span>
-                </button>
+                
               </div>
             )}
           </div>

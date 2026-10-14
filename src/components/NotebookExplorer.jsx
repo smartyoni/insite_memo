@@ -4090,7 +4090,6 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
       items: [
         {
           id: `tb_${Date.now()}_0`,
-          title: '',
           content: ''
         }
       ]
