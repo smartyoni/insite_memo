@@ -35,41 +35,66 @@ export const parseDetailBlocks = (detailValue, detailBlocks) => {
     const validBlocks = detailBlocks.filter((b) => b && b.type !== 'divider');
     if (validBlocks.length > 0) {
       return validBlocks.map((b, idx) => {
-      if (b.type === 'checklist') {
-        const rawItems = Array.isArray(b.items) && b.items.length > 0
-          ? b.items
-          : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
-        const parsedItems = rawItems.map((it, i) => ({
-          id: it.id || `item_${Date.now()}_${i}`,
-          text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : ''),
-          completed: Boolean(it.completed)
-        }));
-        const uncompleted = parsedItems.filter((it) => !it.completed);
-        const completed = parsedItems.filter((it) => it.completed);
+        if (b.type === 'checklist') {
+          const rawItems = Array.isArray(b.items) && b.items.length > 0
+            ? b.items
+            : [{ id: `item_${Date.now()}_0`, text: '', completed: false }];
+          const parsedItems = rawItems.map((it, i) => ({
+            id: it.id || `item_${Date.now()}_${i}`,
+            text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : ''),
+            completed: Boolean(it.completed)
+          }));
+          const uncompleted = parsedItems.filter((it) => !it.completed);
+          const completed = parsedItems.filter((it) => it.completed);
+          return {
+            id: b.id || `chk_${Date.now()}_${idx}`,
+            type: 'checklist',
+            title: typeof b.title === 'string' ? b.title : '체크리스트',
+            items: [...uncompleted, ...completed]
+          };
+        }
+
+        // type === 'text' 블록
+        let parsedTextItems = [];
+        if (Array.isArray(b.items) && b.items.length > 0) {
+          parsedTextItems = b.items.map((it, i) => ({
+            id: it.id || `t_item_${Date.now()}_${i}`,
+            text: typeof it.text === 'string' ? it.text : (typeof it === 'string' ? it : '')
+          }));
+        } else if (typeof b.content === 'string' && b.content.trim().length > 0) {
+          // 기존 content 문자열이 있는 경우: 줄바꿈 분리하여 각 줄을 개별 텍스트 항목으로 변환
+          const lines = b.content.split('\n');
+          parsedTextItems = lines.map((line, i) => ({
+            id: `t_item_${Date.now()}_${i}`,
+            text: line
+          }));
+        } else {
+          parsedTextItems = [{ id: `t_item_${Date.now()}_0`, text: '' }];
+        }
+
         return {
-          id: b.id || `chk_${Date.now()}_${idx}`,
-          type: 'checklist',
-          title: typeof b.title === 'string' ? b.title : '체크리스트',
-          items: [...uncompleted, ...completed]
+          id: b.id || `b_${Date.now()}_${idx}`,
+          type: 'text',
+          title: typeof b.title === 'string' ? b.title : '텍스트',
+          content: typeof b.content === 'string' ? b.content : '',
+          items: parsedTextItems
         };
-      }
-      return {
-        id: b.id || `b_${Date.now()}_${idx}`,
-        type: 'text',
-        title: typeof b.title === 'string' ? b.title : '',
-        content: typeof b.content === 'string' ? b.content : ''
-      };
-    });
+      });
+    }
   }
-}
 
   if (typeof detailValue === 'string' && detailValue.trim().length > 0) {
+    const lines = detailValue.split('\n');
     return [
       {
         id: `b_init_${Date.now()}`,
         type: 'text',
-        title: '',
-        content: detailValue
+        title: '텍스트',
+        content: detailValue,
+        items: lines.map((line, i) => ({
+          id: `t_item_${Date.now()}_${i}`,
+          text: line
+        }))
       }
     ];
   }
@@ -98,7 +123,13 @@ export const blocksToPlainText = (blocks) => {
       }
       const parts = [];
       if (b.title && b.title.trim()) parts.push(`[${b.title.trim()}]`);
-      if (b.content && b.content.trim()) parts.push(b.content.trim());
+      if (Array.isArray(b.items) && b.items.length > 0) {
+        b.items.forEach((it) => {
+          if (it.text && it.text.trim()) parts.push(it.text.trim());
+        });
+      } else if (b.content && b.content.trim()) {
+        parts.push(b.content.trim());
+      }
       return parts.join('\n');
     })
     .filter((s) => s.length > 0)
@@ -587,6 +618,491 @@ function DetailChecklistItemRow({
                           <Folder size={12} color="#059669" style={{ flexShrink: 0 }} />
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
                             {targetBlock.title && targetBlock.title.trim() ? targetBlock.title : '체크리스트'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onCloseItemMenu}
+                    style={blockMenuItemCancelStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <X size={13} color="#64748B" />
+                    <span>취소</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 텍스트 블록 개별 항목 컴포넌트 (DetailTextItemRow)
+ * 체크리스트와 유사하게 텍스트 그룹 내 개별 행(Row)을 구성하며,
+ * 인라인 수정, Shift+Enter 새 항목 추가, 순서 이동, 복제, 복사, 다른 텍스트 그룹으로 이동, 삭제를 지원합니다.
+ */
+function DetailTextItemRow({
+  blockId,
+  item,
+  itemIdx,
+  items,
+  isEditing,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onAddNext,
+  onCopy,
+  onCopyItem,
+  onDelete,
+  onMoveItem,
+  openItemMenuId,
+  openItemMenuPos,
+  onOpenItemMenu,
+  onCloseItemMenu,
+  isDragged,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  otherTextBlocks = [],
+  onMoveToBlock,
+  onCreateEvent
+}) {
+  const [draftText, setDraftText] = useState(item.text || '');
+  const textareaRef = useRef(null);
+  const itemLongPressTimerRef = useRef(null);
+
+  const handleTouchStart = () => {
+    if (!onCreateEvent || isEditing) return;
+    itemLongPressTimerRef.current = setTimeout(() => {
+      onCreateEvent({
+        title: item.text || '',
+        blocks: []
+      });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (itemLongPressTimerRef.current) {
+      clearTimeout(itemLongPressTimerRef.current);
+      itemLongPressTimerRef.current = null;
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    if (onCreateEvent && !isEditing) {
+      e.preventDefault();
+      e.stopPropagation();
+      onCreateEvent({
+        title: item.text || '',
+        blocks: []
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraftText(item.text || '');
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 38)}px`;
+        }
+      }, 30);
+    }
+  }, [isEditing, item.text]);
+
+  const adjustHeight = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 38)}px`;
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.nativeEvent && e.nativeEvent.isComposing) {
+      return;
+    }
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      if (onAddNext) {
+        onAddNext(blockId, item.id, draftText);
+      }
+    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      onSaveEdit(blockId, item.id, draftText);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancelEdit(blockId, item);
+    }
+  };
+
+  const isFirstItem = itemIdx === 0;
+  const isLastItem = itemIdx !== undefined && items && itemIdx === items.length - 1;
+
+  return (
+    <div
+      key={item.id}
+      draggable={!isEditing}
+      onDragStart={(e) => onDragStart(e, blockId, item.id)}
+      onDragOver={(e) => onDragOver(e, blockId, item.id)}
+      onDrop={(e) => onDrop(e, blockId, item.id)}
+      onDragEnd={onDragEnd}
+      onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
+      onKeyDown={(e) => {
+        if (e.nativeEvent && e.nativeEvent.isComposing) return;
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onAddNext) {
+            onAddNext(blockId, item.id, isEditing ? draftText : (item.text || ''));
+          }
+        }
+      }}
+      style={{
+        display: 'flex',
+        flexDirection: isEditing ? 'column' : 'row',
+        alignItems: isEditing ? 'stretch' : 'center',
+        justifyContent: 'space-between',
+        gap: '6px',
+        padding: isEditing ? '8px 10px' : '6px 10px',
+        borderRadius: '0',
+        border: 'none',
+        borderBottom: (itemIdx !== undefined && items && itemIdx < items.length - 1) ? '1px solid #F1F5F9' : 'none',
+        backgroundColor: isDragOver ? '#F3E8FF' : isEditing ? '#FAF5FF' : '#FFFFFF',
+        boxShadow: isEditing
+          ? 'inset 3px 0 0 #7C3AED'
+          : isDragOver
+            ? 'inset 3px 0 0 #7C3AED, 0 2px 6px rgba(124, 58, 237, 0.15)'
+            : 'none',
+        opacity: isDragged ? 0.4 : 1,
+        transition: 'background-color 0.15s',
+        cursor: isEditing ? 'default' : 'pointer'
+      }}
+    >
+      {isEditing ? (
+        // [수정 모드 (저장/취소 제공, 줄바꿈 지원)]
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+          <textarea
+            ref={textareaRef}
+            rows={2}
+            value={draftText}
+            onChange={(e) => {
+              setDraftText(e.target.value);
+              adjustHeight(e.target);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="텍스트 항목 내용 입력... (Enter 줄바꿈, Shift+Enter 새 항목 추가, Ctrl+Enter 저장)"
+            style={{
+              width: '100%',
+              minHeight: '38px',
+              padding: '6px 8px',
+              borderRadius: '6px',
+              border: '1px solid #C4B5FD',
+              outline: 'none',
+              fontSize: '13px',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              color: '#0F172A',
+              fontFamily: 'inherit',
+              resize: 'none',
+              backgroundColor: '#FFFFFF'
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => onCancelEdit(blockId, item)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#64748B',
+                backgroundColor: '#F1F5F9',
+                border: '1px solid #CBD5E1',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={13} /> 취소
+            </button>
+            <button
+              type="button"
+              onClick={() => onSaveEdit(blockId, item.id, draftText)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                backgroundColor: '#7C3AED',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <Check size={13} /> 저장
+            </button>
+          </div>
+        </div>
+      ) : (
+        // [조회 모드 (불릿 + 텍스트 + 3점 메뉴)]
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+          {/* 좌측: 불릿 + 텍스트 */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
+            {/* 세련된 도트 불릿 */}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                flexShrink: 0,
+                marginTop: '3px',
+                color: '#8B5CF6',
+                fontSize: '14px',
+                fontWeight: 700,
+                userSelect: 'none'
+              }}
+            >
+              •
+            </span>
+
+            {/* 텍스트 본문 (더블클릭 시 수정) */}
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: '13px',
+                fontWeight: 500,
+                lineHeight: 1.55,
+                color: '#1E293B',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                userSelect: 'text'
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onStartEdit(item);
+              }}
+              title="더블클릭하여 내용 수정 (Shift+Enter 새 항목 추가)"
+            >
+              {renderWithLinks(item.text || '(빈 항목)')}
+            </span>
+          </div>
+
+          {/* 우측: 3점 메뉴 */}
+          <div
+            style={{
+              position: 'relative',
+              flexShrink: 0,
+              marginRight: '-2px',
+              alignSelf: 'flex-start',
+              marginTop: '0px'
+            }}
+            className="no-print"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={(e) => onOpenItemMenu(e, item.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                borderRadius: '5px',
+                border: 'none',
+                backgroundColor: openItemMenuId === item.id ? '#EDE9FE' : 'transparent',
+                color: openItemMenuId === item.id ? '#7C3AED' : '#64748B',
+                cursor: 'pointer'
+              }}
+              title="메뉴"
+            >
+              <MoreVertical size={15} />
+            </button>
+
+            {openItemMenuId === item.id && (
+              <>
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 9998,
+                    backgroundColor: 'transparent'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseItemMenu();
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: openItemMenuPos?.top ?? 0,
+                    right: openItemMenuPos?.right ?? 0,
+                    zIndex: 9999,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)',
+                    border: '1px solid #CBD5E1',
+                    minWidth: '120px',
+                    padding: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onStartEdit(item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Edit2 size={13} color="#475569" />
+                    <span>수정</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCopy(blockId, item)}
+                    style={blockMenuItemStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="현재 목록에 바로 복제"
+                  >
+                    <Copy size={13} color="#475569" />
+                    <span>복제</span>
+                  </button>
+                  {onCopyItem && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCloseItemMenu();
+                        onCopyItem(item);
+                      }}
+                      style={blockMenuItemStyle}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      title="클립보드에 복사하여 다른 블록이나 다른 항목에 붙여넣기"
+                    >
+                      <Copy size={13} color="#2563EB" />
+                      <span style={{ color: '#2563EB', fontWeight: 600 }}>항목 복사</span>
+                    </button>
+                  )}
+
+                  {/* 위치 이동 세트 */}
+                  {onMoveItem && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
+                      <button
+                        type="button"
+                        disabled={isFirstItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'top')}
+                        style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ChevronsUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>맨 위로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isFirstItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'up')}
+                        style={{ ...blockMenuItemStyle, opacity: isFirstItem ? 0.4 : 1, cursor: isFirstItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isFirstItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ArrowUp size={13} color={isFirstItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>위로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLastItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'down')}
+                        style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ArrowDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>아래로 이동</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLastItem}
+                        onClick={() => onMoveItem(blockId, item.id, 'bottom')}
+                        style={{ ...blockMenuItemStyle, opacity: isLastItem ? 0.4 : 1, cursor: isLastItem ? 'not-allowed' : 'pointer' }}
+                        onMouseEnter={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
+                        onMouseLeave={(e) => { if (!isLastItem) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <ChevronsDown size={13} color={isLastItem ? '#94A3B8' : '#7C3AED'} />
+                        <span>맨 아래로 이동</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => onDelete(blockId, item.id)}
+                    style={blockMenuItemDangerStyle}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Trash2 size={13} color="#DC2626" />
+                    <span>삭제</span>
+                  </button>
+
+                  {Array.isArray(otherTextBlocks) && otherTextBlocks.length > 0 && (
+                    <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '2px', paddingTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, padding: '3px 8px' }}>
+                        다른 그룹으로 이동:
+                      </div>
+                      {otherTextBlocks.map((targetBlock) => (
+                        <button
+                          key={targetBlock.id}
+                          type="button"
+                          onClick={() => {
+                            onCloseItemMenu();
+                            if (onMoveToBlock) {
+                              onMoveToBlock(blockId, targetBlock.id, item.id);
+                            }
+                          }}
+                          style={{
+                            ...blockMenuItemStyle,
+                            gap: '6px',
+                            color: '#6D28D9',
+                            padding: '4px 8px 4px 12px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAF5FF'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title={`'${targetBlock.title || '텍스트'}' 그룹으로 이동`}
+                        >
+                          <Folder size={12} color="#7C3AED" style={{ flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {targetBlock.title && targetBlock.title.trim() ? targetBlock.title : '텍스트'}
                           </span>
                         </button>
                       ))}
@@ -1122,6 +1638,180 @@ export const DetailBlocksManager = ({
   const handleSaveChecklistTitle = (blockId, newTitle) => {
     const next = blocks.map((b) => (b.id === blockId ? { ...b, title: newTitle.trim() } : b));
     setEditingChecklistTitleId(null);
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 텍스트 블록 항목 추가 (헤더의 [+ 항목 추가] 버튼 클릭 시)
+  const handleAddTextItem = (blockId) => {
+    const newItem = {
+      id: `t_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: ''
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: [...(b.items || []), newItem]
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(newItem.id);
+  };
+
+  // 텍스트 항목 편집 중 Shift+Enter 단축키: 현재 항목 바로 아래에 새 항목 추가 및 편집 포커스
+  const handleAddNextTextItem = (blockId, currentItemId, currentText) => {
+    const newItem = {
+      id: `t_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: ''
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const currentItems = [...(b.items || [])];
+      const idx = currentItems.findIndex((it) => it.id === currentItemId);
+      if (idx !== -1) {
+        if (currentText !== undefined) {
+          currentItems[idx] = { ...currentItems[idx], text: currentText };
+        }
+        currentItems.splice(idx + 1, 0, newItem);
+      } else {
+        currentItems.push(newItem);
+      }
+      return { ...b, items: currentItems };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(newItem.id);
+  };
+
+  // 텍스트 개별 항목 수정 저장
+  const handleSaveEditTextItem = (blockId, itemId, newText) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: (b.items || []).map((it) => (it.id === itemId ? { ...it, text: newText } : it))
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(null);
+  };
+
+  // 텍스트 개별 항목 수정 취소
+  const handleCancelEditTextItem = (blockId, item) => {
+    if (!item.text || !item.text.trim()) {
+      const targetBlock = blocks.find((b) => b.id === blockId);
+      if (targetBlock && targetBlock.items && targetBlock.items.length > 1) {
+        const next = blocks.map((b) => {
+          if (b.id !== blockId) return b;
+          return {
+            ...b,
+            items: (b.items || []).filter((it) => it.id !== item.id)
+          };
+        });
+        if (onChangeAndSave) onChangeAndSave(next);
+      }
+    }
+    setEditingItemId(null);
+  };
+
+  // 텍스트 개별 항목 복제
+  const handleCopyTextItem = (blockId, item) => {
+    setOpenItemMenuId(null);
+    const newItem = {
+      id: `t_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: item.text || ''
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const currentItems = [...(b.items || [])];
+      const idx = currentItems.findIndex((it) => it.id === item.id);
+      if (idx !== -1) {
+        currentItems.splice(idx + 1, 0, newItem);
+      } else {
+        currentItems.push(newItem);
+      }
+      return { ...b, items: currentItems };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 실제 텍스트 항목 삭제 실행
+  const executeDeleteTextItem = (blockId, itemId) => {
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const filtered = (b.items || []).filter((it) => it.id !== itemId);
+      return {
+        ...b,
+        items: filtered.length > 0 ? filtered : [{ id: `t_item_${Date.now()}`, text: '' }]
+      };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    if (editingItemId === itemId) setEditingItemId(null);
+  };
+
+  // 텍스트 항목 삭제 (모달 연동)
+  const handleDeleteTextItem = (blockId, itemId) => {
+    setOpenItemMenuId(null);
+    const targetBlock = blocks.find((b) => b.id === blockId);
+    const targetItem = targetBlock?.items?.find((it) => it.id === itemId);
+
+    if (!targetItem?.text?.trim()) {
+      executeDeleteTextItem(blockId, itemId);
+      return;
+    }
+
+    if (openDeleteModal) {
+      const text = targetItem.text.trim();
+      const preview = text.length > 30 ? text.slice(0, 30) + '...' : text;
+      openDeleteModal(
+        '텍스트 항목 삭제',
+        `'${preview}' 항목을 정말 삭제하시겠습니까?`,
+        () => executeDeleteTextItem(blockId, itemId)
+      );
+    } else {
+      executeDeleteTextItem(blockId, itemId);
+    }
+  };
+
+  // 텍스트 항목 위치 이동 (맨위, 위, 아래, 맨아래)
+  const handleMoveTextItem = (blockId, itemId, direction) => {
+    setOpenItemMenuId(null);
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const items = [...(b.items || [])];
+      const idx = items.findIndex((it) => it.id === itemId);
+      if (idx === -1) return b;
+      const targetItem = items[idx];
+      items.splice(idx, 1);
+      if (direction === 'top') {
+        items.unshift(targetItem);
+      } else if (direction === 'bottom') {
+        items.push(targetItem);
+      } else if (direction === 'up') {
+        const newIdx = Math.max(0, idx - 1);
+        items.splice(newIdx, 0, targetItem);
+      } else if (direction === 'down') {
+        const newIdx = Math.min(items.length, idx + 1);
+        items.splice(newIdx, 0, targetItem);
+      }
+      return { ...b, items };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 텍스트 블록에 복사한 항목 붙여넣기
+  const handlePasteItemToTextBlock = (blockId) => {
+    if (!detailClipboard || detailClipboard.type !== 'item' || !detailClipboard.item) return;
+    const newItem = {
+      id: `t_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text: detailClipboard.item.text || ''
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        items: [...(b.items || []), newItem]
+      };
+    });
     if (onChangeAndSave) onChangeAndSave(next);
   };
 
@@ -1680,42 +2370,58 @@ export const DetailBlocksManager = ({
         );
         }
 
-        const isEditingThisBlock = editingBlockId === block.id;
+        // type === 'text' 블록
+        const isEditingTitle = editingChecklistTitleId === block.id;
+        const textItems = Array.isArray(block.items) && block.items.length > 0
+          ? block.items
+          : (typeof block.content === 'string' && block.content.trim().length > 0
+              ? block.content.split('\n').map((line, i) => ({ id: `t_item_${Date.now()}_${i}`, text: line }))
+              : [{ id: `t_item_${Date.now()}_0`, text: '' }]);
         const isFirstBlock = idx === 0;
         const isLastBlock = idx === blocks.length - 1;
         const isCollapsed = Boolean(collapsedBlockIds[block.id]);
+        const isBlockDragOver = dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === null;
 
         return (
           <div
             key={block.id || `text_${idx}`}
+            onDragOver={(e) => {
+              if (e.target === e.currentTarget) {
+                handleBlockDragOver(e, block.id);
+              }
+            }}
+            onDrop={(e) => {
+              if (e.target === e.currentTarget) {
+                handleItemDrop(e, block.id, null);
+              }
+            }}
             style={{
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: '#FFFFFF',
               borderRadius: 0,
-              border: isEditingThisBlock ? '1.5px solid #8B5CF6' : '1px solid #9D84BE',
+              border: isBlockDragOver ? '2px dashed #7C3AED' : '1.5px solid #8B5CF6',
               borderLeft: 'none',
               borderRight: 'none',
-              boxShadow: isEditingThisBlock
-                ? '0 0 0 2px rgba(139, 92, 246, 0.2)'
-                : 'none',
+              boxShadow: isBlockDragOver ? '0 0 0 2px rgba(124, 58, 237, 0.2)' : 'none',
               overflow: 'hidden',
-              flexShrink: 0,
-              transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+              flexShrink: 0
             }}
           >
-            {/* 카드 상단 헤더 바: 하위체크리스트 톤과 맞춘 보라색 테마 (T 아이콘 제거) */}
+            {/* 텍스트 그룹 헤더 바: 보라색 테마 */}
             <div
+              onDragOver={(e) => handleBlockDragOver(e, block.id)}
+              onDrop={(e) => handleItemDrop(e, block.id, null)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                height: isMobile ? '29px' : '31px',
+                height: isMobile ? '35px' : '37px',
                 boxSizing: 'border-box',
-                padding: isMobile ? '1px 0 1px 6px' : '1px 0 1px 8px',
-                backgroundColor: isEditingThisBlock ? '#EDE9FE' : '#C8B6E2',
-                borderBottom: isCollapsed && !isEditingThisBlock ? 'none' : (isEditingThisBlock ? '1px solid #C4B5FD' : '1px solid #9578B8'),
-                cursor: isEditingThisBlock ? 'default' : 'pointer',
+                padding: isMobile ? '0 0 0 6px' : '0 0 0 8px',
+                backgroundColor: '#C8B6E2',
+                borderBottom: isCollapsed ? 'none' : '1px solid #9578B8',
+                cursor: isEditingTitle ? 'default' : 'pointer',
                 userSelect: 'none',
                 position: 'sticky',
                 top: 0,
@@ -1723,73 +2429,78 @@ export const DetailBlocksManager = ({
                 flexShrink: 0
               }}
               onClick={() => {
-                if (!isEditingThisBlock) {
+                if (!isEditingTitle) {
                   toggleBlockCollapse(block.id);
                 }
               }}
             >
-              {/* 좌측: 토글 화살표 + 텍스트 이름 (T 아이콘 제거) */}
-              {isEditingThisBlock ? (
+              {/* 좌측: 토글 화살표 + 폴더 아이콘 + 그룹명 */}
+              {isEditingTitle ? (
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, marginRight: '6px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, height: '100%', minWidth: 0, paddingRight: '4px' }}
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <Folder size={isMobile ? 12 : 13} color="#5B21B6" style={{ flexShrink: 0 }} />
                   <input
-                    ref={titleInputRef}
                     type="text"
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
+                    value={draftChecklistTitle}
+                    onChange={(e) => setDraftChecklistTitle(e.target.value)}
                     onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                      if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleSaveBlock(block.id);
+                        handleSaveChecklistTitle(block.id, draftChecklistTitle);
                       } else if (e.key === 'Escape') {
                         e.preventDefault();
-                        handleCancelEdit();
+                        setEditingChecklistTitleId(null);
                       }
                     }}
-                    placeholder="텍스트 이름 입력... (예: 계약조건, 전달사항)"
+                    placeholder="텍스트 그룹 이름 입력..."
+                    autoFocus
                     style={{
-                      flex: 1,
-                      fontSize: '12px',
+                      height: '100%',
+                      boxSizing: 'border-box',
+                      fontSize: '14px',
                       fontWeight: 700,
                       color: '#2E1065',
-                      padding: '1px 4px',
-                      borderRadius: '3px',
-                      border: '1px solid #7C3AED',
+                      padding: '0 8px',
+                      borderRadius: '4px',
+                      border: '1.5px solid #7C3AED',
                       outline: 'none',
                       backgroundColor: '#FFFFFF',
+                      flex: 1,
                       minWidth: 0
                     }}
                   />
                   <button
                     type="button"
-                    onClick={() => handleSaveBlock(block.id)}
+                    onClick={() => handleSaveChecklistTitle(block.id, draftChecklistTitle)}
                     style={{
-                      padding: '1px 6px',
-                      borderRadius: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
                       border: 'none',
                       backgroundColor: '#7C3AED',
                       color: '#FFFFFF',
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: 600,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     저장
                   </button>
                   <button
                     type="button"
-                    onClick={handleCancelEdit}
+                    onClick={() => setEditingChecklistTitleId(null)}
                     style={{
-                      padding: '1px 6px',
-                      borderRadius: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
                       border: '1px solid #CBD5E1',
                       backgroundColor: '#FFFFFF',
                       color: '#64748B',
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: 600,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     취소
@@ -1797,14 +2508,7 @@ export const DetailBlocksManager = ({
                 </div>
               ) : (
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    flex: 1,
-                    minWidth: 0,
-                    cursor: 'pointer'
-                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}
                   onContextMenu={(e) => handleBlockContextMenu(e, block)}
                   onTouchStart={() => handleBlockTouchStart(block)}
                   onTouchEnd={handleBlockTouchEnd}
@@ -1815,23 +2519,25 @@ export const DetailBlocksManager = ({
                     style={{ display: 'flex', alignItems: 'center', color: '#4C1D95' }}
                     title={isCollapsed ? '펼치기' : '접기'}
                   >
-                    {isCollapsed ? <ChevronRight size={isMobile ? 13 : 14} /> : <ChevronDown size={isMobile ? 13 : 14} />}
+                    {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                   </span>
+                  <Folder size={13} color="#4C1D95" style={{ flexShrink: 0 }} />
                   <span
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingChecklistTitleId(block.id);
+                      setDraftChecklistTitle(block.title || '');
+                    }}
+                    title="더블클릭: 이름 수정 / 우클릭 및 길게누름: 일정 만들기"
                     style={{
-                      fontSize: isMobile ? '11px' : '12px',
+                      fontSize: '12px',
                       fontWeight: 700,
                       color: block.title && block.title.trim() ? '#2E1065' : '#7C6F93',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      cursor: 'text'
                     }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
-                      handleStartEdit(block);
-                    }}
-                    title="더블클릭: 이름 수정 / 우클릭 및 길게누름: 일정 만들기"
                   >
                     {block.title && block.title.trim() ? block.title : '텍스트'}
                   </span>
@@ -1843,133 +2549,251 @@ export const DetailBlocksManager = ({
                 </div>
               )}
 
-              {/* 우측 세그먼트 탭: 위치이동 & 3점 메뉴 (수정 중이 아닐 때) */}
-              {!isEditingThisBlock && (
-                <div
+              {/* 세그먼트 탭 컨트롤: [텍스트항목추가] | [위치이동 세트] | [3점메뉴] */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRight: 'none',
+                  borderRadius: '4px 0 0 4px',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                  height: isMobile ? '18px' : '20px',
+                  flexShrink: 0
+                }}
+                className="no-print"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* 1. 텍스트 항목 추가 버튼 (3번 패널과 동일하게 헤더에서 바로 추가) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddTextItem(block.id);
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRight: 'none',
-                    borderRadius: '4px 0 0 4px',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    height: isMobile ? '18px' : '20px',
-                    flexShrink: 0
+                    justifyContent: 'center',
+                    width: isMobile ? '20px' : '22px',
+                    height: '100%',
+                    border: 'none',
+                    borderRight: '1px solid #E2E8F0',
+                    backgroundColor: 'transparent',
+                    color: '#7C3AED',
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'all 0.15s ease'
                   }}
-                  className="no-print"
-                  onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F5F3FF';
+                    e.currentTarget.style.color = '#6D28D9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#7C3AED';
+                  }}
+                  title="텍스트 항목 추가 (단축키: Shift+Enter)"
                 >
-                  {/* 3점 메뉴 */}
-                  <div style={{ position: 'relative', height: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenBlockMenu(e, block.id)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: isMobile ? '20px' : '22px',
-                        height: '100%',
-                        border: 'none',
-                        backgroundColor: openBlockMenuId === block.id ? '#E2E8F0' : 'transparent',
-                        color: openBlockMenuId === block.id ? '#2563EB' : '#1E293B',
-                        cursor: 'pointer',
-                        padding: 0,
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = '#F1F5F9';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                      title="메뉴"
-                    >
-                      <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
-                    </button>
-                  </div>
+                  <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                </button>
+
+                {detailClipboard && detailClipboard.type === 'item' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePasteItemToTextBlock(block.id);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: isMobile ? '20px' : '22px',
+                      height: '100%',
+                      border: 'none',
+                      borderRight: '1px solid #E2E8F0',
+                      backgroundColor: '#F5F3FF',
+                      color: '#7C3AED',
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#EDE9FE';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F5F3FF';
+                    }}
+                    title={`복사한 항목('${detailClipboard.title}') 붙여넣기`}
+                  >
+                    <Copy size={isMobile ? 11 : 12} />
+                  </button>
+                )}
+
+                {/* 2. 가장 위로 이동 버튼 */}
+                <button
+                  type="button"
+                  disabled={isFirstBlock}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMoveToTop(idx);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: isMobile ? '20px' : '22px',
+                    height: '100%',
+                    border: 'none',
+                    borderRight: '1px solid #E2E8F0',
+                    backgroundColor: 'transparent',
+                    color: isFirstBlock ? '#CBD5E1' : '#7C3AED',
+                    cursor: isFirstBlock ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isFirstBlock) {
+                      e.currentTarget.style.backgroundColor = '#F5F3FF';
+                      e.currentTarget.style.color = '#6D28D9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isFirstBlock) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#7C3AED';
+                    }
+                  }}
+                  title="가장 위로 이동"
+                >
+                  <ChevronsUp size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                </button>
+
+                {/* 3. 가장 아래로 이동 버튼 */}
+                <button
+                  type="button"
+                  disabled={isLastBlock}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMoveToBottom(idx);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: isMobile ? '20px' : '22px',
+                    height: '100%',
+                    border: 'none',
+                    borderRight: '1px solid #CBD5E1',
+                    backgroundColor: 'transparent',
+                    color: isLastBlock ? '#CBD5E1' : '#7C3AED',
+                    cursor: isLastBlock ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLastBlock) {
+                      e.currentTarget.style.backgroundColor = '#F5F3FF';
+                      e.currentTarget.style.color = '#6D28D9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isLastBlock) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#7C3AED';
+                    }
+                  }}
+                  title="가장 아래로 이동"
+                >
+                  <ChevronsDown size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                </button>
+
+                {/* 4. 블록 3점 메뉴 */}
+                <div style={{ position: 'relative', height: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenBlockMenu(e, block.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: isMobile ? '20px' : '22px',
+                      height: '100%',
+                      border: 'none',
+                      backgroundColor: openBlockMenuId === block.id ? '#EDE9FE' : 'transparent',
+                      color: openBlockMenuId === block.id ? '#7C3AED' : '#1E293B',
+                      cursor: 'pointer',
+                      padding: 0,
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = '#F5F3FF';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (openBlockMenuId !== block.id) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title="메뉴"
+                  >
+                    <MoreVertical size={isMobile ? 12 : 13} strokeWidth={2.5} />
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* 카드 본문: 접혀있지 않거나 편집 중일 때만 렌더링 */}
-            {(!isCollapsed || isEditingThisBlock) && (
-              isEditingThisBlock ? (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    backgroundColor: '#FFFFFF',
-                    maxHeight: 'max(300px, calc(100vh - 230px))',
-                    overflowY: 'auto'
-                  }}
-                >
-                  <textarea
-                    ref={textareaRef}
-                    value={draftContent}
-                    onChange={(e) => {
-                      setDraftContent(e.target.value);
-                      adjustTextareaHeight(e.target);
-                    }}
-                    onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                        e.preventDefault();
-                        handleSaveBlock(block.id);
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        handleCancelEdit();
-                      }
-                    }}
-                    placeholder="내용을 입력하세요... (전화번호, 웹 URL 자동 링크 지원 / Ctrl+S 저장)"
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      minHeight: '46px',
-                      padding: '0',
-                      border: 'none',
-                      outline: 'none',
-                      resize: 'none',
-                      fontSize: '14px',
-                      lineHeight: 1.65,
-                      color: '#1E293B',
-                      fontFamily: 'inherit',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      boxSizing: 'border-box',
-                      backgroundColor: 'transparent',
-                      display: 'block',
-                      overflow: 'hidden'
-                    }}
+            {/* 카드 본문: 접혀있지 않을 때 텍스트 항목 리스트 렌더링 */}
+            {!isCollapsed && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0px',
+                  minHeight: '20px'
+                }}
+                onDragOver={(e) => {
+                  if (e.target === e.currentTarget) {
+                    handleBlockDragOver(e, block.id);
+                  }
+                }}
+                onDrop={(e) => {
+                  if (e.target === e.currentTarget) {
+                    handleItemDrop(e, block.id, null);
+                  }
+                }}
+              >
+                {textItems.map((item, itemIdx) => (
+                  <DetailTextItemRow
+                    key={item.id || `text_item_${itemIdx}`}
+                    blockId={block.id}
+                    item={item}
+                    itemIdx={itemIdx}
+                    items={textItems}
+                    isEditing={editingItemId === item.id}
+                    onStartEdit={handleStartEditChecklistItem}
+                    onSaveEdit={handleSaveEditTextItem}
+                    onCancelEdit={handleCancelEditTextItem}
+                    onAddNext={handleAddNextTextItem}
+                    onCopy={handleCopyTextItem}
+                    onCopyItem={onCopyItem}
+                    onDelete={handleDeleteTextItem}
+                    onMoveItem={handleMoveTextItem}
+                    openItemMenuId={openItemMenuId}
+                    openItemMenuPos={openItemMenuPos}
+                    onOpenItemMenu={handleOpenItemMenu}
+                    onCloseItemMenu={handleCloseItemMenu}
+                    isDragged={draggedItemKey?.blockId === block.id && draggedItemKey?.itemId === item.id}
+                    isDragOver={dragOverItemKey?.blockId === block.id && dragOverItemKey?.itemId === item.id}
+                    onDragStart={handleItemDragStart}
+                    onDragOver={handleItemDragOver}
+                    onDrop={handleItemDrop}
+                    onDragEnd={handleItemDragEnd}
+                    otherTextBlocks={blocks.filter((b) => b.type === 'text' && b.id !== block.id)}
+                    onMoveToBlock={handleMoveItemToBlock}
+                    onCreateEvent={onCreateEvent}
                   />
-                </div>
-              ) : (
-                <div
-                  onDoubleClick={() => {
-                    setCollapsedBlockIds((prev) => ({ ...prev, [block.id]: false }));
-                    handleStartEdit(block);
-                  }}
-                  title="더블클릭하여 수정 가능"
-                  style={{
-                    padding: '12px 14px',
-                    fontSize: '14px',
-                    lineHeight: 1.65,
-                    color: '#1E293B',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    cursor: 'text',
-                    maxHeight: 'max(300px, calc(100vh - 230px))',
-                    overflowY: 'auto'
-                  }}
-                >
-                  {block.content && block.content.trim() ? (
-                    renderWithLinks(block.content, searchQuery)
-                  ) : (
-                    <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '13px' }}>
-                      (비어 있는 텍스트입니다. 메뉴의 [수정]을 누르거나 본문을 더블클릭하여 내용을 입력하세요)
-                    </span>
-                  )}
-                </div>
-              )
+                ))}
+              </div>
             )}
           </div>
         );
@@ -2337,8 +3161,35 @@ export const DetailBlocksManager = ({
                   type="button"
                   onClick={() => {
                     setOpenBlockMenuId(null);
-                    setCollapsedBlockIds((prev) => ({ ...prev, [activeMenuBlock.id]: false }));
-                    handleStartEdit(activeMenuBlock);
+                    handleAddTextItem(activeMenuBlock.id);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '7px 12px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#7C3AED',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Plus size={14} color="#7C3AED" />
+                  <span>항목 추가</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenBlockMenuId(null);
+                    setEditingChecklistTitleId(activeMenuBlock.id);
+                    setDraftChecklistTitle(activeMenuBlock.title || '');
                   }}
                   style={{
                     display: 'flex',
@@ -2406,19 +3257,49 @@ export const DetailBlocksManager = ({
                       padding: '7px 12px',
                       fontSize: '13px',
                       fontWeight: 500,
-                      color: '#059669',
+                      color: '#7C3AED',
                       backgroundColor: 'transparent',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       textAlign: 'left'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ECFDF5'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     title="블록 내용을 줄바꿈 텍스트로 통합 복사"
                   >
-                    <FileText size={14} color="#059669" />
+                    <FileText size={14} color="#7C3AED" />
                     <span>통합복사</span>
+                  </button>
+                )}
+                {detailClipboard && detailClipboard.type === 'item' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenBlockMenuId(null);
+                      handlePasteItemToTextBlock(activeMenuBlock.id);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#7C3AED',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title={`복사한 항목('${detailClipboard.title}') 여기에 붙여넣기`}
+                  >
+                    <Copy size={14} color="#7C3AED" />
+                    <span>복사 항목 붙여넣기</span>
                   </button>
                 )}
                 {onOpenMoveModal && (

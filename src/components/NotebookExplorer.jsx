@@ -4085,12 +4085,18 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     const newBlock = {
       id: newBlockId,
       type: 'text',
-      title: '',
-      content: ''
+      title: '텍스트',
+      content: '',
+      items: [
+        {
+          id: `t_item_${Date.now()}_0`,
+          text: ''
+        }
+      ]
     };
     const updated = [...checklistDetailBlocks, newBlock];
     setChecklistDetailBlocks(updated);
-    setEditingBlockId(newBlockId);
+    handleSaveChecklistDetail(selectedChecklistId, updated);
   };
 
   const handleAddNewChecklistBlock = () => {
