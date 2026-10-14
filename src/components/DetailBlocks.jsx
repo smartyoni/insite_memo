@@ -539,8 +539,11 @@ function DetailChecklistItemRow({
                 <div
                   style={{
                     position: 'fixed',
-                    top: openItemMenuPos?.top ?? 0,
+                    top: openItemMenuPos?.top ?? 'auto',
+                    bottom: openItemMenuPos?.bottom ?? 'auto',
                     right: openItemMenuPos?.right ?? 0,
+                    maxHeight: openItemMenuPos?.maxHeight || 'calc(100vh - 20px)',
+                    overflowY: 'auto',
                     zIndex: 9999,
                     backgroundColor: '#FFFFFF',
                     borderRadius: '8px',
@@ -949,8 +952,11 @@ function DetailTextItemRow({
                   <div
                     style={{
                       position: 'fixed',
-                      top: openItemMenuPos?.top ?? 0,
+                      top: openItemMenuPos?.top ?? 'auto',
+                      bottom: openItemMenuPos?.bottom ?? 'auto',
                       right: openItemMenuPos?.right ?? 0,
+                      maxHeight: openItemMenuPos?.maxHeight || 'calc(100vh - 20px)',
+                      overflowY: 'auto',
                       zIndex: 9999,
                       backgroundColor: '#FFFFFF',
                       borderRadius: '8px',
@@ -1260,11 +1266,28 @@ export const DetailBlocksManager = ({
       setOpenBlockMenuId(null);
     } else {
       const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 160;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const estimatedMenuHeight = 380;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // 아래쪽 공간이 메뉴 높이보다 작고 위쪽 공간이 더 여유있을 때 위쪽으로 열기
+      const openUpward = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
       const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenBlockMenuPos({ top, right });
+
+      if (openUpward) {
+        setOpenBlockMenuPos({
+          top: 'auto',
+          bottom: Math.max(10, window.innerHeight - rect.top + 4),
+          right,
+          maxHeight: `${Math.max(180, rect.top - 20)}px`
+        });
+      } else {
+        setOpenBlockMenuPos({
+          top: rect.bottom + 4,
+          bottom: 'auto',
+          right,
+          maxHeight: `${Math.max(180, window.innerHeight - rect.bottom - 20)}px`
+        });
+      }
       setOpenBlockMenuId(blockId);
     }
   };
@@ -1346,11 +1369,27 @@ export const DetailBlocksManager = ({
       setOpenItemMenuId(null);
     } else {
       const rect = e.currentTarget.getBoundingClientRect();
-      const menuHeight = 150;
-      const wouldOverflowBottom = rect.bottom + menuHeight > window.innerHeight;
-      const top = wouldOverflowBottom ? Math.max(10, rect.top - menuHeight - 4) : rect.bottom + 4;
+      const estimatedMenuHeight = 260;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUpward = spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow;
       const right = Math.max(10, window.innerWidth - rect.right);
-      setOpenItemMenuPos({ top, right });
+
+      if (openUpward) {
+        setOpenItemMenuPos({
+          top: 'auto',
+          bottom: Math.max(10, window.innerHeight - rect.top + 4),
+          right,
+          maxHeight: `${Math.max(150, rect.top - 20)}px`
+        });
+      } else {
+        setOpenItemMenuPos({
+          top: rect.bottom + 4,
+          bottom: 'auto',
+          right,
+          maxHeight: `${Math.max(150, window.innerHeight - rect.bottom - 20)}px`
+        });
+      }
       setOpenItemMenuId(itemId);
     }
   };
@@ -2868,7 +2907,10 @@ export const DetailBlocksManager = ({
               gap: '2px',
               whiteSpace: 'nowrap',
               top: openBlockMenuPos.top,
-              right: openBlockMenuPos.right
+              bottom: openBlockMenuPos.bottom || 'auto',
+              right: openBlockMenuPos.right,
+              maxHeight: openBlockMenuPos.maxHeight || 'calc(100vh - 20px)',
+              overflowY: 'auto'
             }}
             onClick={(e) => e.stopPropagation()}
           >
