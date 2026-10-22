@@ -3450,7 +3450,9 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
     }
 
     // 그룹이 접혀있다면 자동 펼치기
-    updateCollapsedSections((prev) => ({ ...prev, [sectionId]: false }));
+    if (sectionId) {
+      updateCollapsedSections((prev) => ({ ...prev, [sectionId]: false }));
+    }
 
     if (isEditMode) {
       setDraftChecklists(updated);
@@ -3476,7 +3478,7 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
   };
 
   const handleAddNextChecklistInGroup = async (sectionId, currentItemId, currentText) => {
-    if (!activeItem || !sectionId || !currentItemId) return;
+    if (!activeItem || !currentItemId) return;
     recordWorkLocation();
     const newItem = {
       id: Date.now().toString() + '_' + Math.random().toString(36).substring(2, 6),
@@ -11871,12 +11873,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                               }}
                                               onKeyDown={(e) => {
                                                 if (e.nativeEvent && e.nativeEvent.isComposing) return;
-                                                if (e.key === 'Enter' && e.shiftKey) {
-                                                  if (group.section) {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    handleAddNextChecklistInGroup(group.section.id, checkItem.id, isEditing ? editingCheckText : (checkItem.text || ''));
-                                                  }
+                                                if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') || (e.key === 'Enter' && e.shiftKey)) {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  const secId = group.section ? group.section.id : null;
+                                                  handleAddNextChecklistInGroup(secId, checkItem.id, isEditing ? editingCheckText : (checkItem.text || ''));
                                                 }
                                               }}
                                               style={group.section ? {
@@ -11913,13 +11914,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                     onChange={(e) => setEditingCheckText(e.target.value)}
                                                     onKeyDown={(e) => {
                                                       if (e.nativeEvent && e.nativeEvent.isComposing) return;
-                                                      if (e.key === 'Enter' && e.shiftKey) {
-                                                        if (group.section) {
+                                                      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
                                                           e.preventDefault();
                                                           e.stopPropagation();
-                                                          handleAddNextChecklistInGroup(group.section.id, checkItem.id, editingCheckText);
-                                                        }
-                                                      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                          const secId = group.section ? group.section.id : null;
+                                                          handleAddNextChecklistInGroup(secId, checkItem.id, editingCheckText);
+                                                        } else if (e.key === 'Enter' && e.shiftKey) {
+                                                          e.preventDefault();
+                                                          e.stopPropagation();
+                                                          const secId = group.section ? group.section.id : null;
+                                                          handleAddNextChecklistInGroup(secId, checkItem.id, editingCheckText);
+                                                        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                                         e.preventDefault();
                                                         handleSaveEditChecklist(checkItem.id);
                                                       } else if (e.key === 'Escape') {
@@ -13599,12 +13604,11 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                             }}
                                             onKeyDown={(e) => {
                                               if (e.nativeEvent && e.nativeEvent.isComposing) return;
-                                              if (e.key === 'Enter' && e.shiftKey) {
-                                                if (group.section) {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  handleAddNextChecklistInGroup(group.section.id, checkItem.id, isEditing ? editingCheckText : (checkItem.text || ''));
-                                                }
+                                              if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') || (e.key === 'Enter' && e.shiftKey)) {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                const secId = group.section ? group.section.id : null;
+                                                handleAddNextChecklistInGroup(secId, checkItem.id, isEditing ? editingCheckText : (checkItem.text || ''));
                                               }
                                             }}
                                             style={group.section ? {
@@ -13641,13 +13645,17 @@ export default function NotebookExplorer({ currentUser, onLogout } = {}) {
                                                   onChange={(e) => setEditingCheckText(e.target.value)}
                                                   onKeyDown={(e) => {
                                                     if (e.nativeEvent && e.nativeEvent.isComposing) return;
-                                                    if (e.key === 'Enter' && e.shiftKey) {
-                                                      if (group.section) {
+                                                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
                                                         e.preventDefault();
                                                         e.stopPropagation();
-                                                        handleAddNextChecklistInGroup(group.section.id, checkItem.id, editingCheckText);
-                                                      }
-                                                    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                                        const secId = group.section ? group.section.id : null;
+                                                        handleAddNextChecklistInGroup(secId, checkItem.id, editingCheckText);
+                                                      } else if (e.key === 'Enter' && e.shiftKey) {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        const secId = group.section ? group.section.id : null;
+                                                        handleAddNextChecklistInGroup(secId, checkItem.id, editingCheckText);
+                                                      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                                       e.preventDefault();
                                                       handleSaveEditChecklist(checkItem.id);
                                                     } else if (e.key === 'Escape') {

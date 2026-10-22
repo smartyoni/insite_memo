@@ -283,16 +283,25 @@ function DetailChecklistItemRow({
     if (e.nativeEvent && e.nativeEvent.isComposing) {
       return;
     }
-    if (e.key === 'Enter' && e.shiftKey) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
       e.preventDefault();
+      e.stopPropagation();
+      if (onAddNext) {
+        onAddNext(blockId, item.id, draftText);
+      }
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
       if (onAddNext) {
         onAddNext(blockId, item.id, draftText);
       }
     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
+      e.stopPropagation();
       onSaveEdit(blockId, item.id, draftText);
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       onCancelEdit(blockId, item);
     }
   };
@@ -300,6 +309,7 @@ function DetailChecklistItemRow({
   return (
     <div
       key={item.id}
+      tabIndex={0}
       draggable={!isEditing}
       onDragStart={(e) => onDragStart(e, blockId, item.id)}
       onDragOver={(e) => onDragOver(e, blockId, item.id)}
@@ -311,7 +321,7 @@ function DetailChecklistItemRow({
       onTouchMove={handleTouchEnd}
       onKeyDown={(e) => {
         if (e.nativeEvent && e.nativeEvent.isComposing) return;
-        if (e.key === 'Enter' && e.shiftKey) {
+        if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') || (e.key === 'Enter' && e.shiftKey)) {
           e.preventDefault();
           e.stopPropagation();
           if (onAddNext) {
@@ -352,7 +362,7 @@ function DetailChecklistItemRow({
               adjustHeight(e.target);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="체크 항목 내용 입력... (Enter 줄바꿈, Shift+Enter 새 항목 추가, Ctrl+Enter 저장)"
+            placeholder="체크 항목 내용 입력... (Enter 줄바꿈, Shift+Enter / Ctrl+D 새 항목 추가, Ctrl+Enter 저장)"
             style={{
               width: '100%',
               minHeight: '38px',
@@ -670,6 +680,7 @@ function DetailTextItemRow({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  onAddNext,
   onCopy,
   onCopyItem,
   onDelete,
@@ -744,11 +755,25 @@ function DetailTextItemRow({
     if (e.nativeEvent && e.nativeEvent.isComposing) {
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
       e.preventDefault();
+      e.stopPropagation();
+      if (onAddNext) {
+        onAddNext(blockId, item.id, draftContent);
+      }
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (onAddNext) {
+        onAddNext(blockId, item.id, draftContent);
+      }
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
       onSaveEdit(blockId, item.id, draftContent);
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       onCancelEdit(blockId, item);
     }
   };
@@ -759,6 +784,7 @@ function DetailTextItemRow({
   return (
     <div
       key={item.id}
+      tabIndex={0}
       draggable={!isEditing}
       onDragStart={(e) => onDragStart(e, blockId, item.id)}
       onDragOver={(e) => onDragOver(e, blockId, item.id)}
@@ -768,6 +794,16 @@ function DetailTextItemRow({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchEnd}
+      onKeyDown={(e) => {
+        if (e.nativeEvent && e.nativeEvent.isComposing) return;
+        if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') || (e.key === 'Enter' && e.shiftKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onAddNext) {
+            onAddNext(blockId, item.id, isEditing ? draftContent : (item.content || ''));
+          }
+        }
+      }}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -797,7 +833,7 @@ function DetailTextItemRow({
               adjustTextareaHeight(e.target);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="내용을 입력하세요... (Enter 줄바꿈, Ctrl+Enter 저장, Escape 취소)"
+            placeholder="내용을 입력하세요... (Enter 줄바꿈, Shift+Enter / Ctrl+D 새 항목 추가, Ctrl+Enter 저장, Escape 취소)"
             style={{
               width: '100%',
               minHeight: '60px',
@@ -1649,6 +1685,30 @@ export const DetailBlocksManager = ({
     const next = blocks.map((b) => (b.id === blockId ? { ...b, title: newTitle.trim() } : b));
     setEditingChecklistTitleId(null);
     if (onChangeAndSave) onChangeAndSave(next);
+  };
+
+  // 텍스트 개별 텍스트박스 편집 또는 포커스 중 Shift+Enter / Ctrl+D 단축키: 현재 항목 바로 아래에 새 항목 추가 및 편집 포커스
+  const handleAddNextTextItem = (blockId, currentItemId, currentContent) => {
+    const newItem = {
+      id: `tb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      content: ''
+    };
+    const next = blocks.map((b) => {
+      if (b.id !== blockId) return b;
+      const currentItems = [...(b.items || [])];
+      const idx = currentItems.findIndex((it) => it.id === currentItemId);
+      if (idx !== -1) {
+        if (currentContent !== undefined) {
+          currentItems[idx] = { ...currentItems[idx], content: currentContent };
+        }
+        currentItems.splice(idx + 1, 0, newItem);
+      } else {
+        currentItems.push(newItem);
+      }
+      return { ...b, items: currentItems };
+    });
+    if (onChangeAndSave) onChangeAndSave(next);
+    setEditingItemId(newItem.id);
   };
 
   // 텍스트 블록 텍스트박스 추가 (헤더의 [+ 텍스트] 버튼 클릭 시)
@@ -2620,7 +2680,7 @@ export const DetailBlocksManager = ({
                     e.currentTarget.style.backgroundColor = 'transparent';
                     e.currentTarget.style.color = '#7C3AED';
                   }}
-                  title="텍스트 항목 추가 (단축키: Shift+Enter)"
+                  title="텍스트 항목 추가 (단축키: Shift+Enter 또는 Ctrl+D)"
                 >
                   <Plus size={isMobile ? 12 : 13} strokeWidth={2.5} />
                 </button>
@@ -2799,6 +2859,7 @@ export const DetailBlocksManager = ({
                     onStartEdit={handleStartEditChecklistItem}
                     onSaveEdit={handleSaveEditTextItem}
                     onCancelEdit={handleCancelEditTextItem}
+                    onAddNext={handleAddNextTextItem}
                     onCopy={handleCopyTextItem}
                     onCopyItem={onCopyItem}
                     onDelete={handleDeleteTextItem}
